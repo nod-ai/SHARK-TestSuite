@@ -12,10 +12,10 @@ TORCH_MLIR_BUILD = ""
 IREE_BUILD = ""
 
 
-def getTestsList(test_types):
+def getTestsList(frameworkname, test_types):
     testsList = []
     for test_type in test_types:
-        globpattern = test_type + "/*"
+        globpattern = frameworkname + "/" + test_type + "/*"
         testsList += glob.glob(globpattern)
     return testsList
 
@@ -76,6 +76,33 @@ def runTest(aList):
     # /proj/gdba/kumar/nod/iree-build/tools/iree-run-module --module=<model>.<model>.<backend>.onnx.vmfb --input="8x3xf32=0"
 
 
+def runFrameworkTests(frameworkname, args):
+    testArg = "--dtype " + args.dtype
+    testsList = []
+    poolSize = args.jobs
+    if args.tests:
+        testsList += frameworkname + "/" + args.tests
+        print("Running tests: ", testsList)
+    if args.groups:
+        if args.tests:
+            print("Since specific tests were provided, test group will not be run")
+        else:
+            testsList += getTestsList(frameworkname, args.groups)
+    uniqueTestList = []
+    [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
+    if not uniqueTestList:
+        print("No test specified.")
+        sys.exit(1)
+    listOfListArg = []
+    # Create list of pair(test, arg) to allow launching tests in parallel
+    [listOfListArg.append([test, testArg, run_dir]) for test in uniqueTestList]
+
+    with Pool(poolSize) as p:
+        result = p.map_async(runTest, listOfListArg)
+        result.wait()
+        print("All tasks submitted to process pool completed")
+
+
 if __name__ == "__main__":
     msg = "The run.py script to run e2e shark tests"
     parser = argparse.ArgumentParser(prog="run.py", description=msg, epilog="")
@@ -113,6 +140,14 @@ if __name__ == "__main__":
         help="Number of parallel processes to use for running tests",
     )
     parser.add_argument(
+        "-f",
+        "--frameworks",
+        nargs="*",
+        default=["pytorch"],
+        choices=["pytorch", "onnx", "tensorflow"],
+        help="Run tests for given framework(s)",
+    )
+    parser.add_argument(
         "-g",
         "--groups",
         nargs="*",
@@ -124,7 +159,13 @@ if __name__ == "__main__":
         "-t",
         "--tests",
         nargs="*",
-        help="Run specific tests.",
+        help="Run given specific tests only. Other test run options will be ignored.",
+    )
+    parser.add_argument(
+        "-l",
+        "--listfile",
+        nargs="*",
+        help="Run tests listed in given file only. Other test run options will be ignored.",
     )
     parser.add_argument(
         "-r",
@@ -154,30 +195,8 @@ if __name__ == "__main__":
         print("IREE build directory", IREE_BUILD, "does not exist")
         sys.exit(1)
 
-    testArg = "--dtype " + args.dtype
-    testsList = []
-    poolSize = args.jobs
-    if args.tests:
-        testsList += args.tests
-        print("Running tests: ", testsList)
-    if args.groups:
-        if args.tests:
-            print("Since specific tests were provided, test group will not be run")
-        else:
-            testsList += getTestsList(args.groups)
-    uniqueTestList = []
-    [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
-    if not uniqueTestList:
-        print("No test specified.")
-        sys.exit(1)
-    listOfListArg = []
-    # Create list of pair(test, arg) to allow launching tests in parallel
-    [listOfListArg.append([test, testArg, run_dir]) for test in uniqueTestList]
-
-    with Pool(poolSize) as p:
-        result = p.map_async(runTest, listOfListArg)
-        result.wait()
-        print("All tasks submitted to process pool completed")
+    for framework in args.frameworks:
+        runFrameworkTests(framework, args)
 
     # When all processes are done, print
     print("Completed run of e2e shark tests")
