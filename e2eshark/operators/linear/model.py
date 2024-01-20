@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     # Instantiate model and run inference in PyTorch
     runstage = runstages[0]
-    model = op_conv2d()
+    model = op_linear()
     model_name_dtype = model.name() + "." + dtype
     # batch size 8 of input size 3
     test_input = torch.randn(8, 3)
