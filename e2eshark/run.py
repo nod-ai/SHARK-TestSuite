@@ -38,8 +38,8 @@ def changeToTestDir(run_dir):
 
 def launchCommand(scriptcommand):
     try:
-        os.system(scriptcommand)
-        return 0
+        ret = os.system(scriptcommand)
+        return ret
     except OSError as errormsg:
         print(
             "Invoking ",
@@ -57,24 +57,26 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
     ofile.write(f1.read() + f2.read())
 
 
-def runTest(aList):
-    testName = aList[0]
-    args = aList[1]
+def runTest(aTuple):
+    # Do not construct absolute path here as this will run
+    # in a new process and cur dir may change over time giving
+    # unpredicatble results
+    (frameworkname, testName, args, script_dir, run_dir) = aTuple
     testargs = " --dtype " + args.dtype
-    run_dir = os.path.abspath(aList[2] + "/" + testName)
+    testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
-    # Root dir where run.py is
-    scriptrootdirectory = os.path.dirname(os.path.realpath(__file__))
-    testAbsPath = os.path.abspath(scriptrootdirectory + "/" + testName)
-    toolsDirAbsPath = os.path.abspath(scriptrootdirectory + "/tools")
+
+    testAbsPath = script_dir + "/" + testName
+    toolsDirAbsPath = script_dir + "/tools"
     stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
     modelpy = testAbsPath + "/model.py"
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
 
     curdir = os.getcwd()
-    print("Running:", testName, "[ Proc:", os.getpid(), "]")
-    if changeToTestDir(run_dir):
+    if args.verbose:
+        print("Running:", testName, "[ Proc:", os.getpid(), "]")
+    if changeToTestDir(testRunDir):
         return 1
 
     # Concatenate the testName model.py and tools/runmodel.py as run.py to
@@ -86,7 +88,9 @@ def runTest(aList):
     # TODO decide based upon run to
     testargs += " --mode " + args.mode + " --outfileprefix " + modelname
     logfilename = modelname + ".log"
-    scriptcommand = "python " + runmodelpy + " " + testargs + " > " + logfilename
+    scriptcommand = (
+        "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
+    )
     if launchCommand(scriptcommand):
         print("Test", testName, "failed [model-run]")
         return 1
@@ -103,8 +107,9 @@ def runTest(aList):
             + onnxfilename
             + " -o "
             + torchonnxfilename
-            + " > "
+            + " 1> "
             + logfilename
+            + " 2>&1"
         )
         if launchCommand(scriptcommand):
             print("Test", testName, "failed [onnx-import]")
@@ -112,13 +117,15 @@ def runTest(aList):
 
         # Lower torch ONNX to torch MLIR
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
-
+        logfilename = "onnxtotorch.log"
         scriptcommand = (
             TORCH_MLIR_BUILD
             + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
             + torchonnxfilename
             + " > "
             + torchmlirfilename
+            + " 2>"
+            + logfilename
         )
 
         if launchCommand(scriptcommand):
@@ -131,6 +138,7 @@ def runTest(aList):
 
     # Compile torch MLIR using IREE to binary to target backend
     vmfbfilename = modelname + "." + args.dtype + ".vfmb"
+    logfilename = "ireecompile.log"
     scriptcommand = (
         IREE_BUILD
         + "/tools/iree-compile --iree-hal-target-backends="
@@ -139,6 +147,8 @@ def runTest(aList):
         + torchmlirfilename
         + " > "
         + vmfbfilename
+        + " 2>"
+        + logfilename
     )
     if launchCommand(scriptcommand):
         print("Test", testName, "failed [ireecompile]")
@@ -150,6 +160,7 @@ def runTest(aList):
     # TODO: Set the input string from the input dumped by the model
     # during earlier run
     inputstring = "8x3xf32=0"
+    logfilename = "inference.log"
     scriptcommand = (
         IREE_BUILD
         + "/tools/iree-run-module --module="
@@ -158,6 +169,8 @@ def runTest(aList):
         + inputstring
         + " > "
         + vmfbfilename
+        + " 2>"
+        + logfilename
     )
     if launchCommand(scriptcommand):
         print("Test", testName, "failed [inference]")
@@ -168,9 +181,11 @@ def runTest(aList):
     return 0
 
 
-def runFrameworkTests(frameworkname, args, run_dir):
+def runFrameworkTests(frameworkname, args, script_dir, run_dir):
     testsList = []
     poolSize = args.jobs
+    if frameworkname == "tensorflow":
+        print("The tensorflow is not supported yet.")
     if args.tests:
         testsList += frameworkname + "/" + args.tests
         print("Running tests: ", testsList)
@@ -184,12 +199,15 @@ def runFrameworkTests(frameworkname, args, run_dir):
     if not uniqueTestList:
         print("No test specified.")
         sys.exit(1)
-    listOfListArg = []
+    tupleOfListArg = []
     # Create list of tuple(test, arg, run_dir) to allow launching tests in parallel
-    [listOfListArg.append([test, args, run_dir]) for test in uniqueTestList]
+    [
+        tupleOfListArg.append((frameworkname, test, args, script_dir, run_dir))
+        for test in uniqueTestList
+    ]
 
     with Pool(poolSize) as p:
-        result = p.map_async(runTest, listOfListArg)
+        result = p.map_async(runTest, tupleOfListArg)
         result.wait()
         if args.verbose:
             print("All tasks submitted to process pool completed")
@@ -286,6 +304,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
     if args.torchmlirbuild:
         TORCH_MLIR_BUILD = args.torchmlirbuild
     TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
@@ -310,16 +329,20 @@ if __name__ == "__main__":
             print("IREE build directory", IREE_BUILD, "does not exist.")
             sys.exit(1)
 
-    run_dir = args.rundirectory
+    run_dir = os.path.abspath(args.rundirectory)
+    # Root dir where run.py is
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+
     if not os.path.exists(run_dir):
         try:
             os.mkdir(run_dir)
         except OSError as errormsg:
             print("Could not make run directory", run_dir, " Error message: ", errormsg)
             sys.exit(1)
-
+    print("Starting e2eshark tests. Using", args.jobs, "processes")
+    print("Run directory:", run_dir)
     for framework in args.frameworks:
-        runFrameworkTests(framework, args, run_dir)
+        runFrameworkTests(framework, args, script_dir, run_dir)
 
     # When all processes are done, print
     print("Completed run of e2e shark tests")
