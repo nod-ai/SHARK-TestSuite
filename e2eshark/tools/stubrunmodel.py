@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["torch", "onnx", "ort"],
+        choices=["direct", "onnx", "ort"],
         default="onnx",
         help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
     )
