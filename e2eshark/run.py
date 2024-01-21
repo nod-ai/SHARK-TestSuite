@@ -37,7 +37,6 @@ def changeToTestDir(run_dir):
 
 
 def launchCommand(scriptcommand):
-    print("Running command:", scriptcommand)
     try:
         os.system(scriptcommand)
         return 0
@@ -86,27 +85,34 @@ def runTest(aList):
     # Run the model.py to find reference output, generate ONNX and torch MLIR
     # TODO decide based upon run to
     testargs += " --mode " + args.mode + " --outfileprefix " + modelname
-    scriptcommand = "python " + runmodelpy + " " + testargs + " > " + modelname + ".log"
+    logfilename = modelname + ".log"
+    scriptcommand = "python " + runmodelpy + " " + testargs + " > " + logfilename
     if launchCommand(scriptcommand):
+        print("Test", testName, "failed [model-run]")
         return 1
 
     torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
+
     if args.mode == "onnx" or args.mode == "ort":
         # Import ONNX into torch MLIR as torch.operator custom OP
         onnxfilename = modelname + "." + args.dtype + ".onnx"
         torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
+        logfilename = "torch-onnx.log"
         scriptcommand = (
             "python -m torch_mlir.tools.import_onnx "
             + onnxfilename
             + " -o "
             + torchonnxfilename
-            + "> torch-onnx.log"
+            + " > "
+            + logfilename
         )
         if launchCommand(scriptcommand):
+            print("Test", testName, "failed [onnx-import]")
             return 1
 
         # Lower torch ONNX to torch MLIR
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
+
         scriptcommand = (
             TORCH_MLIR_BUILD
             + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
@@ -114,10 +120,13 @@ def runTest(aList):
             + " > "
             + torchmlirfilename
         )
+
         if launchCommand(scriptcommand):
+            print("Test", testName, "failed [torch-mlir]")
             return 1
 
     if args.upto == "torch-mlir":
+        print("Test", testName, "passed")
         return 0
 
     # Compile torch MLIR using IREE to binary to target backend
@@ -132,9 +141,11 @@ def runTest(aList):
         + vmfbfilename
     )
     if launchCommand(scriptcommand):
+        print("Test", testName, "failed [ireecompile]")
         return 1
 
     if args.upto == "ireecompile":
+        print("Test", testName, "passed")
         return 0
     # TODO: Set the input string from the input dumped by the model
     # during earlier run
@@ -149,9 +160,11 @@ def runTest(aList):
         + vmfbfilename
     )
     if launchCommand(scriptcommand):
+        print("Test", testName, "failed [inference]")
         return 1
 
     os.chdir(curdir)
+    print("Test", testName, "passed")
     return 0
 
 
@@ -178,7 +191,8 @@ def runFrameworkTests(frameworkname, args, run_dir):
     with Pool(poolSize) as p:
         result = p.map_async(runTest, listOfListArg)
         result.wait()
-        print("All tasks submitted to process pool completed")
+        if args.verbose:
+            print("All tasks submitted to process pool completed")
 
 
 if __name__ == "__main__":
@@ -215,7 +229,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--ireebuild",
-        required=True,
         help="Path to the IREE build",
     )
     parser.add_argument(
@@ -242,9 +255,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["torch", "onnx", "ort"],
+        choices=["direct", "onnx", "ort"],
         default="onnx",
-        help="Use PyTorch to torch MLIR, PyTorch to ONNX or ONNX plus ONNX RT stub flow",
+        help="Use framework to torch MLIR, PyTorch to ONNX or ONNX plus ONNX RT stub flow",
     )
     parser.add_argument(
         "-r",
@@ -265,18 +278,37 @@ if __name__ == "__main__":
         default="torch-mlir",
         help="Stop after genearting torch MLIR, or after IREE compilation, or go all the way to running inference.",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print aditional messsages to show progress",
+    )
 
     args = parser.parse_args()
     if args.torchmlirbuild:
         TORCH_MLIR_BUILD = args.torchmlirbuild
+    TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
     if not os.path.exists(TORCH_MLIR_BUILD):
-        print("IREE build directory", TORCH_MLIR_BUILD, "does not exist")
+        print(
+            "Torch MLIR build directory",
+            TORCH_MLIR_BUILD,
+            "does not exist.",
+        )
         sys.exit(1)
 
     if args.ireebuild:
         IREE_BUILD = args.ireebuild
-    TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
-    IREE_BUILD = os.path.abspath(IREE_BUILD)
+    if args.upto == "ireecompile" or args.upto == "inference":
+        if not IREE_BUILD:
+            print(
+                "If --upto is 'ireecompile' or 'inference' then a valid IREE build is needed. Specify a valid IREE build directory using --ireebuild or set IREE_BUILD in run.py"
+            )
+            sys.exit(1)
+        IREE_BUILD = os.path.abspath(IREE_BUILD)
+        if not os.path.exists(IREE_BUILD):
+            print("IREE build directory", IREE_BUILD, "does not exist.")
+            sys.exit(1)
 
     run_dir = args.rundirectory
     if not os.path.exists(run_dir):
@@ -285,10 +317,6 @@ if __name__ == "__main__":
         except OSError as errormsg:
             print("Could not make run directory", run_dir, " Error message: ", errormsg)
             sys.exit(1)
-
-    if not os.path.exists(IREE_BUILD):
-        print("IREE build directory", IREE_BUILD, "does not exist")
-        sys.exit(1)
 
     for framework in args.frameworks:
         runFrameworkTests(framework, args, run_dir)
