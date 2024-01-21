@@ -9,12 +9,12 @@
  compilation errors, then test will report the stage at which compilation failed.
  
  For each framework category, multiple flows are tested. The flow is named by how input
- to IREE is generated. For example, for PyTorch, the torch MLIR for IREE can be generated
- in following ways
+ torch MLIR to IREE is generated. For example, for PyTorch, the torch MLIR for IREE 
+ can be generated in following ways
 
- - direct: Pytorch -> Torch MLIR -> Compiled artefact -> Run target backend
- - torch-onnx: Pytorch -> ONNX -> Import as torch onnx in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
- - ort-ep: Pytorch -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend
+ - torch: Pytorch -> Torch MLIR -> Compiled artefact -> Run target backend
+ - onnx: Pytorch -> ONNX -> Import as torch onnx in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
+ - ort: Pytorch -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend
 
  The target backend can be any supported hardware: cpu, amdaie, amdgpu etc.
 
@@ -30,5 +30,11 @@
             followed by torch.Relu. 
  - <framework>/models: This has full model test. Since this is full model test, you may need necesary 
             permsisions to download a model such as for llama2 you will need hugging face token. 
-            See the test directory for guidance.
+            See the test directory for guidance. Also set environment variable HF_HOME to a location 
+            with enough space. in bash, export HF_HOME=<path>
+
+ - tools/onnxutil.py : Allows examining an ONNX protobuf file
+ - tools/stubrunmodel.py : This is main that is concatenated to model.py test to form a runmodel.py runnable model
+
+ - requirements.txt : pip install -r requirements.txt to install any packages not in your venv or conda
 
