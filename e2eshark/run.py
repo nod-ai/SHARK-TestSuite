@@ -20,24 +20,12 @@ def getTestsList(frameworkname, test_types):
     return testsList
 
 
-def runTest(aList):
-    testName = aList[0]
-    arguments = aList[1]
-    run_dir = os.path.abspath(aList[2] + "/" + testName)
-    modelname = os.path.basename(testName)
-    curdir = os.getcwd()
-    print(
-        "Running test:", modelname, "with args:", arguments, "in process:", os.getpid()
-    )
-
-    # Setup process invocation timeout
-    scriptpath = "./" + testName + "/model.py "
-    scriptcommand = os.path.abspath(scriptpath) + arguments
-    print("Command:", scriptcommand)
-    scriptcommand = "python " + scriptcommand + " > " + modelname + ".log"
+def changeToTestDir(run_dir):
     try:
+        # If directory does not exist, make it
         os.makedirs(run_dir, exist_ok=True)
         os.chdir(run_dir)
+        return 0
     except OSError as errormsg:
         print(
             "Could not make or change to test run directory",
@@ -45,11 +33,14 @@ def runTest(aList):
             " Error message: ",
             errormsg,
         )
-        return
+        return 1
 
+
+def launchCommand(scriptcommand):
+    print("Running command:", scriptcommand)
     try:
-        print("Running: ", scriptcommand)
         os.system(scriptcommand)
+        return 0
     except OSError as errormsg:
         print(
             "Invoking ",
@@ -57,27 +48,114 @@ def runTest(aList):
             " failed:",
             errormsg,
         )
-        return
+        return 1
+
+
+def concatenateFiles(inpfile1, inpfile2, outfile):
+    f1 = open(inpfile1, "r")
+    f2 = open(inpfile2, "r")
+    ofile = open(outfile, "w")
+    ofile.write(f1.read() + f2.read())
+
+
+def runTest(aList):
+    testName = aList[0]
+    args = aList[1]
+    testargs = " --dtype " + args.dtype
+    run_dir = os.path.abspath(aList[2] + "/" + testName)
+    modelname = os.path.basename(testName)
+    # Root dir where run.py is
+    scriptrootdirectory = os.path.dirname(os.path.realpath(__file__))
+    testAbsPath = os.path.abspath(scriptrootdirectory + "/" + testName)
+    toolsDirAbsPath = os.path.abspath(scriptrootdirectory + "/tools")
+    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
+    modelpy = testAbsPath + "/model.py"
+    # This is the generated runmodel.py which will be run
+    runmodelpy = "runmodel.py"
+
+    curdir = os.getcwd()
+    print("Running:", testName, "[ Proc:", os.getpid(), "]")
+    if changeToTestDir(run_dir):
+        return 1
+
+    # Concatenate the testName model.py and tools/runmodel.py as run.py to
+    # form runnable script.
+    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
+    concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
+
+    # Run the model.py to find reference output, generate ONNX and torch MLIR
+    # TODO decide based upon run to
+    testargs += " --mode " + args.mode + " --outfileprefix " + modelname
+    scriptcommand = "python " + runmodelpy + " " + testargs + " > " + modelname + ".log"
+    if launchCommand(scriptcommand):
+        return 1
+
+    torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
+    if args.mode == "onnx" or args.mode == "ort":
+        # Import ONNX into torch MLIR as torch.operator custom OP
+        onnxfilename = modelname + "." + args.dtype + ".onnx"
+        torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
+        scriptcommand = (
+            "python -m torch_mlir.tools.import_onnx "
+            + onnxfilename
+            + " -o "
+            + torchonnxfilename
+            + "> torch-onnx.log"
+        )
+        if launchCommand(scriptcommand):
+            return 1
+
+        # Lower torch ONNX to torch MLIR
+        torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
+        scriptcommand = (
+            TORCH_MLIR_BUILD
+            + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
+            + torchonnxfilename
+            + " > "
+            + torchmlirfilename
+        )
+        if launchCommand(scriptcommand):
+            return 1
+
+    if args.upto == "torch-mlir":
+        return 0
+
+    # Compile torch MLIR using IREE to binary to target backend
+    vmfbfilename = modelname + "." + args.dtype + ".vfmb"
+    scriptcommand = (
+        IREE_BUILD
+        + "/tools/iree-compile --iree-hal-target-backends="
+        + args.backend
+        + " "
+        + torchmlirfilename
+        + " > "
+        + vmfbfilename
+    )
+    if launchCommand(scriptcommand):
+        return 1
+
+    if args.upto == "ireecompile":
+        return 0
+    # TODO: Set the input string from the input dumped by the model
+    # during earlier run
+    inputstring = "8x3xf32=0"
+    scriptcommand = (
+        IREE_BUILD
+        + "/tools/iree-run-module --module="
+        + vmfbfilename
+        + " --input="
+        + inputstring
+        + " > "
+        + vmfbfilename
+    )
+    if launchCommand(scriptcommand):
+        return 1
+
     os.chdir(curdir)
-
-    # TODO
-    # Import ONNX into torch MLIR
-    # python -m torch_mlir.tools.import_onnx <model>.onnx -o <model>.torch-onnx.mlir
-
-    # Compiler torch MLIR to commpiled artefact
-    # TORCH_MLIR_BUILD/bin/torch-mlir-opt -convert-torch-onnx-to-torch <model>.torch-onnx.mlir > <model>.onnx.torch.mlir
-
-    # #Compile torch MLIR using IREE to binary to target backend
-    # IREE_BUILD/tools/iree-compile --iree-hal-target-backends=<backend> <model>.pt.torch.mlir > <model>.<backend>.pt.vmfb
-    # IREE_BUILD/tools/iree-compile --iree-hal-target-backends=<backend> <model>.onnx.torch.mlir > <model>.<backend>.onnx.vmfb
-
-    # Run the copiled module on target and check correctness of result for each
-    # /proj/gdba/kumar/nod/iree-build/tools/iree-run-module --module=<model>.<backend>.pt.vmfb --input="8x3xf32=0"
-    # /proj/gdba/kumar/nod/iree-build/tools/iree-run-module --module=<model>.<model>.<backend>.onnx.vmfb --input="8x3xf32=0"
+    return 0
 
 
-def runFrameworkTests(frameworkname, args):
-    testArg = "--dtype " + args.dtype
+def runFrameworkTests(frameworkname, args, run_dir):
     testsList = []
     poolSize = args.jobs
     if args.tests:
@@ -94,8 +172,8 @@ def runFrameworkTests(frameworkname, args):
         print("No test specified.")
         sys.exit(1)
     listOfListArg = []
-    # Create list of pair(test, arg) to allow launching tests in parallel
-    [listOfListArg.append([test, testArg, run_dir]) for test in uniqueTestList]
+    # Create list of tuple(test, arg, run_dir) to allow launching tests in parallel
+    [listOfListArg.append([test, args, run_dir]) for test in uniqueTestList]
 
     with Pool(poolSize) as p:
         result = p.map_async(runTest, listOfListArg)
@@ -114,30 +192,17 @@ if __name__ == "__main__":
         help="Target backend hardware",
     )
     parser.add_argument(
-        "-d",
-        "--dtype",
-        choices=["fp32", "bf16"],
-        default="fp32",
-        help="Tensor datatype to use",
-    )
-    parser.add_argument(
-        "-i",
-        "--ireebuild",
-        required=True,
-        help="Path to the IREE build",
-    )
-    parser.add_argument(
-        "-m",
+        "-c",
         "--torchmlirbuild",
         required=True,
         help="Path to the torch-mlir build",
     )
     parser.add_argument(
-        "-j",
-        "--jobs",
-        type=int,
-        default=1,
-        help="Number of parallel processes to use for running tests",
+        "-d",
+        "--dtype",
+        choices=["fp32", "bf16"],
+        default="fp32",
+        help="Tensor datatype to use",
     )
     parser.add_argument(
         "-f",
@@ -148,6 +213,12 @@ if __name__ == "__main__":
         help="Run tests for given framework(s)",
     )
     parser.add_argument(
+        "-i",
+        "--ireebuild",
+        required=True,
+        help="Path to the IREE build",
+    )
+    parser.add_argument(
         "-g",
         "--groups",
         nargs="*",
@@ -156,10 +227,11 @@ if __name__ == "__main__":
         help="Run given group of tests",
     )
     parser.add_argument(
-        "-t",
-        "--tests",
-        nargs="*",
-        help="Run given specific tests only. Other test run options will be ignored.",
+        "-j",
+        "--jobs",
+        type=int,
+        default=1,
+        help="Number of parallel processes to use for running tests",
     )
     parser.add_argument(
         "-l",
@@ -168,10 +240,30 @@ if __name__ == "__main__":
         help="Run tests listed in given file only. Other test run options will be ignored.",
     )
     parser.add_argument(
+        "-m",
+        "--mode",
+        choices=["torch", "onnx", "ort"],
+        default="onnx",
+        help="Use PyTorch to torch MLIR, PyTorch to ONNX or ONNX plus ONNX RT stub flow",
+    )
+    parser.add_argument(
         "-r",
         "--rundirectory",
         default="test-run",
         help="Path to the torch-mlir build",
+    )
+    parser.add_argument(
+        "-t",
+        "--tests",
+        nargs="*",
+        help="Run given specific tests only. Other test run options will be ignored.",
+    )
+    parser.add_argument(
+        "-u",
+        "--upto",
+        choices=["torch-mlir", "ireecompile", "inference"],
+        default="torch-mlir",
+        help="Stop after genearting torch MLIR, or after IREE compilation, or go all the way to running inference.",
     )
 
     args = parser.parse_args()
@@ -183,6 +275,9 @@ if __name__ == "__main__":
 
     if args.ireebuild:
         IREE_BUILD = args.ireebuild
+    TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
+    IREE_BUILD = os.path.abspath(IREE_BUILD)
+
     run_dir = args.rundirectory
     if not os.path.exists(run_dir):
         try:
@@ -196,7 +291,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     for framework in args.frameworks:
-        runFrameworkTests(framework, args)
+        runFrameworkTests(framework, args, run_dir)
 
     # When all processes are done, print
     print("Completed run of e2e shark tests")
