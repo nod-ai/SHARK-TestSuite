@@ -73,10 +73,15 @@ def logAndReturn(commandslog, timelog, resultdict, retval):
     return retval
 
 
-def unzipAnyZippedONNXFile(abs_directory, unzipped_file_name):
+def unzipAnyZippedONNXFile(testName, abs_directory, unzipped_file_name):
+    # extract second last name in test name and if that is "models" and
+    # it may have zipped onnx files, unzip them if not already done so
+    second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
+    if second_last_name_inpath != "models":
+        return
+
     # Look for any unzipped file and if there is not already an unzipped file
     # then first time unzip it.
-
     abs_unzip_file_name = abs_directory + "/" + unzipped_file_name
     abs_zip_file_name = abs_unzip_file_name + ".zip"
     # this test dir does not have a zipped test file, so nothing to do
@@ -117,25 +122,13 @@ def runTest(aTuple):
     testAbsPath = script_dir + "/" + testName
 
     toolsDirAbsPath = script_dir + "/tools"
-    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
+    stubrunmodelpy = toolsDirAbsPath + "stubs/pytorchmodel.py"
     modelpy = testAbsPath + "/model.py"
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
     # For args.framework == onnx, onnx is starting point, so mode is
     # forced to onnx if it is direct
     mode = args.mode
-    if args.verbose:
-        print("Running test:", testName)
-    if frameworkname == "onnx":
-        # extract second last name in test name and if that is "models" and
-        # test framework is onnx then, it may have zipped onnx files, unzip
-        # them if not already done so
-        second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
-        print("onnx model : ", second_last_name_inpath)
-        if second_last_name_inpath == "models":
-            unzipAnyZippedONNXFile(testAbsPath, "model.onnx")
-        if mode == "direct":
-            mode = "onnx"
 
     if args.verbose:
         print("Running:", testName, "[ Proc:", os.getpid(), "]")
@@ -148,27 +141,28 @@ def runTest(aTuple):
 
     # start phases[0]
     curphase = phases[0]
-    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
+    stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
     onnxfilename = modelname + "." + args.dtype + ".onnx"
     # Concatenate the testName model.py and tools/runmodel.py as run.py to
     # form runnable script.
     if frameworkname == "onnx":
-        # generate runmodel.py
-        stubrunmodelpy = toolsDirAbsPath + "/stubonnxrunmodel.py"
+        unzipAnyZippedONNXFile(testName, testAbsPath, "model.onnx")
+        # For onnx, dierct and onnx means same as direct generates/has onnx itself
+        if mode == "direct":
+            mode = "onnx"
+
+        # generate runmodel.py bu concatenating start stub, model.py and end stub
+        startstubmodelpy = toolsDirAbsPath + "/stubs/onnxstartmodel.py"
+        endstubmodelpy = toolsDirAbsPath + "/stubs/onnxendmodel.py"
+        temp_file = "temp_runmodel.py"
+        concatenateFiles(startstubmodelpy, modelpy, temp_file)
+        concatenateFiles(temp_file, endstubmodelpy, runmodelpy)
         onnxfilename = testAbsPath + "/model.onnx"
-        shutil.copyfile(stubrunmodelpy, runmodelpy)
-        runmodelfile = open(runmodelpy, "a")
-        linetoprint = (
-            'session = onnxruntime.InferenceSession("' + testAbsPath + '", None)'
-        )
-        print(linetoprint, file=runmodelfile)
-        f2 = open(modelpy, "r")
-        runmodelfile.write(f2.read())
-        testargs = ""
+        testargs += " -n " + onnxfilename
     else:
         concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
-        testargs += " --mode " + mode + " --outfileprefix " + modelname
 
+    testargs += " --mode " + mode + " --outfileprefix " + modelname
     logfilename = modelname + ".log"
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
