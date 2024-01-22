@@ -33,11 +33,22 @@
  - Framework/models: This has full model test. Since this is full model test, you may need necesary 
             permsisions to download a model such as for llama2 you will need hugging face token. You
             should run 'huggingface-cli login' and enter the HF token before launching the test.
-            Also set environment variable HF_HOME to a location with enough space. in bash, export HF_HOME=<path>
-            If not set, script will set it to 'run dir'/HF_HOME. The run directory can be secpified
-            using --rundirectory option and defaults to 'test-run' if not specified
+            Also set environment variable HF_HOME to a location with enough space. in bash, 
+            export HF_HOME=<path>. 
+
  - tools/onnxutil.py : Allows examining an ONNX protobuf file
  - tools/stubrunmodel.py : This is concatenated to 'model.py' in test directory to form a runmodel.py runnable model
+ 
+ The logs are created as .log files in the test run sub directory. Examine the logs to find and fix 
+ cause of any failure.
+ 
+## Examples
 
+Run the tests in models, operators, combinations of the default framework (i.e. pytorch),
+use framework to onnx to torch MLIR path- and run up to hardware inference on default llvm-cpu
+hardware target
+```
+python ./run.py --upto inference -j 4 -c ../../torch-mlir/build -g models combinations operators -i ../../iree-build --mode onnx
+```
  
 
