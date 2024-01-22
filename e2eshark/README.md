@@ -9,8 +9,13 @@
  compilation errors, then test will report the stage at which compilation failed.
  
  Test is organized starting with framework: pytorch, tensorflow, onnx
- For each framework category, multiple modes are tested. Following up-to three modes
- are supported based upon what is possible for a framework:
+ For each framework category, multiple modes are tested. 
+
+ - pytroch : starting model is a pytorch model
+ - tensorflow : stating model is a tensorflow model (no test at present, planned for later)
+ - onnx : starting model is an onnx model (work in progress in setting this up)
+ 
+ Following up-to three modes are supported based upon what is possible for a framework:
 
  - direct: Framework -> Torch MLIR -> Compiled artefact -> Run target backend
  - onnx: Framework -> ONNX -> Import as torch onnx in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
