@@ -1,6 +1,8 @@
 import os, time, glob, sys, shutil
 from multiprocessing import Pool
 import argparse
+import numpy as np
+import torch
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -36,8 +38,10 @@ def changeToTestDir(run_dir):
         return 1
 
 
-def launchCommand(scriptcommand):
+def launchCommand(scriptcommand, commandslog):
     try:
+        commandslog.write(scriptcommand)
+        commandslog.write("\n")
         ret = os.system(scriptcommand)
         return ret
     except OSError as errormsg:
@@ -55,9 +59,22 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
     f2 = open(inpfile2, "r")
     ofile = open(outfile, "w")
     ofile.write(f1.read() + f2.read())
+    f1.close()
+    f2.close()
+    ofile.close()
+
+
+def logAndReturn(commandslog, timelog, resultdict, retval):
+    for i in resultdict:
+        listitem = [i] + resultdict[i]
+        print(listitem, file=timelog)
+    timelog.close()
+    commandslog.close()
+    return retval
 
 
 def runTest(aTuple):
+    curdir = os.getcwd()
     # Do not construct absolute path here as this will run
     # in a new process and cur dir may change over time giving
     # unpredicatble results
@@ -65,6 +82,13 @@ def runTest(aTuple):
     testargs = " --dtype " + args.dtype
     testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
+    modelinputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.npy"
+    goldoutputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".output.npy"
+    phases = ["model-run", "onnx-import", "torch-mlir", "ireecompile", "inference"]
+    resultdict = {}
+    for phase in phases:
+        # Put status and time taken for each phase
+        resultdict[phase] = ["notrun", 0.0]
 
     testAbsPath = script_dir + "/" + testName
     toolsDirAbsPath = script_dir + "/tools"
@@ -73,15 +97,20 @@ def runTest(aTuple):
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
 
-    curdir = os.getcwd()
     if args.verbose:
         print("Running:", testName, "[ Proc:", os.getpid(), "]")
     if changeToTestDir(testRunDir):
         return 1
 
+    # Open files to log commands run and time taken
+    commandslog = open("commands.log", "w")
+    timelog = open("time.log", "w")
+
+    # start phases[0]
+    curphase = phases[0]
+    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
     # Concatenate the testName model.py and tools/runmodel.py as run.py to
     # form runnable script.
-    stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
 
     # Run the model.py to find reference output, generate ONNX and torch MLIR
@@ -91,13 +120,19 @@ def runTest(aTuple):
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
     )
-    if launchCommand(scriptcommand):
-        print("Test", testName, "failed [model-run]")
-        return 1
+    if args.verbose:
+        print("Launching:", scriptcommand, "[ Proc:", os.getpid(), "]")
+    start = time.time()
+    if launchCommand(scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
+    resultdict[curphase] = ["passed", end - start]
 
     torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
-
     if args.mode == "onnx" or args.mode == "ort":
+        # start phases[1]
+        curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
         onnxfilename = modelname + "." + args.dtype + ".onnx"
         torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
@@ -111,11 +146,16 @@ def runTest(aTuple):
             + logfilename
             + " 2>&1"
         )
-        if launchCommand(scriptcommand):
-            print("Test", testName, "failed [onnx-import]")
-            return 1
+        start = time.time()
+        if launchCommand(scriptcommand, commandslog):
+            print("Test", testName, "failed[" + curphase + "]")
+            return logAndReturn(commandslog, timelog, resultdict, 1)
+        end = time.time()
+        resultdict[curphase] = ["passed", end - start]
 
         # Lower torch ONNX to torch MLIR
+        # start phases[2]
+        curphase = phases[2]
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
         logfilename = "onnxtotorch.log"
         scriptcommand = (
@@ -128,15 +168,19 @@ def runTest(aTuple):
             + logfilename
         )
 
-        if launchCommand(scriptcommand):
-            print("Test", testName, "failed [torch-mlir]")
-            return 1
+        start = time.time()
+        if launchCommand(scriptcommand, commandslog):
+            print("Test", testName, "failed[" + curphase + "]")
+            return logAndReturn(commandslog, timelog, resultdict, 1)
+        end = time.time()
+        resultdict[curphase] = ["passed", end - start]
 
     if args.upto == "torch-mlir":
         print("Test", testName, "passed")
-        return 0
+        return logAndReturn(commandslog, timelog, resultdict, 0)
 
     # Compile torch MLIR using IREE to binary to target backend
+    curphase = phases[3]
     vmfbfilename = modelname + "." + args.dtype + ".vfmb"
     logfilename = "ireecompile.log"
     scriptcommand = (
@@ -150,35 +194,73 @@ def runTest(aTuple):
         + " 2>"
         + logfilename
     )
-    if launchCommand(scriptcommand):
-        print("Test", testName, "failed [ireecompile]")
-        return 1
+    start = time.time()
+    if launchCommand(scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
+    resultdict[curphase] = ["passed", end - start]
 
     if args.upto == "ireecompile":
         print("Test", testName, "passed")
-        return 0
-    # TODO: Set the input string from the input dumped by the model
-    # during earlier run
-    inputstring = "8x3xf32=0"
+        return logAndReturn(commandslog, timelog, resultdict, 0)
+
+    # run inference now
+    curphase = phases[4]
+    # read the gold output produced by model
     logfilename = "inference.log"
+    infoutputfilename = "inference.output.npy"
     scriptcommand = (
         IREE_BUILD
         + "/tools/iree-run-module --module="
         + vmfbfilename
-        + " --input="
-        + inputstring
+        + " --input=@"
+        + modelinputfilename
+        + " --output=@"
+        + infoutputfilename
         + " > "
-        + vmfbfilename
-        + " 2>"
         + logfilename
+        + " 2>&1"
     )
-    if launchCommand(scriptcommand):
-        print("Test", testName, "failed [inference]")
-        return 1
+    start = time.time()
+    if launchCommand(scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
 
+    infoutput = np.load(infoutputfilename)
+    goloutput = np.load(goldoutputfilename)
+
+    # Adjust absolute tolerance and relative tolerance as needed
+    # numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)[source]
+    # if absolute(a - b) <= (atol + rtol * absolute(b)) is elementwise true
+    # then numpy.allclose returns True
+    rtol = 1e-05
+    atol = 1e-08
+    approximatematch = np.allclose(
+        infoutput, goloutput, rtol=rtol, atol=atol, equal_nan=False
+    )
+    inferencematched = approximatematch
+    if args.zerotolerance:
+        # If each element matches exactly only then np.array_equal is true
+        inferencematched = np.array_equal(infoutput, goloutput, equal_nan=False)
+    if args.verbose:
+        inerencelog = open(logfilename, "a")
+        print("Gold reference:\n", goloutput, file=inerencelog)
+        print("Output from target hardware:\n", infoutput, file=inerencelog)
+        print("Difference: \n", goloutput - infoutput, file=inerencelog)
+    if not inferencematched:
+        failedinflog = open("failedinference.log", "w")
+        print("Gold reference:\n", goloutput, file=failedinflog)
+        print("Output from target hardware:\n", infoutput, file=failedinflog)
+        print("Difference: \n", goloutput - infoutput, file=failedinflog)
+        print("Test", testName, "failed[output-mismatch]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+
+    resultdict[curphase] = ["passed", end - start]
     os.chdir(curdir)
     print("Test", testName, "passed")
-    return 0
+    return logAndReturn(commandslog, timelog, resultdict, 0)
 
 
 def runFrameworkTests(frameworkname, args, script_dir, run_dir):
@@ -300,7 +382,15 @@ if __name__ == "__main__":
         "-v",
         "--verbose",
         action="store_true",
+        default=False,
         help="Print aditional messsages to show progress",
+    )
+    parser.add_argument(
+        "-z",
+        "--zerotolerance",
+        action="store_true",
+        default=False,
+        help="Do not allow any tolerance in comparing results",
     )
 
     args = parser.parse_args()
@@ -340,7 +430,12 @@ if __name__ == "__main__":
             print("Could not make run directory", run_dir, " Error message: ", errormsg)
             sys.exit(1)
     print("Starting e2eshark tests. Using", args.jobs, "processes")
-    print("Run directory:", run_dir)
+    if args.verbose:
+        print("Test run with arguments: ", vars(args))
+    print("Torch MLIR build:", TORCH_MLIR_BUILD)
+    if IREE_BUILD:
+        print("IREE build:", IREE_BUILD)
+    print("Test run directory:", run_dir)
     for framework in args.frameworks:
         runFrameworkTests(framework, args, script_dir, run_dir)
 
