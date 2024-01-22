@@ -1,8 +1,8 @@
-import os, time, glob, sys, shutil
+import os, time, glob, sys, zipfile
 from multiprocessing import Pool
 import argparse
 import numpy as np
-import torch
+import shutil
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -73,6 +73,30 @@ def logAndReturn(commandslog, timelog, resultdict, retval):
     return retval
 
 
+def unzipAnyZippedONNXFile(abs_directory, unzipped_file_name):
+    # Look for any unzipped file and if there is not already an unzipped file
+    # then first time unzip it.
+
+    abs_unzip_file_name = abs_directory + "/" + unzipped_file_name
+    abs_zip_file_name = abs_unzip_file_name + ".zip"
+    # this test dir does not have a zipped test file, so nothing to do
+    if not os.path.exists(abs_zip_file_name):
+        return 0
+    # if not already unzipped, then
+    if not os.path.exists(abs_unzip_file_name):
+        if not os.access(abs_directory, os.W_OK):
+            print(
+                "The directory",
+                abs_directory,
+                "is not writeable. Could not unzip",
+                abs_zip_file_name,
+            )
+            return 1
+        with zipfile.ZipFile(abs_zip_file_name, "r") as zip_ref:
+            zip_ref.extractall(abs_directory)
+    return 0
+
+
 def runTest(aTuple):
     curdir = os.getcwd()
     # Do not construct absolute path here as this will run
@@ -91,11 +115,27 @@ def runTest(aTuple):
         resultdict[phase] = ["notrun", 0.0]
 
     testAbsPath = script_dir + "/" + testName
+
     toolsDirAbsPath = script_dir + "/tools"
     stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
     modelpy = testAbsPath + "/model.py"
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
+    # For args.framework == onnx, onnx is starting point, so mode is
+    # forced to onnx if it is direct
+    mode = args.mode
+    if args.verbose:
+        print("Running test:", testName)
+    if frameworkname == "onnx":
+        # extract second last name in test name and if that is "models" and
+        # test framework is onnx then, it may have zipped onnx files, unzip
+        # them if not already done so
+        second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
+        print("onnx model : ", second_last_name_inpath)
+        if second_last_name_inpath == "models":
+            unzipAnyZippedONNXFile(testAbsPath, "model.onnx")
+        if mode == "direct":
+            mode = "onnx"
 
     if args.verbose:
         print("Running:", testName, "[ Proc:", os.getpid(), "]")
@@ -109,13 +149,26 @@ def runTest(aTuple):
     # start phases[0]
     curphase = phases[0]
     stubrunmodelpy = toolsDirAbsPath + "/stubrunmodel.py"
+    onnxfilename = modelname + "." + args.dtype + ".onnx"
     # Concatenate the testName model.py and tools/runmodel.py as run.py to
     # form runnable script.
-    concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
+    if frameworkname == "onnx":
+        # generate runmodel.py
+        stubrunmodelpy = toolsDirAbsPath + "/stubonnxrunmodel.py"
+        onnxfilename = testAbsPath + "/model.onnx"
+        shutil.copyfile(stubrunmodelpy, runmodelpy)
+        runmodelfile = open(runmodelpy, "a")
+        linetoprint = (
+            'session = onnxruntime.InferenceSession("' + testAbsPath + '", None)'
+        )
+        print(linetoprint, file=runmodelfile)
+        f2 = open(modelpy, "r")
+        runmodelfile.write(f2.read())
+        testargs = ""
+    else:
+        concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
+        testargs += " --mode " + mode + " --outfileprefix " + modelname
 
-    # Run the model.py to find reference output, generate ONNX and torch MLIR
-    # TODO decide based upon run to
-    testargs += " --mode " + args.mode + " --outfileprefix " + modelname
     logfilename = modelname + ".log"
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
@@ -130,11 +183,11 @@ def runTest(aTuple):
     resultdict[curphase] = ["passed", end - start]
 
     torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
-    if args.mode == "onnx" or args.mode == "ort":
+
+    if mode == "onnx" or mode == "ort":
         # start phases[1]
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
-        onnxfilename = modelname + "." + args.dtype + ".onnx"
         torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
         logfilename = "torch-onnx.log"
         scriptcommand = (
@@ -287,6 +340,8 @@ def runFrameworkTests(frameworkname, args, script_dir, run_dir):
         tupleOfListArg.append((frameworkname, test, args, script_dir, run_dir))
         for test in uniqueTestList
     ]
+    if args.verbose:
+        print("Following tests will be run:", uniqueTestList)
 
     with Pool(poolSize) as p:
         result = p.map_async(runTest, tupleOfListArg)
