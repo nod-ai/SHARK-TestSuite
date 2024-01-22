@@ -44,6 +44,8 @@
 
 ## Examples
 
+### Running tests
+
 Run the tests in models, operators, combinations of the default framework (i.e. pytorch),
 use framework to onnx to torch MLIR path- and run up to hardware inference on default llvm-cpu
 hardware target
@@ -58,3 +60,36 @@ total count of operator instances
 python ./tools/onnxutil.py onnx/models/resnet50_vaiq_int8/model.onnx -f
 ```
 
+### Adding new tests
+
+Let us say you wanted to add a new test to the framework "pytorch" to test maxpool  i.e. start with
+pytorch model of maxpool, use run of the model as reference gold output and compare IREE compiled
+output on target backend. 
+First google pytorch maxpool and read about the corresponding behavior of
+maxpool operator in pytorch. For this example:
+https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html provides description. 
+Now take following steps:
+1. Use an appropriate suffix to describe what you are intending to test say maxpool_2d_large
+2. mkdir -p pytorch/operators/maxpool_2d_large
+3. cp -pr pytorch/test_template/operators.template model.py
+4. modify model.py (check other existing tests for clue)
+5. once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
+   ```
+   python ./run.py --upto torch-mlir -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
+   ```
+   Rerun above with --mode onnx if you want ONNX to ge generated from pytorch and tested in addition.
+
+   If you want to test up to inference, then provide your iree build in addition as -i option and run as
+
+   ```
+   python ./run.py --upto inference -c "your torch mlir build dir" -i "your iree build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
+   ```
+
+   Rerun above with --mode onnx if you want ONNX to ge generated from pytorch and tested in addition.
+
+   You will see test-run/pytorch/operators/maxpool_2d_large and logs created. Examine that to see errors. 
+   Iterate over fixing your model.py and examing logs till you get it right. Given state of tools, tests may fail.
+   If test fails because tool has bug, you are ready to add test. If test fails because of issue in model.py,
+   you need to fix that before you can add test.
+   
+   Once you are satisfied, git add pytorch/operators/maxpool_2d_large/model.py, commit and publish it
