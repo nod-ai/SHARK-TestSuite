@@ -21,7 +21,8 @@
  - onnx: Framework -> ONNX -> Import as torch onnx in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
  - ort: Framework -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend
 
- If Framework is onnx, then mode 'direct' will mean same as 'onnx'
+ If Framework is onnx, then mode 'direct' will mean same as 'onnx'. For onnx/operators, onnx/combinations the onnx model should be created using ONNX API. For onnx/models, a prebuilt onnx should be checked in as a zip file.
+ 
  The target backend can be any IREE supported backend: llvm-cpu, amd-aie etc.
 
 ## Contents
