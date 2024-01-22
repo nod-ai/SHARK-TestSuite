@@ -10,6 +10,17 @@ def uniqueOnnxOps(model):
     return ops
 
 
+# Given an onnx model, return a dictionary of ops with frequency
+def frequencyOfOPs(model):
+    ops = {}
+    for node in model.graph.node:
+        if node.op_type in ops:
+            ops[node.op_type] += 1
+        else:
+            ops[node.op_type] = 1
+    return ops
+
+
 if __name__ == "__main__":
     msg = "The script to print contents of an ONNX ProtoBuf file."
     parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -18,10 +29,16 @@ if __name__ == "__main__":
         help="Input ONNX file",
     )
     parser.add_argument(
-        "-u", "--uniqueOps", action="store_true", help="Find unique ops in given file"
+        "-u", "--uniqueops", action="store_true", help="Find unique ops in given file"
     )
     parser.add_argument(
         "-p", "--print", action="store_true", help="Print in human readable format"
+    )
+    parser.add_argument(
+        "-f",
+        "--frequency",
+        action="store_true",
+        help="Print number of occurrences i.e. frquency of ops",
     )
 
     args = parser.parse_args()
@@ -36,6 +53,14 @@ if __name__ == "__main__":
 
     if args.print:
         print(model)
-    if args.uniqueOps:
+    if args.uniqueops:
         ops = uniqueOnnxOps(model)
         print("Number of unique ops:", len(ops), "\nOps: ", ops, "\n")
+    if args.frequency:
+        ops = frequencyOfOPs(model)
+        sortedops = dict(sorted(ops.items(), key=lambda item: item[1], reverse=True))
+        count = 0
+        for k, v in sortedops.items():
+            print(k, ":", v)
+            count += v
+        print("Total instances of ops: ", count)

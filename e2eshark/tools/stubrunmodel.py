@@ -1,5 +1,6 @@
 import sys, argparse
 import torch_mlir
+import numpy as np
 
 if __name__ == "__main__":
     msg = "The script to run a model test"
@@ -16,7 +17,7 @@ if __name__ == "__main__":
         "-m",
         "--mode",
         choices=["direct", "onnx", "ort"],
-        default="onnx",
+        default="direct",
         help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
     )
     parser.add_argument(
@@ -38,20 +39,20 @@ if __name__ == "__main__":
         model = model.to(torch.bfloat16)
         test_input = test_input.to(torch.bfloat16)
 
-    inputsavefilename = outfileprefix + ".input.pt"
+    inputsavefilename = outfileprefix + ".input"
     print("Input:", test_input)
-    torch.save(test_input, inputsavefilename)
+    np.save(inputsavefilename, test_input.detach().numpy())
 
     output_pytorch = model(test_input)
 
-    outputsavefilename = outfileprefix + ".output.pt"
-    torch.save(output_pytorch, outputsavefilename)
+    outputsavefilename = outfileprefix + ".output"
     print("Pytorch output:", output_pytorch)
+    np.save(outputsavefilename, output_pytorch.detach().numpy())
 
     if runmode == "onnx" or runmode == "ort":
         onnx_name = outfileprefix + ".onnx"
         onnx_program = torch.onnx.export(model, test_input, onnx_name)
-    elif runmode == "torchmlir":
+    elif runmode == "direct":
         torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
         ts_model = torch.jit.script(model)
         torch_mlir_model = torch_mlir.compile(
