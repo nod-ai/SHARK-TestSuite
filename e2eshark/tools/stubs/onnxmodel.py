@@ -1,10 +1,10 @@
-import numpy as np
+# This file constitutes end part of runmodel.py
+# this is appended to the model.py in test dir
+
+import numpy
 import onnxruntime
 import sys, argparse
 
-# This file constitutes beginning part of runmodel.py
-# this + model.py in test dir + tools/stubs/onnxendmodel.py
-# makes up the runmodel.py
 
 msg = "The script to run an ONNX model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -28,19 +28,15 @@ parser.add_argument(
     "--outfileprefix",
     help="Prefix of output files written by this model",
 )
-parser.add_argument(
-    "-n",
-    "--onnxfilename",
-    help="Full path of the onnx model file",
-)
 args = parser.parse_args()
 dtype = args.dtype
 runmode = args.mode
 outfileprefix = args.outfileprefix
 outfileprefix += "." + dtype
-onnxfilename = args.onnxfilename
 inputsavefilename = outfileprefix + ".input"
 outputsavefilename = outfileprefix + ".output"
 
-# Start ONNX runtime session
-session = onnxruntime.InferenceSession(onnxfilename, None)
+# test_input and test_output are defined in model.py which
+# is prepended to this file
+numpy.save(inputsavefilename, test_input)
+numpy.save(outputsavefilename, test_output)
