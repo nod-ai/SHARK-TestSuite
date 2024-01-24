@@ -43,7 +43,10 @@
             export HF_HOME="your path"/HF_HOME
 
  - tools/onnxutil.py : Allows examining an ONNX protobuf file
- - tools/stubrunmodel.py : This is concatenated to 'model.py' in test directory to form a runmodel.py runnable model
+ - tools/stubs/onnxmodel.py : This is concatenated to 'model.py' in test directory to form a 
+                              runmodel.py for onnx input model
+ - tools/stubs/pytorchmodel.py : This is concatenated to 'model.py' in test directory to form a 
+                                 runmodel.py for pytorch input model
  
  The logs are created as .log files in the test run sub directory. Examine the logs to find and fix 
  cause of any failure.
@@ -66,6 +69,11 @@ total count of operator instances
 python ./tools/onnxutil.py onnx/models/resnet50_vaiq_int8/model.onnx -f
 ```
 
+Run given test onnx/combinations/constant_constantofshape upto inference on target backend
+```
+python ./run.py -c ../../torch-mlir/build --frameworks onnx --upto inference -i ../../iree-build/ --tests onnx/combinations/constant_constantofshape
+```
+
 ### Adding new tests
 
 Let us say you wanted to add a new test to the framework "pytorch" to test maxpool  i.e. start with
@@ -77,13 +85,16 @@ https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html provides descr
 Now take following steps:
 1. Use an appropriate suffix to describe what you are intending to test say maxpool_2d_large
 2. mkdir -p pytorch/operators/maxpool_2d_large
-3. cp -pr pytorch/test_template/operators.template model.py
-4. modify model.py (check other existing tests for clue)
-5. once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
+3. cd pytorch/operators/maxpool_2d_large
+4. cp -pr pytorch/operators/conv2d/model.py .
+5. modify model.py
+6. You can run 'python ./model.py' to see input and output values printed to test 
+7. 
+8. once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
    ```
    python ./run.py --upto torch-mlir -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
-   Rerun above with --mode onnx if you want ONNX to ge generated from pytorch and tested in addition.
+   Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
 
    If you want to test up to inference, then provide your iree build in addition as -i option and run as
 
@@ -91,7 +102,7 @@ Now take following steps:
    python ./run.py --upto inference -c "your torch mlir build dir" -i "your iree build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
 
-   Rerun above with --mode onnx if you want ONNX to ge generated from pytorch and tested in addition.
+   Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
 
    You will see test-run/pytorch/operators/maxpool_2d_large and logs created. Examine that to see errors. 
    Iterate over fixing your model.py and examing logs till you get it right. Given state of tools, tests may fail.

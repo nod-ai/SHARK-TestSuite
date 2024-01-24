@@ -73,13 +73,7 @@ def logAndReturn(commandslog, timelog, resultdict, retval):
     return retval
 
 
-def unzipAnyZippedONNXFile(testName, abs_directory, unzipped_file_name):
-    # extract second last name in test name and if that is "models" and
-    # it may have zipped onnx files, unzip them if not already done so
-    second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
-    if second_last_name_inpath != "models":
-        return
-
+def unzipONNXFile(testName, abs_directory, unzipped_file_name):
     # Look for any unzipped file and if there is not already an unzipped file
     # then first time unzip it.
     abs_unzip_file_name = abs_directory + "/" + unzipped_file_name
@@ -99,7 +93,97 @@ def unzipAnyZippedONNXFile(testName, abs_directory, unzipped_file_name):
             return 1
         with zipfile.ZipFile(abs_zip_file_name, "r") as zip_ref:
             zip_ref.extractall(abs_directory)
+
     return 0
+
+
+def getTestKind(testName):
+    # extract second last name in test name and if that is "models" and
+    # it may have zipped onnx files, unzip them if not already done so
+    second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
+    return second_last_name_inpath
+
+
+def runInference(
+    curphase,
+    testName,
+    args,
+    vmfbfilename,
+    modelinputfilename,
+    goldoutputfilename,
+    scriptcommand,
+    commandslog,
+    resultdict,
+):
+    # read the gold output produced by model
+    logfilename = "inference.log"
+    infoutputfilename = "inference.output.npy"
+
+    modelinput = np.load(modelinputfilename)
+
+    # numpy does not support bfloat16, so bfloat16 is cast to fp32 stored and
+    # needs to be restored back
+    # TODO: Does IREE handle bf16 as fp32 and back auomatically?
+
+    goloutput = np.load(goldoutputfilename)
+
+    if args.verbose:
+        print("IREE run input:", modelinput)
+        print("Framework gold:", goloutput)
+
+    inputarg = ""
+    # If there is no input the do not pass --input
+    if modelinput.size > 0:
+        inputarg = " --input=@" + modelinputfilename
+
+    scriptcommand = (
+        IREE_BUILD
+        + "/tools/iree-run-module --module="
+        + vmfbfilename
+        + inputarg
+        + " --output=@"
+        + infoutputfilename
+        + " > "
+        + logfilename
+        + " 2>&1"
+    )
+
+    start = time.time()
+    if launchCommand(scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
+
+    infoutput = np.load(infoutputfilename)
+    if args.verbose:
+        print("Framework gold output:", infoutput)
+    # Adjust absolute tolerance and relative tolerance as needed
+    # numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)[source]
+    # if absolute(a - b) <= (atol + rtol * absolute(b)) is elementwise true
+    # then numpy.allclose returns True
+    rtol = 1e-05
+    atol = 1e-08
+    approximatematch = np.allclose(
+        infoutput, goloutput, rtol=rtol, atol=atol, equal_nan=False
+    )
+    inferencematched = approximatematch
+    if args.zerotolerance:
+        # If each element matches exactly only then np.array_equal is true
+        inferencematched = np.array_equal(infoutput, goloutput, equal_nan=False)
+    if args.verbose:
+        inerencelog = open(logfilename, "a")
+        print("Gold reference:\n", goloutput, file=inerencelog)
+        print("Output from target hardware:\n", infoutput, file=inerencelog)
+        print("Difference: \n", goloutput - infoutput, file=inerencelog)
+    if not inferencematched:
+        failedinflog = open("failedinference.log", "w")
+        print("Gold reference:\n", goloutput, file=failedinflog)
+        print("Output from target hardware:\n", infoutput, file=failedinflog)
+        print("Difference: \n", goloutput - infoutput, file=failedinflog)
+        print("Test", testName, "failed[output-mismatch]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+
+    resultdict[curphase] = ["passed", end - start]
 
 
 def runTest(aTuple):
@@ -146,22 +230,18 @@ def runTest(aTuple):
     # Concatenate the testName model.py and tools/runmodel.py as run.py to
     # form runnable script.
     if frameworkname == "onnx":
-        unzipAnyZippedONNXFile(testName, testAbsPath, "model.onnx")
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct":
             mode = "onnx"
-
-        # generate runmodel.py bu concatenating start stub, model.py and end stub
-        startstubmodelpy = toolsDirAbsPath + "/stubs/onnxstartmodel.py"
-        endstubmodelpy = toolsDirAbsPath + "/stubs/onnxendmodel.py"
-        temp_file = "temp_runmodel.py"
-        concatenateFiles(startstubmodelpy, modelpy, temp_file)
-        concatenateFiles(temp_file, endstubmodelpy, runmodelpy)
+        stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
         onnxfilename = testAbsPath + "/model.onnx"
-        testargs += " -n " + onnxfilename
-    else:
-        concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
+        if getTestKind(testName) == "models":
+            # Create soft link to the model.onnx
+            unzipONNXFile(testName, testAbsPath, "model.onnx")
+            if not os.path.exists("model.onnx"):
+                os.symlink(onnxfilename, "model.onnx")
 
+    concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
     testargs += " --mode " + mode + " --outfileprefix " + modelname
     logfilename = modelname + ".log"
     scriptcommand = (
@@ -254,57 +334,19 @@ def runTest(aTuple):
 
     # run inference now
     curphase = phases[4]
-    # read the gold output produced by model
-    logfilename = "inference.log"
-    infoutputfilename = "inference.output.npy"
-    scriptcommand = (
-        IREE_BUILD
-        + "/tools/iree-run-module --module="
-        + vmfbfilename
-        + " --input=@"
-        + modelinputfilename
-        + " --output=@"
-        + infoutputfilename
-        + " > "
-        + logfilename
-        + " 2>&1"
-    )
-    start = time.time()
-    if launchCommand(scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
-        return logAndReturn(commandslog, timelog, resultdict, 1)
-    end = time.time()
+    if runInference(
+        curphase,
+        testName,
+        args,
+        vmfbfilename,
+        modelinputfilename,
+        goldoutputfilename,
+        scriptcommand,
+        commandslog,
+        resultdict,
+    ):
+        return 1
 
-    infoutput = np.load(infoutputfilename)
-    goloutput = np.load(goldoutputfilename)
-
-    # Adjust absolute tolerance and relative tolerance as needed
-    # numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)[source]
-    # if absolute(a - b) <= (atol + rtol * absolute(b)) is elementwise true
-    # then numpy.allclose returns True
-    rtol = 1e-05
-    atol = 1e-08
-    approximatematch = np.allclose(
-        infoutput, goloutput, rtol=rtol, atol=atol, equal_nan=False
-    )
-    inferencematched = approximatematch
-    if args.zerotolerance:
-        # If each element matches exactly only then np.array_equal is true
-        inferencematched = np.array_equal(infoutput, goloutput, equal_nan=False)
-    if args.verbose:
-        inerencelog = open(logfilename, "a")
-        print("Gold reference:\n", goloutput, file=inerencelog)
-        print("Output from target hardware:\n", infoutput, file=inerencelog)
-        print("Difference: \n", goloutput - infoutput, file=inerencelog)
-    if not inferencematched:
-        failedinflog = open("failedinference.log", "w")
-        print("Gold reference:\n", goloutput, file=failedinflog)
-        print("Output from target hardware:\n", infoutput, file=failedinflog)
-        print("Difference: \n", goloutput - infoutput, file=failedinflog)
-        print("Test", testName, "failed[output-mismatch]")
-        return logAndReturn(commandslog, timelog, resultdict, 1)
-
-    resultdict[curphase] = ["passed", end - start]
     os.chdir(curdir)
     print("Test", testName, "passed")
     return logAndReturn(commandslog, timelog, resultdict, 0)
@@ -316,13 +358,18 @@ def runFrameworkTests(frameworkname, args, script_dir, run_dir):
     if frameworkname == "tensorflow":
         print("The tensorflow is not supported yet.")
     if args.tests:
-        testsList += frameworkname + "/" + args.tests
-        print("Running tests: ", testsList)
+        testsList += args.tests
+
     if args.groups:
         if args.tests:
-            print("Since specific tests were provided, test group will not be run")
+            print("Specific test(s) provided, test group will not be run")
         else:
             testsList += getTestsList(frameworkname, args.groups)
+    # strip leading and trainling slashes
+    for i, item in enumerate(testsList):
+        testsList[i] = item.strip(os.sep)
+
+    print("Running tests: ", testsList)
     uniqueTestList = []
     [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
     if not uniqueTestList:
@@ -418,7 +465,7 @@ if __name__ == "__main__":
         "-t",
         "--tests",
         nargs="*",
-        help="Run given specific tests only. Other test run options will be ignored.",
+        help="Run given specific test(s) only. Other test run options will be ignored.",
     )
     parser.add_argument(
         "-u",

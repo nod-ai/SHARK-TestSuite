@@ -29,3 +29,6 @@ class model_opt_125M(torch.nn.Module):
 model = model_opt_125M()
 tokenizer = AutoTokenizer.from_pretrained(test_model_name)
 test_input = torch.tensor([tokenizer.encode("The test prommpt")])
+test_output = model(test_input)
+print("Input:", test_input)
+print("Onput:", test_output)

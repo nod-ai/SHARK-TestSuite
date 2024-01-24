@@ -23,3 +23,6 @@ class mlp(nn.Module):
 
 model = mlp()
 test_input = torch.randn(8, 3)
+test_output = model(test_input)
+print("Input:", test_input)
+print("Onput:", test_output)
