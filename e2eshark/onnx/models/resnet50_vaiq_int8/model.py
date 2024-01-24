@@ -24,4 +24,4 @@ input_name = session.get_inputs()[0].name
 
 # call inference session
 test_output = [session.run([], {input_name: test_input})[0]]
-print("Onput:", test_output)
+print("Output:", test_output)

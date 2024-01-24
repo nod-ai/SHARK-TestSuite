@@ -36,7 +36,7 @@ outfileprefix += "." + dtype
 inputsavefilename = outfileprefix + ".input"
 outputsavefilename = outfileprefix + ".output"
 
-# test_input and test_output are defined in model.py which
+# test_input and test_output are defined in model.py as numpy array which
 # is prepended to this file
 # numpy does not support bfloat16, cast to fp32 and restore back to
 # bfloat16 in run.py when gotten value from an inference run that supports

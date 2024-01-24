@@ -19,3 +19,5 @@ class op_linear(nn.Module):
 model = op_linear()
 test_input = torch.randn(8, 3)
 test_output = model(test_input)
+print("Input:", test_input)
+print("Output:", test_output)
