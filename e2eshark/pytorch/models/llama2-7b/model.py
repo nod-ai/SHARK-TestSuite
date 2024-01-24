@@ -25,3 +25,6 @@ class model_llama2_7b_hf(torch.nn.Module):
 model = model_llama2_7b_hf()
 tokenizer = LlamaTokenizer.from_pretrained(test_model_name)
 test_input = tokenizer.encode("The llama goes to graze grass", return_tensors="pt")
+test_output = model(test_input)
+print("Input:", test_input)
+print("Onput:", test_output)
