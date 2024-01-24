@@ -38,5 +38,12 @@ outputsavefilename = outfileprefix + ".output"
 
 # test_input and test_output are defined in model.py which
 # is prepended to this file
+# numpy does not support bfloat16, cast to fp32 and restore back to
+# bfloat16 in run.py when gotten value from an inference run that supports
+# bfloat16
+if args.dtype == "bf16":
+    test_input = numpy.float32(test_input)
+    test_output = numpy.float32(test_output)
+
 numpy.save(inputsavefilename, test_input)
 numpy.save(outputsavefilename, test_output)
