@@ -38,7 +38,9 @@ def changeToTestDir(run_dir):
         return 1
 
 
-def launchCommand(scriptcommand, commandslog):
+def launchCommand(args, scriptcommand, commandslog):
+    if args.verbose:
+        print("Launching:", scriptcommand, "[ Proc:", os.getpid(), "]")
     try:
         commandslog.write(scriptcommand)
         commandslog.write("\n")
@@ -113,6 +115,7 @@ def runInference(
     goldoutputfilename,
     scriptcommand,
     commandslog,
+    timelog,
     resultdict,
 ):
     # read the gold output produced by model
@@ -121,16 +124,14 @@ def runInference(
 
     modelinput = np.load(modelinputfilename)
 
+    # TODO : need to cast it back to bfloat16 somehow before calling IRRE run module
+    # if(args.dtype == "bf16"):
+
     # numpy does not support bfloat16, so bfloat16 is cast to fp32 stored and
     # needs to be restored back
     # TODO: Does IREE handle bf16 as fp32 and back auomatically?
 
-    goloutput = np.load(goldoutputfilename)
-
-    if args.verbose:
-        print("IREE run input:", modelinput)
-        print("Framework gold:", goloutput)
-
+    goldoutput = np.load(goldoutputfilename)
     inputarg = ""
     # If there is no input the do not pass --input
     if modelinput.size > 0:
@@ -149,37 +150,45 @@ def runInference(
     )
 
     start = time.time()
-    if launchCommand(scriptcommand, commandslog):
+
+    if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
-
     infoutput = np.load(infoutputfilename)
+
     if args.verbose:
-        print("Framework gold output:", infoutput)
+        inerencelog = open(logfilename, "a")
+        print("Gold reference:\n", goldoutput, file=inerencelog)
+        print("Output from target hardware:\n", infoutput, file=inerencelog)
+
     # Adjust absolute tolerance and relative tolerance as needed
     # numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)[source]
     # if absolute(a - b) <= (atol + rtol * absolute(b)) is elementwise true
     # then numpy.allclose returns True
-    rtol = 1e-05
-    atol = 1e-08
-    approximatematch = np.allclose(
-        infoutput, goloutput, rtol=rtol, atol=atol, equal_nan=False
-    )
-    inferencematched = approximatematch
-    if args.zerotolerance:
-        # If each element matches exactly only then np.array_equal is true
-        inferencematched = np.array_equal(infoutput, goloutput, equal_nan=False)
-    if args.verbose:
-        inerencelog = open(logfilename, "a")
-        print("Gold reference:\n", goloutput, file=inerencelog)
-        print("Output from target hardware:\n", infoutput, file=inerencelog)
-        print("Difference: \n", goloutput - infoutput, file=inerencelog)
+
+    goldoutput = goldoutput.flatten()
+    infoutput = infoutput.flatten()
+    inferencematched = False
+    # if shapes do not match, we have a problem as comparison routines may crash
+    # so gauard it
+    if infoutput.shape != goldoutput.shape:
+        inferencematched = False
+    else:
+        if args.zerotolerance:
+            # If each element matches exactly only then np.array_equal is true
+            inferencematched = np.array_equal(infoutput, goldoutput, equal_nan=False)
+        else:
+            rtol = 1e-05
+            atol = 1e-08
+            inferencematched = np.allclose(
+                infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
+            )
+
     if not inferencematched:
         failedinflog = open("failedinference.log", "w")
-        print("Gold reference:\n", goloutput, file=failedinflog)
+        print("Gold reference:\n", goldoutput, file=failedinflog)
         print("Output from target hardware:\n", infoutput, file=failedinflog)
-        print("Difference: \n", goloutput - infoutput, file=failedinflog)
         print("Test", testName, "failed[output-mismatch]")
         return logAndReturn(commandslog, timelog, resultdict, 1)
 
@@ -234,8 +243,9 @@ def runTest(aTuple):
         if mode == "direct":
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
-        onnxfilename = testAbsPath + "/model.onnx"
+        onnxfilename = "model.onnx"
         if getTestKind(testName) == "models":
+            onnxfilename = testAbsPath + "/model.onnx"
             # Create soft link to the model.onnx
             unzipONNXFile(testName, testAbsPath, "model.onnx")
             if not os.path.exists("model.onnx"):
@@ -247,10 +257,8 @@ def runTest(aTuple):
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
     )
-    if args.verbose:
-        print("Launching:", scriptcommand, "[ Proc:", os.getpid(), "]")
     start = time.time()
-    if launchCommand(scriptcommand, commandslog):
+    if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
@@ -274,7 +282,8 @@ def runTest(aTuple):
             + " 2>&1"
         )
         start = time.time()
-        if launchCommand(scriptcommand, commandslog):
+
+        if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed[" + curphase + "]")
             return logAndReturn(commandslog, timelog, resultdict, 1)
         end = time.time()
@@ -296,7 +305,7 @@ def runTest(aTuple):
         )
 
         start = time.time()
-        if launchCommand(scriptcommand, commandslog):
+        if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed[" + curphase + "]")
             return logAndReturn(commandslog, timelog, resultdict, 1)
         end = time.time()
@@ -322,7 +331,7 @@ def runTest(aTuple):
         + logfilename
     )
     start = time.time()
-    if launchCommand(scriptcommand, commandslog):
+    if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
@@ -343,6 +352,7 @@ def runTest(aTuple):
         goldoutputfilename,
         scriptcommand,
         commandslog,
+        timelog,
         resultdict,
     ):
         return 1
@@ -369,7 +379,7 @@ def runFrameworkTests(frameworkname, args, script_dir, run_dir):
     for i, item in enumerate(testsList):
         testsList[i] = item.strip(os.sep)
 
-    print("Running tests: ", testsList)
+    print("Running tests for framework", frameworkname, ":", testsList)
     uniqueTestList = []
     [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
     if not uniqueTestList:

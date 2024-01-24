@@ -37,6 +37,9 @@ if not outfileprefix:
 
 outfileprefix += "." + dtype
 
+# test_input and test_output are defined in model.py as torch tensor which
+# is prepended to this file
+
 if dtype == "bf16":
     model = model.to(torch.bfloat16)
     test_input = test_input.to(torch.bfloat16)
@@ -57,17 +60,19 @@ elif runmode == "direct":
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
+
+if dtype == "bf16":
+    # Unfortunately, numpy does not support bfloat16, so do the casting dance
+    test_input = test_input.to(torch.float32)
+    test_output = test_output.to(torch.float32)
+
 # Now save the input and output as numpy array for testing at later states of tool run
 numpy_test_input = test_input.detach().numpy()
 numpy_test_output = test_output.detach().numpy()
 
-if args.dtype == "bf16":
-    # Unfortunately, numpy does not support bfloat16, so do the casting dance
-    numpy_test_input = numpy.float32(numpy_test_input)
-    numpy_test_output = numpy.float32(numpy_test_output)
 
 inputsavefilename = outfileprefix + ".input"
 numpy.save(inputsavefilename, numpy_test_input)
 
 outputsavefilename = outfileprefix + ".output"
-numpy.save(outputsavefilename, numpy_test_input)
+numpy.save(outputsavefilename, numpy_test_output)
