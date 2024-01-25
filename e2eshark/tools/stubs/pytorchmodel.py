@@ -49,9 +49,8 @@ if runmode == "onnx" or runmode == "ort":
     onnx_program = torch.onnx.export(model, test_input, onnx_name)
 elif runmode == "direct":
     torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
-    ts_model = torch.jit.script(model)
     torch_mlir_model = torch_mlir.compile(
-        ts_model,
+        model,
         (test_input),
         output_type="torch",
         use_tracing=True,
@@ -60,19 +59,22 @@ elif runmode == "direct":
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
+if not isinstance(test_input, list):
+    if dtype == "bf16":
+        # Unfortunately, numpy does not support bfloat16, so do the casting dance
+        test_input = test_input.to(torch.float32)
+        test_output = test_output.to(torch.float32)
 
-if dtype == "bf16":
-    # Unfortunately, numpy does not support bfloat16, so do the casting dance
-    test_input = test_input.to(torch.float32)
-    test_output = test_output.to(torch.float32)
+    # Now save the input and output as numpy array for testing at later states of tool run
 
-# Now save the input and output as numpy array for testing at later states of tool run
-numpy_test_input = test_input.detach().numpy()
-numpy_test_output = test_output.detach().numpy()
+    numpy_test_input = test_input.detach().numpy()
+    numpy_test_output = test_output.detach().numpy()
 
+    inputsavefilename = outfileprefix + ".input"
+    numpy.save(inputsavefilename, numpy_test_input)
 
-inputsavefilename = outfileprefix + ".input"
-numpy.save(inputsavefilename, numpy_test_input)
-
-outputsavefilename = outfileprefix + ".output"
-numpy.save(outputsavefilename, numpy_test_output)
+    outputsavefilename = outfileprefix + ".output"
+    numpy.save(outputsavefilename, numpy_test_output)
+else:
+    # TODO: need a way to save and restore
+    print("TOD: need a way to save and store a list")
