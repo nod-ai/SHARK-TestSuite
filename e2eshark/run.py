@@ -395,6 +395,28 @@ def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
             print("All tasks submitted to process pool completed")
 
 
+def checkAndSetEnvironments(args):
+    HF_HOME = os.environ.get("HF_HOME")
+
+    if args.hfhome:
+        HF_HOME = args.hfhome
+
+    if HF_HOME:
+        if not os.path.exists(HF_HOME):
+            print(
+                "Hugging Face HF_HOME environment variable or --hfhome argument value",
+                HF_HOME,
+                "does not exist. Set your HF_HOME to a valid dir.",
+            )
+            return 1
+        os.environ["HF_HOME"] = HF_HOME
+    else:
+        print("Your Hugging Face Home is not set. Use --hfhome or set HF_HOME env.")
+        return 1
+    print("HF_HOME:", HF_HOME)
+    return 0
+
+
 def main():
     global TORCH_MLIR_BUILD, IREE_BUILD
     msg = "The run.py script to run e2e shark tests"
@@ -428,17 +450,21 @@ def main():
         help="Run tests for given framework(s)",
     )
     parser.add_argument(
-        "-i",
-        "--ireebuild",
-        help="Path to the IREE build",
-    )
-    parser.add_argument(
         "-g",
         "--groups",
         nargs="*",
         default=["operators", "combinations"],
         choices=["operators", "combinations", "models"],
         help="Run given group of tests",
+    )
+    parser.add_argument(
+        "-i",
+        "--ireebuild",
+        help="Path to the IREE build",
+    )
+    parser.add_argument(
+        "--hfhome",
+        help="Hugging Face Home (HF_HOME) directory, a dir with large free space ",
     )
     parser.add_argument(
         "-j",
@@ -532,6 +558,10 @@ def main():
     if IREE_BUILD:
         print("IREE build:", IREE_BUILD)
     print("Test run directory:", run_dir)
+
+    if checkAndSetEnvironments(args):
+        sys.exit(1)
+
     # if args.tests used, that means run given specific tests, the --frameworks options will be
     # ignored in that case
     if args.tests:
