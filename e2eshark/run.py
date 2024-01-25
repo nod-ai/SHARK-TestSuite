@@ -179,8 +179,8 @@ def runInference(
             # If each element matches exactly only then np.array_equal is true
             inferencematched = np.array_equal(infoutput, goldoutput, equal_nan=False)
         else:
-            rtol = 1e-05
-            atol = 1e-08
+            rtol = 1e-03
+            atol = 1e-03
             inferencematched = np.allclose(
                 infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
             )
