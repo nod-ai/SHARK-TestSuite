@@ -362,29 +362,13 @@ def runTest(aTuple):
     return logAndReturn(commandslog, timelog, resultdict, 0)
 
 
-def runFrameworkTests(frameworkname, args, script_dir, run_dir):
-    testsList = []
+def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
     poolSize = args.jobs
-    if frameworkname == "tensorflow":
-        print("The tensorflow is not supported yet.")
-    if args.tests:
-        testsList += args.tests
-
-    if args.groups:
-        if args.tests:
-            print("Specific test(s) provided, test group will not be run")
-        else:
-            testsList += getTestsList(frameworkname, args.groups)
-    # strip leading and trainling slashes
-    for i, item in enumerate(testsList):
-        testsList[i] = item.strip(os.sep)
-
     print("Running tests for framework", frameworkname, ":", testsList)
     uniqueTestList = []
     [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
     if not uniqueTestList:
-        print("No test specified.")
-        sys.exit(1)
+        return
     tupleOfListArg = []
     # Create list of tuple(test, arg, run_dir) to allow launching tests in parallel
     [
@@ -428,7 +412,7 @@ if __name__ == "__main__":
         "-f",
         "--frameworks",
         nargs="*",
-        default=["pytorch"],
+        default=["onnx"],
         choices=["pytorch", "onnx", "tensorflow"],
         help="Run tests for given framework(s)",
     )
@@ -451,12 +435,6 @@ if __name__ == "__main__":
         type=int,
         default=1,
         help="Number of parallel processes to use for running tests",
-    )
-    parser.add_argument(
-        "-l",
-        "--listfile",
-        nargs="*",
-        help="Run tests listed in given file only. Other test run options will be ignored.",
     )
     parser.add_argument(
         "-m",
@@ -500,6 +478,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    frameworks = args.frameworks
 
     if args.torchmlirbuild:
         TORCH_MLIR_BUILD = args.torchmlirbuild
@@ -542,8 +521,30 @@ if __name__ == "__main__":
     if IREE_BUILD:
         print("IREE build:", IREE_BUILD)
     print("Test run directory:", run_dir)
-    for framework in args.frameworks:
-        runFrameworkTests(framework, args, script_dir, run_dir)
+    # if args.tests used, that means run given specific tests, the --frameworks options will be
+    # ignored in that case
+    if args.tests:
+        print("Since --tests was specified, --groups tests will not be run")
+        testsList = args.tests
+        # Strip leading/trailing slashes
+        # Construct a dictionary of framework name and list of tests in them
+        frameworktotests_dict = {"pytorch": [], "onnx": [], "tensorflow": []}
+        for item in testsList:
+            testName = item.strip(os.sep)
+            frameworkname = testName.split("/")[0]
+            if frameworkname not in frameworktotests_dict:
+                print(
+                    "Test name must start with a valid framework name: pytorch, onnx, tensorflow. Invalid name:",
+                    frameworkname,
+                )
+            frameworktotests_dict[frameworkname] += [testName]
+        for framework in frameworktotests_dict:
+            testsList = frameworktotests_dict[framework]
+            runFrameworkTests(framework, testsList, args, script_dir, run_dir)
+    else:
+        for framework in frameworks:
+            testsList = getTestsList(framework, args.groups)
+            runFrameworkTests(framework, testsList, args, script_dir, run_dir)
 
     # When all processes are done, print
     print("Completed run of e2e shark tests")

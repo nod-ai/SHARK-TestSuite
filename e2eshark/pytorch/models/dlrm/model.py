@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 from torch.fx.experimental.proxy_tensor import make_fx
 from torch_mlir.dynamo import _get_decomposition_table
-import extend_distributed as ext_dist
 
 
 # Start model definition
