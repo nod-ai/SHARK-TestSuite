@@ -1,3 +1,5 @@
 transformers
 huggingface-cli
 onnxruntime
+sentencepiece
+accelerate
