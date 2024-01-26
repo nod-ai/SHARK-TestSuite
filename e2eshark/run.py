@@ -138,7 +138,7 @@ def runInference(
         inputarg = " --input=@" + modelinputfilename
 
     scriptcommand = (
-        IREE_BUILD
+        SHARED_IREE_BUILD
         + "/tools/iree-run-module --module="
         + vmfbfilename
         + inputarg
@@ -294,8 +294,10 @@ def runTest(aTuple):
         curphase = phases[2]
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
         logfilename = "onnxtotorch.log"
+        # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
+        print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
         scriptcommand = (
-            TORCH_MLIR_BUILD
+            SHARED_TORCH_MLIR_BUILD
             + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
             + torchonnxfilename
             + " > "
@@ -319,8 +321,9 @@ def runTest(aTuple):
     curphase = phases[3]
     vmfbfilename = modelname + "." + args.dtype + ".vfmb"
     logfilename = "ireecompile.log"
+    print(f"In RunTest - iree build - {SHARED_IREE_BUILD}")
     scriptcommand = (
-        IREE_BUILD
+        SHARED_IREE_BUILD
         + "/tools/iree-compile --iree-hal-target-backends="
         + args.backend
         + " "
@@ -362,7 +365,14 @@ def runTest(aTuple):
     return logAndReturn(commandslog, timelog, resultdict, 0)
 
 
+def initializer(tm_path, iree_path):
+    global SHARED_TORCH_MLIR_BUILD, SHARED_IREE_BUILD
+    SHARED_TORCH_MLIR_BUILD = tm_path
+    SHARED_IREE_BUILD = iree_path
+
+
 def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
+    print(f"In runFrameworkTests - torch mlir build - {TORCH_MLIR_BUILD}")
     poolSize = args.jobs
     print("Running tests for framework", frameworkname, ":", testsList)
     uniqueTestList = []
@@ -378,7 +388,7 @@ def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
     if args.verbose:
         print("Following tests will be run:", uniqueTestList)
 
-    with Pool(poolSize) as p:
+    with Pool(poolSize, initializer, (TORCH_MLIR_BUILD, IREE_BUILD)) as p:
         result = p.map_async(runTest, tupleOfListArg)
         result.wait()
         if args.verbose:
@@ -407,7 +417,8 @@ def checkAndSetEnvironments(args):
     return 0
 
 
-if __name__ == "__main__":
+def main():
+    global TORCH_MLIR_BUILD, IREE_BUILD
     msg = "The run.py script to run e2e shark tests"
     parser = argparse.ArgumentParser(prog="run.py", description=msg, epilog="")
     parser.add_argument(
@@ -581,3 +592,7 @@ if __name__ == "__main__":
 
     # When all processes are done, print
     print("Completed run of e2e shark tests")
+
+
+if __name__ == "__main__":
+    main()
