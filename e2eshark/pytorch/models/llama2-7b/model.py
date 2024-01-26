@@ -1,30 +1,36 @@
 import sys, argparse
 import torch
 import torch.nn as nn
-import torch_mlir
+import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
-test_model_name = "meta-llama/Llama-2-7b-hf"
+modelname = "meta-llama/Llama-2-7b-chat-hf"
+model = LlamaForCausalLM.from_pretrained(modelname)
+tokenizer = LlamaTokenizer.from_pretrained(modelname)
+test_input = "How to make a carrot halwa?"
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    torch_dtype=torch.float16,
+    device_map="auto",
+)
+print("Not redy yet, hangs. exiting...")
+sys.exit(1)
+sequences = pipeline(
+    test_input,
+    do_sample=True,
+    top_k=10,
+    num_return_sequences=1,
+    eos_token_id=tokenizer.eos_token_id,
+    max_length=400,
+)
 
+# test_output = []
+# for seq in sequences:
+#     sentence = seq["generated_text"]
+#     print(f"{sentence}")
+#     test_output += sentence
 
-class model_llama2_7b_hf(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.model = LlamaForCausalLM.from_pretrained(test_model_name)
-        self.model.eval()
-        self.model.eval()
-
-    def forward(self, tokens):
-        attention_mask = torch.ones(tokens.shape, dtype=torch.long)
-        return self.model.forward(input_ids=tokens, attention_mask=attention_mask)
-
-    def name(self):
-        return self.__class__.__name__
-
-
-model = model_llama2_7b_hf()
-tokenizer = LlamaTokenizer.from_pretrained(test_model_name)
-test_input = tokenizer.encode("The llama goes to graze grass", return_tensors="pt")
-test_output = model(test_input)
-print("Input:", test_input)
-print("Output:", test_output)
+# print("Input:", test_input)
+# print("Output:", test_output)
