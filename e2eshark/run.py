@@ -295,7 +295,7 @@ def runTest(aTuple):
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
         logfilename = "onnxtotorch.log"
         # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
-        print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
+        # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
         scriptcommand = (
             SHARED_TORCH_MLIR_BUILD
             + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
@@ -321,7 +321,7 @@ def runTest(aTuple):
     curphase = phases[3]
     vmfbfilename = modelname + "." + args.dtype + ".vfmb"
     logfilename = "ireecompile.log"
-    print(f"In RunTest - iree build - {SHARED_IREE_BUILD}")
+    # print(f"In RunTest - iree build - {SHARED_IREE_BUILD}")
     scriptcommand = (
         SHARED_IREE_BUILD
         + "/tools/iree-compile --iree-hal-target-backends="
@@ -372,7 +372,7 @@ def initializer(tm_path, iree_path):
 
 
 def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
-    print(f"In runFrameworkTests - torch mlir build - {TORCH_MLIR_BUILD}")
+    # print(f"In runFrameworkTests - torch mlir build - {TORCH_MLIR_BUILD}")
     poolSize = args.jobs
     print("Running tests for framework", frameworkname, ":", testsList)
     uniqueTestList = []

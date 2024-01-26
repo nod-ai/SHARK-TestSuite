@@ -6,6 +6,6 @@ huggingface-cli
 numpy
 onnx
 onnxruntime
-torch==2.3.0.dev20240122 --pre -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+#torch==2.3.0.dev20240122 --pre -f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 sentencepiece
 
