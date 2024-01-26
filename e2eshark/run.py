@@ -413,7 +413,7 @@ def checkAndSetEnvironments(args):
     else:
         print("Your Hugging Face Home is not set. Use --hfhome or set HF_HOME env.")
         return 1
-    print("HF_HOME:", HF_HOME)
+    print("HF_HOME:", os.environ.get("HF_HOME"))
     return 0
 
 

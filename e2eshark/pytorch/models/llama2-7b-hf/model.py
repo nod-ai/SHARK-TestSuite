@@ -7,7 +7,9 @@ from transformers import LlamaForCausalLM, LlamaTokenizer
 modelname = "meta-llama/Llama-2-7b-hf"
 
 tokenizer = LlamaTokenizer.from_pretrained(modelname)
-model = LlamaForCausalLM.from_pretrained(modelname, low_cpu_mem_usage=True)
+model = LlamaForCausalLM.from_pretrained(
+    modelname, low_cpu_mem_usage=True, attn_implementation="eager"
+)
 model.to("cpu")
 prompt = "What is nature of our existence?"
 batch = tokenizer(prompt, return_tensors="pt")
