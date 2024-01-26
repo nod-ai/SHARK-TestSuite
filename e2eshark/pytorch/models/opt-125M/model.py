@@ -15,6 +15,6 @@ model = OPTModel.from_pretrained(
 model.eval()
 tokenizer = AutoTokenizer.from_pretrained(test_model_name)
 test_input = torch.tensor([tokenizer.encode("The test prommpt")])
-test_output = model(test_input)
+test_output = model(test_input)[0]
 print("Input:", test_input)
 print("Output:", test_output)

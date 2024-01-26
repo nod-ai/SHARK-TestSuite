@@ -60,21 +60,18 @@ elif runmode == "direct":
         f.write(torch_mlir_model.operation.get_asm())
 
 if not isinstance(test_input, list):
-    if dtype == "bf16":
-        # Unfortunately, numpy does not support bfloat16, so do the casting dance
-        test_input = test_input.to(torch.float32)
-        test_output = test_output.to(torch.float32)
-
     # Now save the input and output as numpy array for testing at later states of tool run
-
     numpy_test_input = test_input.detach().numpy()
-    numpy_test_output = test_output.detach().numpy()
-
     inputsavefilename = outfileprefix + ".input"
     numpy.save(inputsavefilename, numpy_test_input)
+else:
+    # TODO: need a way to save and restore
+    print("TODO: need a way to save and store an input list")
 
+if not isinstance(test_output, list):
+    numpy_test_output = test_output.detach().numpy()
     outputsavefilename = outfileprefix + ".output"
     numpy.save(outputsavefilename, numpy_test_output)
 else:
     # TODO: need a way to save and restore
-    print("TOD: need a way to save and store a list")
+    print("TODO: need a way to save and store an output list")

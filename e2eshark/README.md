@@ -59,10 +59,14 @@
 
 Need to have a local build of torch MLIR and IREE, get this repo and setup a python environment (venv or conda)
 To get a local build of torch MLIR: https://github.com/llvm/torch-mlir/blob/main/docs/development.md
+
 For torch MLIR build, build the torch_mlir python wheel as well as per:
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md#build-python-packages 
+
 To get a local build of IREE: https://iree.dev/building-from-source/getting-started 
+
 If using AMD AIE target, build https://github.com/nod-ai/iree-amd-aie in addition
+
 To get the test repo:
 ```
 git clone https://github.com/nod-ai/SHARK-TestSuite.git
@@ -129,8 +133,8 @@ Now take following steps:
 4. cp -pr pytorch/operators/conv2d/model.py .
 5. modify model.py
 6. You can run 'python ./model.py' to see input and output values printed to test 
-7. 
-8. once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
+
+Once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
    ```
    python ./run.py --upto torch-mlir -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
