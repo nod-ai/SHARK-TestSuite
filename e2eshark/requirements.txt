@@ -1,4 +1,6 @@
 tabulate
+onnx
+onnxruntime
 transformers
 huggingface-cli
 sentencepiece

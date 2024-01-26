@@ -560,6 +560,9 @@ if __name__ == "__main__":
         # Construct a dictionary of framework name and list of tests in them
         frameworktotests_dict = {"pytorch": [], "onnx": [], "tensorflow": []}
         for item in testsList:
+            if not os.path.exists(item):
+                print("Test", item, "does not exist")
+                sys.exit(1)
             testName = item.strip(os.sep)
             frameworkname = testName.split("/")[0]
             if frameworkname not in frameworktotests_dict:
