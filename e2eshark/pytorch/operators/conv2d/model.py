@@ -14,9 +14,6 @@ class op_conv2d(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-    def name(self):
-        return self.__class__.__name__
-
 
 model = op_conv2d()
 test_input = torch.randn(2, 8, 12, 16)

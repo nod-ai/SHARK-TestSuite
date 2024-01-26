@@ -17,9 +17,6 @@ class mlp(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-    def name(self):
-        return self.__class__.__name__
-
 
 model = mlp()
 test_input = torch.randn(8, 3)
