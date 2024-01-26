@@ -55,6 +55,42 @@
  model weights etc. from Hugging Face will be downloaded. This can be large so set it to
  other than your home, preferably with 100 GB or more free space.
 
+## Setting up
+
+Need to have a local build of torch MLIR and IREE, get this repo and setup a python environment (venv or conda)
+To get a local build of torch MLIR: https://github.com/llvm/torch-mlir/blob/main/docs/development.md
+For torch MLIR build, build the torch_mlir python wheel as well as per:
+https://github.com/llvm/torch-mlir/blob/main/docs/development.md#build-python-packages 
+To get a local build of IREE: https://iree.dev/building-from-source/getting-started 
+If using AMD AIE target, build https://github.com/nod-ai/iree-amd-aie in addition
+To get the test repo:
+```
+git clone https://github.com/nod-ai/SHARK-TestSuite.git
+cd e2eshark 
+```
+Set up python envonment, can use venv or conda. If you already have one for building torch MLIR and/or IREE
+can just use that
+Example to create a brand new conda using python 3.10 is: 
+```
+conda create -n e2e python=3.10
+conda activate e2e
+pip install --upgrade pip
+
+```
+Make sure you do not skip the pip upgrade above as older pip may not able to handle pytorch deps
+Then install needed packages
+```
+pip install -r <your local torch MLIR repo>/requirements.txt
+pip install -r <your local torch MLIR repo>/torchvision-requirements.txt
+pip install <your local torch MLIR repo>/torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
+pip install -r ./requirements.txt
+```
+Once setup, in any new shell you can activate the same env everytime you want to use it 
+without needing to re-install requirements.txt. 
+Example:
+```
+conda activate e2e
+```
 ## Examples
 
 ### Running tests
