@@ -56,7 +56,7 @@ if __name__ == "__main__":
         if args.print:
             ofilename = os.path.basename(onnxfile) + ".json"
             ofile = open(ofilename, "w")
-            print(model)
+            print(model, file=ofile)
             ofile.close()
         if args.uniqueops:
             ops = uniqueOnnxOps(model)
