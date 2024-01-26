@@ -12,9 +12,6 @@ class op_linear(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-    def name(self):
-        return self.__class__.__name__
-
 
 model = op_linear()
 test_input = torch.randn(8, 3)

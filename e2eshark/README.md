@@ -27,20 +27,20 @@
 
 ## Contents
  The contents are as below. Substitute 'Framework' by one of: pytorch, tensoflow, onnx
- - requirements.txt : 'pip install -r requirements.txt' to install needed additional packages not in your venv or conda
- - run.py : Run 'python run.py --help' to learn about the script. This is the script to run a specific
-            test, all tests in a framework, all frameworks as per choice of a user
- - Framework/test_template: This has a template for creating a new test. Copy this to a new test directory
-          and modify the TEMPLATE_* identifiers to create a new test
+ - requirements.txt : 'pip install -r requirements.txt' to install needed additional 
+                       packages not in your venv or conda. If you have a venv or conda 
+                       environment for torch mlir or iree build, you can install 
+                       this on top of that
+ - run.py : Run 'python run.py --help' to learn about the script. This is the script to 
+            run a specific test, all tests in a framework, all frameworks as per choice of a user
  - Framework/operators: This has operator level test. example: pytorch/operators/conv2d
  - Framework/combinations: This has small test testing combination of operators such as 
-            pytorch/combinations/mlp testing a multi layer perceptron which has torch.linear 
-            followed by torch.relu and repeated a few times
- - Framework/models: This has full model test. Since this is full model test, you may need necesary 
-            permsisions to download a model such as for llama2 you will need hugging face token. You
-            should run 'huggingface-cli login' and enter the HF token before launching the test.
-            Also set environment variable HF_HOME to a location with enough space. in bash, 
-            export HF_HOME="your path"/HF_HOME
+                           pytorch/combinations/mlp testing a multi layer perceptron which 
+                           has torch.linear followed by torch.relu and repeated a few times
+ - Framework/models: This has full model test. Since this is full model test, you may need 
+                     necesary permsisions to download a model such as for llama2 you will 
+                     need hugging face token. You should run 'huggingface-cli login' and 
+                     enter the HF token before launching the run.py.
 
  - tools/onnxutil.py : Allows examining an ONNX protobuf file
  - tools/stubs/onnxmodel.py : This is concatenated to 'model.py' in test directory to form a 
@@ -51,6 +51,46 @@
  The logs are created as .log files in the test run sub directory. Examine the logs to find and fix 
  cause of any failure.
 
+ Also you will be required to pass --hfhome argument to point to a directory where 
+ model weights etc. from Hugging Face will be downloaded. This can be large so set it to
+ other than your home, preferably with 100 GB or more free space.
+
+## Setting up
+
+Need to have a local build of torch MLIR and IREE, get this repo and setup a python environment (venv or conda)
+To get a local build of torch MLIR: https://github.com/llvm/torch-mlir/blob/main/docs/development.md
+For torch MLIR build, build the torch_mlir python wheel as well as per:
+https://github.com/llvm/torch-mlir/blob/main/docs/development.md#build-python-packages 
+To get a local build of IREE: https://iree.dev/building-from-source/getting-started 
+If using AMD AIE target, build https://github.com/nod-ai/iree-amd-aie in addition
+To get the test repo:
+```
+git clone https://github.com/nod-ai/SHARK-TestSuite.git
+cd e2eshark 
+```
+Set up python envonment, can use venv or conda. If you already have one for building torch MLIR and/or IREE
+can just use that
+Example to create a brand new conda using python 3.10 is: 
+```
+conda create -n e2e python=3.10
+conda activate e2e
+pip install --upgrade pip
+
+```
+Make sure you do not skip the pip upgrade above as older pip may not able to handle pytorch deps
+Then install needed packages
+```
+pip install -r <your local torch MLIR repo>/requirements.txt
+pip install -r <your local torch MLIR repo>/torchvision-requirements.txt
+pip install <your local torch MLIR repo>/torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
+pip install -r ./requirements.txt
+```
+Once setup, in any new shell you can activate the same env everytime you want to use it 
+without needing to re-install requirements.txt. 
+Example:
+```
+conda activate e2e
+```
 ## Examples
 
 ### Running tests

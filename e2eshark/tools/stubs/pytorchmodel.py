@@ -33,7 +33,7 @@ runmode = args.mode
 outfileprefix = args.outfileprefix
 
 if not outfileprefix:
-    outfileprefix = model.name()
+    outfileprefix = test_modelname
 
 outfileprefix += "." + dtype
 

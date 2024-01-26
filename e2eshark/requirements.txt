@@ -1,5 +1,3 @@
-tabulate
 transformers
 huggingface-cli
-sentencepiece
-
+onnxruntime
