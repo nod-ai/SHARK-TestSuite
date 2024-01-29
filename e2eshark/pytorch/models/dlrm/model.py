@@ -310,8 +310,7 @@ class DLRM_Net(nn.Module):
             # single device run
             return self.sequential_forward(dense_x, lS_o, lS_i)
         else:
-            # single-node multi-device run
-            return self.parallel_forward(dense_x, lS_o, lS_i)
+            print("Only single device run is support.")
 
     def sequential_forward(self, dense_x, lS_o, lS_i):
         # process dense features (using bottom mlp), resulting in a row vector
@@ -529,8 +528,6 @@ model.eval()
 
 print(f"INFO: Running inference using fx graph to generate reference data...")
 test_output = model(batch_dense_X, batch_lS_o, batch_lS_i)
-
-
 sorted, indices = torch.sort(test_output, dim=0, descending=True)
 top_n = batch_size if batch_size < 5 else 5
 print(f"INFO: Clickthrough probability of top {top_n} ads:")
@@ -544,3 +541,9 @@ for i in range(top_n):
 
 print("Input:", test_input)
 print("Onput:", test_output)
+# Do not enforce any particular strategy for getting torch MLIR
+# By default set it to None, set it to
+# 'compile' : to force using torch_mllir.compile
+# 'fximport' : to force using PyTorch 2.0 Fx Import
+# Force usage of torch_mlir.compile
+test_torchmlir = "compile"
