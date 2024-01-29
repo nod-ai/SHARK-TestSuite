@@ -5,6 +5,31 @@ import sys, argparse
 import torch_mlir
 import numpy
 
+# Fx importer related
+from typing import Optional
+import torch.export
+from torch_mlir.extras.fx_importer import FxImporter
+from torch_mlir import ir
+from torch_mlir.dialects import torch as torch_d
+
+
+def export_and_import(
+    f,
+    *args,
+    fx_importer: Optional[FxImporter] = None,
+    constraints: Optional[torch.export.Constraint] = None,
+    **kwargs,
+):
+    context = ir.Context()
+    torch_d.register_dialect(context)
+
+    if fx_importer is None:
+        fx_importer = FxImporter(context=context)
+    prog = torch.export.export(f, args, kwargs, constraints=constraints)
+    fx_importer.import_frozen_exported_program(prog)
+    return fx_importer.module_op
+
+
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
 
@@ -21,6 +46,13 @@ parser.add_argument(
     choices=["direct", "onnx", "ort"],
     default="direct",
     help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
+)
+parser.add_argument(
+    "-c",
+    "--torchmlir",
+    choices=["compile", "fximport"],
+    default="fximport",
+    help="Use torch_mlir.compile, or Fx importer",
 )
 parser.add_argument(
     "-o",
@@ -49,13 +81,20 @@ if runmode == "onnx" or runmode == "ort":
     onnx_program = torch.onnx.export(model, test_input, onnx_name)
 elif runmode == "direct":
     torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
-    torch_mlir_model = torch_mlir.compile(
-        model,
-        (test_input),
-        output_type="torch",
-        use_tracing=True,
-        verbose=False,
-    )
+    torch_mlir_model = None
+    if test_torchmlir:
+        # override mechanism to get torch MLIR as per model
+        args.torchmlir = test_torchmlir
+    if args.torchmlir == "compile":
+        torch_mlir_model = torch_mlir.compile(
+            model,
+            (test_input),
+            output_type="torch",
+            use_tracing=True,
+            verbose=False,
+        )
+    else:
+        torch_mlir_model = export_and_import(model, test_input)
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
