@@ -294,11 +294,15 @@ def runTest(aTuple):
         curphase = phases[2]
         torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
         logfilename = "onnxtotorch.log"
+        commandstring = "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
+        if args.torchtolinalg:
+            commandstring += "-convert-torch-to-linalg "
+
         # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
         # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
         scriptcommand = (
             SHARED_TORCH_MLIR_BUILD
-            + "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
+            + commandstring
             + torchonnxfilename
             + " > "
             + torchmlirfilename
@@ -472,6 +476,13 @@ def main():
         type=int,
         default=1,
         help="Number of parallel processes to use for running tests",
+    )
+    parser.add_argument(
+        "-l",
+        "--torchtolinalg",
+        action="store_true",
+        default=False,
+        help="Have torch-mlir-opt to produce linalg instead of torch mlir and pass that to iree-compile",
     )
     parser.add_argument(
         "-m",
