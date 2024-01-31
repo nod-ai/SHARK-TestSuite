@@ -3,3 +3,5 @@ huggingface-cli
 onnxruntime
 sentencepiece
 accelerate
+auto-gptq
+optimum

@@ -62,6 +62,13 @@ To get a local build of torch MLIR: https://github.com/llvm/torch-mlir/blob/main
 
 For torch MLIR build, build the torch_mlir python wheel as well as per:
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md#build-python-packages 
+Edit setup.py to insert following in cmake_args if you used clang to build torch-mlir 
+ f"-DCMAKE_C_COMPILER=clang",
+ f"-DCMAKE_CXX_COMPILER=clang++",
+And then following
+CMAKE_GENERATOR=Ninja python setup.py bdist_wheel --dist-dir ./torch-mlir-wheel -v
+pip uninstall torch-mlir
+pip install torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
 
 To get a local build of IREE: https://iree.dev/building-from-source/getting-started 
 
