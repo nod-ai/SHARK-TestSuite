@@ -2,7 +2,8 @@ import os, time, glob, sys, zipfile
 from multiprocessing import Pool
 import argparse
 import numpy as np
-import shutil
+import torch, io
+import struct
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -106,13 +107,85 @@ def getTestKind(testName):
     return second_last_name_inpath
 
 
+def loadTorchSave(filename):
+    with open(filename, "rb") as f:
+        bindata = f.read()
+    buf = io.BytesIO(bindata)
+    loaded = torch.load(buf)
+    return loaded
+
+
+def getShapeString(tensorvalue, dtype):
+    inputshape = list(tensorvalue.shape)
+    inputshapestring = "x".join([str(item) for item in inputshape])
+    if dtype == "bf16":
+        inputshapestring += "xbf16"
+    else:
+        inputshapestring += "xf32"
+    return inputshapestring
+
+
+def unpackBytearray(barray, num_elem, dtype):
+    num_array = None
+    if dtype == torch.int64:
+        num_array = struct.unpack("q" * num_elem, barray)
+    elif dtype == torch.float32 or dtype == torch.float:
+        num_array = struct.unpack("f" * num_elem, barray)
+    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
+        num_array = struct.unpack("h" * num_elem, barray)
+    elif dtype == torch.int8:
+        num_array = struct.unpack("b" * num_elem, barray)
+    else:
+        print("In unpackBytearray, found an unsupported data type", dtype)
+    rettensor = torch.tensor(num_array, dtype=dtype)
+    return rettensor
+
+
+def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
+    # Read the whole files as bytes
+    with open(binaryfile, "rb") as f:
+        binarydata = f.read()
+    # Number of elements in tensor
+    num_elem = torch.prod(torch.tensor(list(shape)))
+    # Total bytes
+    tensor_num_bytes = (num_elem * dtype.itemsize).item()
+    barray = bytearray(binarydata[0:tensor_num_bytes])
+    rettensor = unpackBytearray(barray, num_elem, dtype)
+    reshapedtensor = rettensor.reshape(list(shape))
+    return reshapedtensor
+
+
+def packTensor(modelinput):
+    mylist = modelinput.flatten().tolist()
+    dtype = modelinput.dtype
+    if dtype == torch.int64:
+        bytearr = struct.pack("%sq" % len(mylist), *mylist)
+    if dtype == torch.float32 or dtype == torch.float:
+        bytearr = struct.pack("%sf" % len(mylist), *mylist)
+    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
+        bytearr = struct.pack("%sh" % len(mylist), *mylist)
+    elif dtype == torch.int8:
+        bytearr = struct.pack("%sb" % len(mylist), *mylist)
+    else:
+        print("In packTensor, found an nsupported data type", dtype)
+    return bytearr
+
+
+def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
+    with open(modelinputbinfilename, "wb") as f:
+        bytearr = packTensor(modelinput)
+        f.write(bytearr)
+        f.close()
+
+
 def runInference(
     curphase,
     testName,
     args,
     vmfbfilename,
-    modelinputfilename,
-    goldoutputfilename,
+    modelinputptfilename,
+    goldoutputptfilename,
+    infoutputfilename,
     scriptcommand,
     commandslog,
     timelog,
@@ -120,30 +193,24 @@ def runInference(
 ):
     # read the gold output produced by model
     logfilename = "inference.log"
-    infoutputfilename = "inference.output.npy"
-
-    modelinput = np.load(modelinputfilename)
-
-    # TODO : need to cast it back to bfloat16 somehow before calling IRRE run module
-    # if(args.dtype == "bf16"):
-
-    # numpy does not support bfloat16, so bfloat16 is cast to fp32 stored and
-    # needs to be restored back
-    # TODO: Does IREE handle bf16 as fp32 and back auomatically?
-
-    goldoutput = np.load(goldoutputfilename)
+    modelinput = loadTorchSave(modelinputptfilename)
+    goldoutput = loadTorchSave(goldoutputptfilename)
     inputarg = ""
     # If there is no input the do not pass --input
-    if modelinput.size > 0:
-        inputarg = " --input=@" + modelinputfilename
+    if modelinput.numel() > 0:
+        modelinputbinfilename = "inference_input.bin"
+        writeInferenceInputBinFile(modelinput, modelinputbinfilename)
+        inputshapestring = getShapeString(modelinput, args.dtype)
+        inputarg = ' --input="' + inputshapestring + "=@" + modelinputbinfilename + '"'
 
+    outputshapestring = getShapeString(goldoutput, args.dtype)
+    outputarg = " --output=@" + infoutputfilename + " "
     scriptcommand = (
         SHARED_IREE_BUILD
         + "/tools/iree-run-module --module="
         + vmfbfilename
         + inputarg
-        + " --output=@"
-        + infoutputfilename
+        + outputarg
         + " > "
         + logfilename
         + " 2>&1"
@@ -155,20 +222,17 @@ def runInference(
         print("Test", testName, "failed[" + curphase + "]")
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
-    infoutput = np.load(infoutputfilename)
-
+    outputshape = goldoutput.size()
+    torchdtype = goldoutput.dtype
+    infoutput = loadRawBinaryAsTorchSensor(infoutputfilename, outputshape, torchdtype)
     if args.verbose:
         inerencelog = open(logfilename, "a")
         print("Gold reference:\n", goldoutput, file=inerencelog)
         print("Output from target hardware:\n", infoutput, file=inerencelog)
 
-    # Adjust absolute tolerance and relative tolerance as needed
-    # numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)[source]
-    # if absolute(a - b) <= (atol + rtol * absolute(b)) is elementwise true
-    # then numpy.allclose returns True
-
     goldoutput = goldoutput.flatten()
     infoutput = infoutput.flatten()
+    # print("After flatten")
     inferencematched = False
     # if shapes do not match, we have a problem as comparison routines may crash
     # so gauard it
@@ -176,12 +240,12 @@ def runInference(
         inferencematched = False
     else:
         if args.zerotolerance:
-            # If each element matches exactly only then np.array_equal is true
-            inferencematched = np.array_equal(infoutput, goldoutput, equal_nan=False)
+            # If each element matches exactly only then torch.equal is true
+            inferencematched = torch.equal(infoutput, goldoutput)
         else:
             rtol = 1e-03
             atol = 1e-03
-            inferencematched = np.allclose(
+            inferencematched = torch.allclose(
                 infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
             )
 
@@ -204,8 +268,11 @@ def runTest(aTuple):
     testargs = " --dtype " + args.dtype
     testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
-    modelinputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.npy"
-    goldoutputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".output.npy"
+    modelinputptfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.pt"
+    goldoutputptfilename = (
+        testRunDir + "/" + modelname + "." + args.dtype + ".goldoutput.pt"
+    )
+    infoutputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".output.bin"
     phases = ["model-run", "onnx-import", "torch-mlir", "ireecompile", "inference"]
     resultdict = {}
     for phase in phases:
@@ -355,8 +422,9 @@ def runTest(aTuple):
         testName,
         args,
         vmfbfilename,
-        modelinputfilename,
-        goldoutputfilename,
+        modelinputptfilename,
+        goldoutputptfilename,
+        infoutputfilename,
         scriptcommand,
         commandslog,
         timelog,
