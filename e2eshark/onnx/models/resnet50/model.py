@@ -14,6 +14,9 @@ import onnxruntime
 # start an onnxrt session
 session = onnxruntime.InferenceSession("model.onnx", None)
 
+# test_input and test_output must be numpy
+# bfloat16 is not supported by onnxruntime and numpy
+# case to/from fp32 to work around at various stages
 # fill the lines that set test_input and onnx_output
 # these two are special names and should not be changed
 test_input = numpy.random.rand(1, 3, 224, 224).astype(numpy.float32)
@@ -21,7 +24,10 @@ print("Input:", test_input)
 
 # Get the name of the input of the model
 input_name = session.get_inputs()[0].name
-
+# TBD: Use iobinding and ortvalue explicitly as per
+# https://onnxruntime.ai/docs/api/python/api_summary.html
 # call inference session
-test_output = [session.run([], {input_name: test_input})[0]]
+test_output = numpy.array(
+    [session.run([], {input_name: test_input})[0]], dtype=numpy.float32
+)
 print("Output:", test_output)
