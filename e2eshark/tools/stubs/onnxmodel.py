@@ -4,7 +4,7 @@
 import numpy
 import onnxruntime
 import sys, argparse
-
+import torch
 
 msg = "The script to run an ONNX model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -33,17 +33,15 @@ dtype = args.dtype
 runmode = args.mode
 outfileprefix = args.outfileprefix
 outfileprefix += "." + dtype
-inputsavefilename = outfileprefix + ".input"
-outputsavefilename = outfileprefix + ".output"
+inputsavefilename = outfileprefix + ".input.pt"
+outputsavefilename = outfileprefix + ".goldoutput.pt"
 
 # test_input and test_output are defined in model.py as numpy array which
 # is prepended to this file
-# numpy does not support bfloat16, cast to fp32 and restore back to
-# bfloat16 in run.py when gotten value from an inference run that supports
-# bfloat16
-if args.dtype == "bf16":
-    test_input = numpy.float32(test_input)
-    test_output = numpy.float32(test_output)
-
-numpy.save(inputsavefilename, test_input)
-numpy.save(outputsavefilename, test_output)
+# to have uniform way to run test
+# same input and output as torch .pt
+pttest_input = torch.from_numpy(test_input)
+pttest_output = torch.from_numpy(test_output)
+print(pttest_input, pttest_output)
+torch.save(pttest_input, inputsavefilename)
+torch.save(pttest_output, outputsavefilename)
