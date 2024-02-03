@@ -37,4 +37,4 @@ print("Prompt:", prompt)
 print("Response:", tokenizer.decode(test_output))
 print("Input:", test_input)
 print("Output:", test_output)
-test_torchmlir = None
+test_torchmlircompile = None

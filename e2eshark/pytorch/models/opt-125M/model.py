@@ -22,4 +22,4 @@ print("Output:", test_output)
 # By default set it to None, set it to
 # 'compile' : to force using torch_mllir.compile
 # 'fximport' : to force using PyTorch 2.0 Fx Import
-test_torchmlir = None
+test_torchmlircompile = None
