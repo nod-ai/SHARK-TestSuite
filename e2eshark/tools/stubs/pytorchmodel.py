@@ -4,6 +4,7 @@
 import sys, argparse
 import torch_mlir
 import numpy
+import io
 
 # Fx importer related
 from typing import Optional
@@ -28,6 +29,19 @@ def export_and_import(
     prog = torch.export.export(f, args, kwargs, constraints=constraints)
     fx_importer.import_frozen_exported_program(prog)
     return fx_importer.module_op
+
+
+def saveData(test_input, filename):
+    buf = io.BytesIO()
+    # Save input and output as .pt
+    if isinstance(test_input, list):
+        for torchtensor in test_input:
+            torch.save(torchtensor.detach(), buf)
+    else:
+        torch.save(test_input.detach(), buf)
+
+    with open(filename, "wb") as f:
+        f.write(buf.getbuffer())
 
 
 msg = "The script to run a model test"
@@ -77,12 +91,11 @@ if dtype == "bf16":
     # casting input to bfloat16 crashes torch.onnx.export, so skip it
     test_input = test_input.to(torch.bfloat16)
     # Fx importer does not support bfloat16, work around, force to torchscript
-    test_torchmlir = "compile"
-
+    # test_torchmlir = "compile"
 
 if runmode == "onnx" or runmode == "ort":
     onnx_name = outfileprefix + ".onnx"
-    onnx_program = torch.onnx.export(model, test_input, onnx_name, export_params=True)
+    onnx_program = torch.onnx.export(model, test_input, onnx_name)
 elif runmode == "direct":
     torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
     torch_mlir_model = None
@@ -102,22 +115,7 @@ elif runmode == "direct":
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
-if args.dtype == "bf16":
-    print("bf16 saving not supported yet")
-else:
-    if not isinstance(test_input, list):
-        # Now save the input and output as numpy array for testing at later states of tool run
-        numpy_test_input = test_input.detach().numpy()
-        inputsavefilename = outfileprefix + ".input"
-        numpy.save(inputsavefilename, numpy_test_input)
-    else:
-        # TODO: need a way to save and restore
-        print("TODO: need a way to save and store an input list")
-
-    if not isinstance(test_output, list):
-        numpy_test_output = test_output.detach().numpy()
-        outputsavefilename = outfileprefix + ".output"
-        numpy.save(outputsavefilename, numpy_test_output)
-    else:
-        # TODO: need a way to save and restore
-        print("TODO: need a way to save and store an output list")
+inputsavefilename = outfileprefix + ".input.pt"
+outputsavefilename = outfileprefix + ".goldoutput.pt"
+saveData(test_input, inputsavefilename)
+saveData(test_output, outputsavefilename)
