@@ -266,6 +266,8 @@ def runTest(aTuple):
     # unpredicatble results
     (frameworkname, testName, args, script_dir, run_dir) = aTuple
     testargs = " --dtype " + args.dtype
+    if frameworkname == "pytorch":
+        testargs += " --torchmlircompile " + args.torchmlircompile
     testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
     modelinputptfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.pt"
@@ -560,6 +562,13 @@ def main():
         help="Use framework to torch MLIR, PyTorch to ONNX or ONNX plus ONNX RT stub flow",
     )
     parser.add_argument(
+        "-p",
+        "--torchmlircompile",
+        choices=["compile", "fximport"],
+        default="fximport",
+        help="Use torch_mlir.compile, or Fx importer",
+    )
+    parser.add_argument(
         "-r",
         "--rundirectory",
         default="test-run",
@@ -571,6 +580,7 @@ def main():
         nargs="*",
         help="Run given specific test(s) only. Other test run options will be ignored.",
     )
+
     parser.add_argument(
         "-u",
         "--upto",

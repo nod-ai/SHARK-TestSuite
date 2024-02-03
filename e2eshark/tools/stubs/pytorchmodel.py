@@ -31,19 +31,6 @@ def export_and_import(
     return fx_importer.module_op
 
 
-def saveData(test_input, filename):
-    buf = io.BytesIO()
-    # Save input and output as .pt
-    if isinstance(test_input, list):
-        for torchtensor in test_input:
-            torch.save(torchtensor.detach(), buf)
-    else:
-        torch.save(test_input.detach(), buf)
-
-    with open(filename, "wb") as f:
-        f.write(buf.getbuffer())
-
-
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
 
@@ -62,8 +49,8 @@ parser.add_argument(
     help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
 )
 parser.add_argument(
-    "-c",
-    "--torchmlir",
+    "-p",
+    "--torchmlircompile",
     choices=["compile", "fximport"],
     default="fximport",
     help="Use torch_mlir.compile, or Fx importer",
@@ -90,8 +77,6 @@ if dtype == "bf16":
     model = model.to(torch.bfloat16)
     # casting input to bfloat16 crashes torch.onnx.export, so skip it
     test_input = test_input.to(torch.bfloat16)
-    # Fx importer does not support bfloat16, work around, force to torchscript
-    # test_torchmlir = "compile"
 
 if runmode == "onnx" or runmode == "ort":
     onnx_name = outfileprefix + ".onnx"
@@ -99,10 +84,8 @@ if runmode == "onnx" or runmode == "ort":
 elif runmode == "direct":
     torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
     torch_mlir_model = None
-    if test_torchmlir:
-        # override mechanism to get torch MLIR as per model
-        args.torchmlir = test_torchmlir
-    if args.torchmlir == "compile":
+    # override mechanism to get torch MLIR as per model
+    if args.torchmlircompile == "compile" or test_torchmlircompile == "compile":
         torch_mlir_model = torch_mlir.compile(
             model,
             (test_input),
@@ -117,5 +100,5 @@ elif runmode == "direct":
 
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
-saveData(test_input, inputsavefilename)
-saveData(test_output, outputsavefilename)
+torch.save(test_input, inputsavefilename)
+torch.save(test_output, outputsavefilename)
