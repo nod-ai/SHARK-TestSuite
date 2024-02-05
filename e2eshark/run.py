@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import argparse
 import numpy as np
 import torch, io
-import struct
+import struct, pickle, tabulate
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -68,9 +68,10 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
 
 
 def logAndReturn(commandslog, timelog, resultdict, retval):
-    for i in resultdict:
-        listitem = [i] + resultdict[i]
-        print(listitem, file=timelog)
+    pickle.dump(resultdict, timelog)
+    # for i in resultdict:
+    #     listitem = [i] + resultdict[i]
+    #     print(listitem, file=timelog)
     timelog.close()
     commandslog.close()
     return retval
@@ -160,14 +161,14 @@ def packTensor(modelinput):
     dtype = modelinput.dtype
     if dtype == torch.int64:
         bytearr = struct.pack("%sq" % len(mylist), *mylist)
-    if dtype == torch.float32 or dtype == torch.float:
+    elif dtype == torch.float32 or dtype == torch.float:
         bytearr = struct.pack("%sf" % len(mylist), *mylist)
     elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
         bytearr = struct.pack("%sh" % len(mylist), *mylist)
     elif dtype == torch.int8:
         bytearr = struct.pack("%sb" % len(mylist), *mylist)
     else:
-        print("In packTensor, found an nsupported data type", dtype)
+        print("In packTensor, found an unsupported data type", dtype)
     return bytearr
 
 
@@ -178,10 +179,128 @@ def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
         f.close()
 
 
-def runInference(
-    curphase,
+def runTorchMLIRGeneration(
+    testName,
+    modelname,
+    mode,
+    args,
+    phases,
+    scriptcommand,
+    commandslog,
+    timelog,
+    onnxfilename,
+    torchmlirfilename,
+    resultdict,
+):
+    if args.verbose:
+        print("Ruuning torch MLIR generation for", testName)
+    start = time.time()
+    curphase = phases[0]
+    if launchCommand(args, scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
+    resultdict[curphase] = ["passed", end - start]
+    if mode == "onnx" or mode == "ort":
+        # start phases[1]
+        curphase = phases[1]
+        # Import ONNX into torch MLIR as torch.operator custom OP
+        torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
+        logfilename = "torch-onnx.log"
+        scriptcommand = (
+            "python -m torch_mlir.tools.import_onnx "
+            + onnxfilename
+            + " -o "
+            + torchonnxfilename
+            + " 1> "
+            + logfilename
+            + " 2>&1"
+        )
+        start = time.time()
+        if launchCommand(args, scriptcommand, commandslog):
+            print("Test", testName, "failed[" + curphase + "]")
+            return logAndReturn(commandslog, timelog, resultdict, 1)
+        end = time.time()
+        resultdict[curphase] = ["passed", end - start]
+
+        # Lower torch ONNX to torch MLIR
+        # start phases[2]
+        curphase = phases[2]
+        logfilename = "onnxtotorch.log"
+        commandstring = "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
+        if args.torchtolinalg:
+            commandstring += "-convert-torch-to-linalg "
+
+        # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
+        # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
+        scriptcommand = (
+            SHARED_TORCH_MLIR_BUILD
+            + commandstring
+            + torchonnxfilename
+            + " > "
+            + torchmlirfilename
+            + " 2>"
+            + logfilename
+        )
+
+        start = time.time()
+        if launchCommand(args, scriptcommand, commandslog):
+            print("Test", testName, "failed[" + curphase + "]")
+            return logAndReturn(commandslog, timelog, resultdict, 1)
+        end = time.time()
+        resultdict[curphase] = ["passed", end - start]
+    return 0
+
+
+def runCodeGeneration(
     testName,
     args,
+    phases,
+    torchmlirfilename,
+    vmfbfilename,
+    logfilename,
+    commandslog,
+    timelog,
+    resultdict,
+):
+    if args.verbose:
+        print("Ruuning code generation for", testName)
+    # Compile torch MLIR using IREE to binary to target backend
+    curphase = phases[3]
+    if (
+        not os.path.exists(torchmlirfilename)
+        or not os.path.getsize(torchmlirfilename) > 0
+    ):
+        print(
+            f"The torch MLIR {torchmlirfilename} does not exist or is empty. Make sure you have run previous phases.",
+        )
+        print(f"Test {testName} failed[{curphase}]")
+        return 1
+    logfilename = "iree-compile.log"
+    scriptcommand = (
+        SHARED_IREE_BUILD
+        + "/tools/iree-compile --iree-hal-target-backends="
+        + args.backend
+        + " "
+        + torchmlirfilename
+        + " > "
+        + vmfbfilename
+        + " 2>"
+        + logfilename
+    )
+    start = time.time()
+    if launchCommand(args, scriptcommand, commandslog):
+        print("Test", testName, "failed[" + curphase + "]")
+        return logAndReturn(commandslog, timelog, resultdict, 1)
+    end = time.time()
+    resultdict[curphase] = ["passed", end - start]
+    return 0
+
+
+def runInference(
+    testName,
+    args,
+    phases,
     vmfbfilename,
     modelinputptfilename,
     goldoutputptfilename,
@@ -191,6 +310,17 @@ def runInference(
     timelog,
     resultdict,
 ):
+    if args.verbose:
+        print("Ruuning inference for", testName)
+    curphase = phases[4]
+    if not os.path.exists(vmfbfilename) or not os.path.getsize(vmfbfilename) > 0:
+        print(
+            "The compiled artefact",
+            vmfbfilename,
+            "does not exist or is empty. Make sure you have run previous phases.",
+        )
+        print("Test", testName, "failed[" + curphase + "]")
+        return 1
     # read the gold output produced by model
     logfilename = "inference.log"
     modelinput = loadTorchSave(modelinputptfilename)
@@ -265,9 +395,6 @@ def runTest(aTuple):
     # in a new process and cur dir may change over time giving
     # unpredicatble results
     (frameworkname, testName, args, script_dir, run_dir) = aTuple
-    testargs = " --dtype " + args.dtype
-    if frameworkname == "pytorch":
-        testargs += " --torchmlircompile " + args.torchmlircompile
     testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
     modelinputptfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.pt"
@@ -275,7 +402,7 @@ def runTest(aTuple):
         testRunDir + "/" + modelname + "." + args.dtype + ".goldoutput.pt"
     )
     infoutputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".output.bin"
-    phases = ["model-run", "onnx-import", "torch-mlir", "ireecompile", "inference"]
+    phases = ["model-run", "onnx-import", "torch-mlir", "iree-compile", "inference"]
     resultdict = {}
     for phase in phases:
         # Put status and time taken for each phase
@@ -299,19 +426,22 @@ def runTest(aTuple):
 
     # Open files to log commands run and time taken
     commandslog = open("commands.log", "w")
-    timelog = open("time.log", "w")
-
-    # start phases[0]
-    curphase = phases[0]
-    stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
-    onnxfilename = modelname + "." + args.dtype + ".onnx"
-    # Concatenate the testName model.py and tools/runmodel.py as run.py to
-    # form runnable script.
-    if frameworkname == "onnx":
+    timelog = open("time.pkl", "wb")
+    testargs = ""
+    torchmlirfilename = ""
+    onnxfilename = ""
+    vmfbfilename = modelname + "." + args.dtype + ".vmfb"
+    if frameworkname == "pytorch":
+        stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
+        onnxfilename = modelname + "." + args.dtype + ".onnx"
+        torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
+        testargs += " --torchmlircompile " + args.torchmlircompile
+    elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct":
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
+        torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
         onnxfilename = "model.onnx"
         if getTestKind(testName) == "models":
             onnxfilename = testAbsPath + "/model.onnx"
@@ -319,120 +449,76 @@ def runTest(aTuple):
             unzipONNXFile(testName, testAbsPath, "model.onnx")
             if not os.path.exists("model.onnx"):
                 os.symlink(onnxfilename, "model.onnx")
-
+    else:
+        print("Framework ", frameworkname, " not supported")
+        return 1
+    testargs += (
+        " --dtype " + args.dtype + " --mode " + mode + " --outfileprefix " + modelname
+    )
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
-    testargs += " --mode " + mode + " --outfileprefix " + modelname
     logfilename = modelname + ".log"
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
     )
-    start = time.time()
-    if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
-        return logAndReturn(commandslog, timelog, resultdict, 1)
-    end = time.time()
-    resultdict[curphase] = ["passed", end - start]
 
-    torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
+    # phases 0 to 2
+    if args.runfrom == "model-run":
+        if runTorchMLIRGeneration(
+            testName,
+            modelname,
+            mode,
+            args,
+            phases,
+            scriptcommand,
+            commandslog,
+            timelog,
+            onnxfilename,
+            torchmlirfilename,
+            resultdict,
+        ):
+            return 1
 
-    if mode == "onnx" or mode == "ort":
-        # start phases[1]
-        curphase = phases[1]
-        # Import ONNX into torch MLIR as torch.operator custom OP
-        torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
-        logfilename = "torch-onnx.log"
-        scriptcommand = (
-            "python -m torch_mlir.tools.import_onnx "
-            + onnxfilename
-            + " -o "
-            + torchonnxfilename
-            + " 1> "
-            + logfilename
-            + " 2>&1"
-        )
-        start = time.time()
-
-        if launchCommand(args, scriptcommand, commandslog):
-            print("Test", testName, "failed[" + curphase + "]")
-            return logAndReturn(commandslog, timelog, resultdict, 1)
-        end = time.time()
-        resultdict[curphase] = ["passed", end - start]
-
-        # Lower torch ONNX to torch MLIR
-        # start phases[2]
-        curphase = phases[2]
-        torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
-        logfilename = "onnxtotorch.log"
-        commandstring = "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
-        if args.torchtolinalg:
-            commandstring += "-convert-torch-to-linalg "
-
-        # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
-        # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
-        scriptcommand = (
-            SHARED_TORCH_MLIR_BUILD
-            + commandstring
-            + torchonnxfilename
-            + " > "
-            + torchmlirfilename
-            + " 2>"
-            + logfilename
-        )
-
-        start = time.time()
-        if launchCommand(args, scriptcommand, commandslog):
-            print("Test", testName, "failed[" + curphase + "]")
-            return logAndReturn(commandslog, timelog, resultdict, 1)
-        end = time.time()
-        resultdict[curphase] = ["passed", end - start]
-
-    if args.upto == "torch-mlir":
+    if args.runupto == "torch-mlir":
         print("Test", testName, "passed")
         return logAndReturn(commandslog, timelog, resultdict, 0)
 
-    # Compile torch MLIR using IREE to binary to target backend
-    curphase = phases[3]
-    vmfbfilename = modelname + "." + args.dtype + ".vfmb"
-    logfilename = "ireecompile.log"
-    # print(f"In RunTest - iree build - {SHARED_IREE_BUILD}")
-    scriptcommand = (
-        SHARED_IREE_BUILD
-        + "/tools/iree-compile --iree-hal-target-backends="
-        + args.backend
-        + " "
-        + torchmlirfilename
-        + " > "
-        + vmfbfilename
-        + " 2>"
-        + logfilename
-    )
-    start = time.time()
-    if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
-        return logAndReturn(commandslog, timelog, resultdict, 1)
-    end = time.time()
-    resultdict[curphase] = ["passed", end - start]
-
-    if args.upto == "ireecompile":
+    if args.runfrom == "model-run" or args.runfrom == "torch-mlir":
+        if runCodeGeneration(
+            testName,
+            args,
+            phases,
+            torchmlirfilename,
+            vmfbfilename,
+            logfilename,
+            commandslog,
+            timelog,
+            resultdict,
+        ):
+            return 1
+    if args.runupto == "iree-compile":
         print("Test", testName, "passed")
         return logAndReturn(commandslog, timelog, resultdict, 0)
 
     # run inference now
-    curphase = phases[4]
-    if runInference(
-        curphase,
-        testName,
-        args,
-        vmfbfilename,
-        modelinputptfilename,
-        goldoutputptfilename,
-        infoutputfilename,
-        scriptcommand,
-        commandslog,
-        timelog,
-        resultdict,
+    if (
+        args.runfrom == "model-run"
+        or args.runfrom == "torch-mlir"
+        or args.runfrom == "iree-compile"
     ):
-        return 1
+        if runInference(
+            testName,
+            args,
+            phases,
+            vmfbfilename,
+            modelinputptfilename,
+            goldoutputptfilename,
+            infoutputfilename,
+            scriptcommand,
+            commandslog,
+            timelog,
+            resultdict,
+        ):
+            return 1
 
     os.chdir(curdir)
     print("Test", testName, "passed")
@@ -448,7 +534,10 @@ def initializer(tm_path, iree_path):
 def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
     # print(f"In runFrameworkTests - torch mlir build - {TORCH_MLIR_BUILD}")
     poolSize = args.jobs
-    print("Running tests for framework", frameworkname, ":", testsList)
+    print(
+        f"Running {frameworkname} tests with dtype={args.dtype} mode={args.mode} runfrom={args.runfrom} framework={frameworkname}"
+    )
+    print("Test list:", testsList)
     uniqueTestList = []
     [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
     if not uniqueTestList:
@@ -471,10 +560,8 @@ def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
 
 def checkAndSetEnvironments(args):
     HF_HOME = os.environ.get("HF_HOME")
-
     if args.hfhome:
         HF_HOME = args.hfhome
-
     if HF_HOME:
         if not os.path.exists(HF_HOME):
             print(
@@ -491,6 +578,79 @@ def checkAndSetEnvironments(args):
     return 0
 
 
+def generateReport(run_dir, testsList, args):
+    print(f"Generting report for rundir {run_dir}")
+    reportdict = {}
+    tableheader = []
+    listoftimerows = []
+    listofstatusrows = []
+    for test in testsList:
+        timelog = run_dir + "/" + test + "/" + "time.pkl"
+        if os.path.exists(timelog):
+            with open(timelog, "rb") as logf:
+                testdict = pickle.load(logf)
+            reportdict[test] = testdict
+
+    # Now have the dectionary of dictionary of log
+    for test, testdict in reportdict.items():
+        statustablerow = [test]
+        timetablerow = [test]
+        # First time build header
+        if len(tableheader) == 0:
+            tableheader += ["test name"]
+            for k, v in testdict.items():
+                tableheader += [k]
+        # Now build the rows
+        for k, v in testdict.items():
+            statustablerow += [v[0]]
+            timetablerow += [str(v[1])]
+        listofstatusrows += [statustablerow]
+        listoftimerows += [timetablerow]
+
+    # Now add header and value rows and tabulate
+    statustable = [tableheader] + listofstatusrows
+    timetable = [tableheader] + listoftimerows
+    print("\nTest run status report:\n")
+    print(tabulate.tabulate(statustable, headers="firstrow", tablefmt="pipe"))
+    print("\nTime (seconds) report:\n")
+    print(tabulate.tabulate(timetable, headers="firstrow", tablefmt="pipe"))
+
+
+def checkBuildAndEnv(run_dir, args):
+    if args.torchmlirbuild:
+        TORCH_MLIR_BUILD = args.torchmlirbuild
+    TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
+    if not os.path.exists(TORCH_MLIR_BUILD):
+        print(
+            "Torch MLIR build directory",
+            TORCH_MLIR_BUILD,
+            "does not exist.",
+        )
+        sys.exit(1)
+
+    if args.ireebuild:
+        IREE_BUILD = args.ireebuild
+    if args.runupto == "iree-compile" or args.runupto == "inference":
+        if not IREE_BUILD:
+            print(
+                "If --runupto is 'iree-compile' or 'inference' then a valid IREE build is needed. Specify a valid IREE build directory using --ireebuild or set IREE_BUILD in run.py"
+            )
+            sys.exit(1)
+        IREE_BUILD = os.path.abspath(IREE_BUILD)
+        if not os.path.exists(IREE_BUILD):
+            print("IREE build directory", IREE_BUILD, "does not exist.")
+            sys.exit(1)
+    if not os.path.exists(run_dir):
+        try:
+            os.mkdir(run_dir)
+        except OSError as errormsg:
+            print("Could not make run directory", run_dir, " Error message: ", errormsg)
+            sys.exit(1)
+    if checkAndSetEnvironments(args):
+        sys.exit(1)
+    return (TORCH_MLIR_BUILD, IREE_BUILD)
+
+
 def main():
     global TORCH_MLIR_BUILD, IREE_BUILD
     msg = "The run.py script to run e2e shark tests"
@@ -500,55 +660,54 @@ def main():
         "--backend",
         choices=["llvm-cpu", "amd-aie", "rocm"],
         default="llvm-cpu",
-        help="Target backend hardware",
-    )
-    parser.add_argument(
-        "-c",
-        "--torchmlirbuild",
-        required=True,
-        help="Path to the torch-mlir build",
+        help="Target backend i.e. hardware to run on",
     )
     parser.add_argument(
         "-d",
         "--dtype",
         choices=["fp32", "bf16"],
         default="fp32",
-        help="Tensor datatype to use",
+        help="Tensor datatype to use for fp32 models. If a model is already in int4, int8, fp16 or bf16, then this switch has no effect",
     )
     parser.add_argument(
         "-f",
         "--frameworks",
         nargs="*",
-        default=["onnx"],
         choices=["pytorch", "onnx", "tensorflow"],
+        default=["pytorch"],
         help="Run tests for given framework(s)",
     )
     parser.add_argument(
         "-g",
         "--groups",
         nargs="*",
-        default=["operators", "combinations"],
         choices=["operators", "combinations", "models"],
+        default=["operators", "combinations"],
         help="Run given group of tests",
     )
     parser.add_argument(
         "-i",
         "--ireebuild",
-        help="Path to the IREE build",
+        help="Path to the IREE build directory",
     )
     parser.add_argument(
         "--hfhome",
-        help="Hugging Face Home (HF_HOME) directory, a dir with large free space ",
+        help="Hugging Face Home (HF_HOME) directory, a dir with large free space",
     )
     parser.add_argument(
         "-j",
         "--jobs",
         type=int,
         default=1,
-        help="Number of parallel processes to use for running tests",
+        help="Number of parallel processes to use per machine for running tests",
     )
     parser.add_argument(
-        "-l",
+        "-c",
+        "--torchmlirbuild",
+        required=True,
+        help="Path to the torch-mlir build directory",
+    )
+    parser.add_argument(
         "--torchtolinalg",
         action="store_true",
         default=False,
@@ -558,21 +717,44 @@ def main():
         "-m",
         "--mode",
         choices=["direct", "onnx", "ort"],
-        default="onnx",
-        help="Use framework to torch MLIR, PyTorch to ONNX or ONNX plus ONNX RT stub flow",
+        default="direct",
+        help="Use framework to torch MLIR, PyTorch to ONNX, or ONNX to ONNX RT flow",
     )
     parser.add_argument(
-        "-p",
-        "--torchmlircompile",
-        choices=["compile", "fximport"],
-        default="fximport",
-        help="Use torch_mlir.compile, or Fx importer",
+        "--norun",
+        action="store_true",
+        default=False,
+        help="Skip running of tests. Useful for generating test summary after the run.",
+    )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        default=False,
+        help="Generate test report summary",
+    )
+    parser.add_argument(
+        "--reportformat",
+        choices=["tabulate", "csv", "html"],
+        default="tabulate",
+        help="Format of the test report summary file",
+    )
+    parser.add_argument(
+        "--runfrom",
+        choices=["model-run", "torch-mlir", "iree-compile"],
+        default="model-run",
+        help="Start from model-run, or torch MLIR, or IREE compiled artefact",
+    )
+    parser.add_argument(
+        "--runupto",
+        choices=["torch-mlir", "iree-compile", "inference"],
+        default="torch-mlir",
+        help="Run upto torch MLIR generation, IREE compilation, or inference.",
     )
     parser.add_argument(
         "-r",
         "--rundirectory",
         default="test-run",
-        help="Path to the torch-mlir build",
+        help="The test run directory",
     )
     parser.add_argument(
         "-t",
@@ -580,13 +762,11 @@ def main():
         nargs="*",
         help="Run given specific test(s) only. Other test run options will be ignored.",
     )
-
     parser.add_argument(
-        "-u",
-        "--upto",
-        choices=["torch-mlir", "ireecompile", "inference"],
-        default="torch-mlir",
-        help="Stop after genearting torch MLIR, or after IREE compilation, or go all the way to running inference.",
+        "--torchmlircompile",
+        choices=["compile", "fximport"],
+        default="fximport",
+        help="Use torch_mlir.compile, or Fx importer",
     )
     parser.add_argument(
         "-v",
@@ -604,42 +784,11 @@ def main():
     )
 
     args = parser.parse_args()
-    frameworks = args.frameworks
-
-    if args.torchmlirbuild:
-        TORCH_MLIR_BUILD = args.torchmlirbuild
-    TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
-    if not os.path.exists(TORCH_MLIR_BUILD):
-        print(
-            "Torch MLIR build directory",
-            TORCH_MLIR_BUILD,
-            "does not exist.",
-        )
-        sys.exit(1)
-
-    if args.ireebuild:
-        IREE_BUILD = args.ireebuild
-    if args.upto == "ireecompile" or args.upto == "inference":
-        if not IREE_BUILD:
-            print(
-                "If --upto is 'ireecompile' or 'inference' then a valid IREE build is needed. Specify a valid IREE build directory using --ireebuild or set IREE_BUILD in run.py"
-            )
-            sys.exit(1)
-        IREE_BUILD = os.path.abspath(IREE_BUILD)
-        if not os.path.exists(IREE_BUILD):
-            print("IREE build directory", IREE_BUILD, "does not exist.")
-            sys.exit(1)
-
-    run_dir = os.path.abspath(args.rundirectory)
     # Root dir where run.py is
     script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    if not os.path.exists(run_dir):
-        try:
-            os.mkdir(run_dir)
-        except OSError as errormsg:
-            print("Could not make run directory", run_dir, " Error message: ", errormsg)
-            sys.exit(1)
+    run_dir = os.path.abspath(args.rundirectory)
+    frameworks = args.frameworks
+    TORCH_MLIR_BUILD, IREE_BUILD = checkBuildAndEnv(run_dir, args)
     print("Starting e2eshark tests. Using", args.jobs, "processes")
     if args.verbose:
         print("Test run with arguments: ", vars(args))
@@ -647,10 +796,7 @@ def main():
     if IREE_BUILD:
         print("IREE build:", IREE_BUILD)
     print("Test run directory:", run_dir)
-
-    if checkAndSetEnvironments(args):
-        sys.exit(1)
-
+    totalTestList = []
     # if args.tests used, that means run given specific tests, the --frameworks options will be
     # ignored in that case
     if args.tests:
@@ -673,14 +819,22 @@ def main():
             frameworktotests_dict[frameworkname] += [testName]
         for framework in frameworktotests_dict:
             testsList = frameworktotests_dict[framework]
-            runFrameworkTests(framework, testsList, args, script_dir, run_dir)
+            totalTestList += testsList
+            if not args.norun:
+                runFrameworkTests(framework, testsList, args, script_dir, run_dir)
     else:
         for framework in frameworks:
             testsList = getTestsList(framework, args.groups)
-            runFrameworkTests(framework, testsList, args, script_dir, run_dir)
+            totalTestList += testsList
+            if not args.norun:
+                runFrameworkTests(framework, testsList, args, script_dir, run_dir)
+
+    # report generation
+    if args.report:
+        generateReport(run_dir, totalTestList, args)
 
     # When all processes are done, print
-    print("Completed run of e2e shark tests")
+    print("\nCompleted run of e2e shark tests")
 
 
 if __name__ == "__main__":

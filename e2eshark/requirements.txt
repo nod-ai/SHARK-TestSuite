@@ -5,3 +5,4 @@ sentencepiece
 accelerate
 auto-gptq
 optimum
+tabulate
