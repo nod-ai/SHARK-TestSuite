@@ -115,15 +115,15 @@ Run the tests in operators, combinations of the default framework (i.e. pytorch)
 Use framework to onnx to torch MLIR path (--mode onnx) and run up to hardware inference on default llvm-cpu
 hardware target, use four processors (--jobs 4) cores on your machine, generate report file after running
 ```
-python ./run.py --hfhome /proj/gdba/kumar/HF_HOME -c ../../torch-mlir/build -i ../../iree-build --report
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --report
 ```
-You can see logs of run inside test-run/<test sub-directory>. The test-run/statusreport.md and test-run/timereport.md
+You can see logs of run inside test-run/'test sub-directory'. The test-run/statusreport.md and test-run/timereport.md
 will show a nice table like below to give you detailed status of pass/fail of each stage. The test-run/passed.txt 
 has list of all tests passed and test-run/failed.txt has list of all tests that failed. After you make changes 
 in your source code to fix torch MLIR or IREE, you can re-run just the failing tests by simply passing test-run/failed.txt 
 as an input like below:
 ```
-python ./run.py --hfhome /proj/gdba/kumar/HF_HOME -c ../../torch-mlir/build -i ../../iree-build --testsfile test-run/failed.txt
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --testsfile test-run/failed.txt
 ```
 If you want to just generate report and skip run of tests then, you can pass --norun
 
@@ -132,14 +132,14 @@ You can start from and run upto a stage. There are four stages: model-run, torch
 Say if you tested upto torch-mlir and not want to test further, if you have not destroyed the test-run dir you
 can run following two at different times (first should have generted the torch MLIR for second one to resume):
 ```
-python ./run.py --hfhome /proj/gdba/kumar/HF_HOME -c ../../torch-mlir/build -i ../../iree-build --frameworks pytorch onnx --runupto torch-mlir 
-python ./run.py --hfhome /proj/gdba/kumar/HF_HOME -c ../../torch-mlir/build -i ../../iree-build --runfrom torch-mlir --runupto inference 
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --frameworks pytorch onnx --runupto torch-mlir 
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --runfrom torch-mlir --runupto inference 
 
 ```
 Example 3:
 Run given test pytorch/models/opt-125M upto inference (default for --runupto) on target AMD AIE backend
 ```
-python ./run.py --hfhome /proj/gdba/kumar/HF_HOME -c ../../torch-mlir/build --frameworks onnx --runupto inference -i ../../iree-build/ --tests onnx/combinations/constant_constantofshape
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' --frameworks onnx --runupto inference -i 'path_to_your_iree_build_dir' --tests onnx/combinations/constant_constantofshape
 ```
 
 Example 4:
@@ -167,14 +167,14 @@ Now take following steps:
 
 Once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
    ```
-   python ./run.py --hfhome /proj/gdba/kumar/HF_HOME --runupto torch-mlir -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME --runupto torch-mlir -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
    Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
 
    If you want to test upto inference, then provide your iree build in addition as -i option and run as
 
    ```
-   python ./run.py --hfhome /proj/gdba/kumar/HF_HOME --runupto inference -c "your torch mlir build dir" -i "your iree build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME --runupto inference -c "your torch mlir build dir" -i "your iree build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
 
    Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
