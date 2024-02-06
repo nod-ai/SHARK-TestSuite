@@ -116,13 +116,20 @@ def loadTorchSave(filename):
     return loaded
 
 
-def getShapeString(tensorvalue, dtype):
-    inputshape = list(tensorvalue.shape)
+def getShapeString(torchtensor):
+    inputshape = list(torchtensor.shape)
     inputshapestring = "x".join([str(item) for item in inputshape])
-    if dtype == "bf16":
-        inputshapestring += "xbf16"
-    else:
+    dtype = torchtensor.dtype
+    if dtype == torch.int64:
+        inputshapestring += "xi64"
+    elif dtype == torch.float32 or dtype == torch.float:
         inputshapestring += "xf32"
+    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
+        inputshapestring += "xbf16"
+    elif dtype == torch.int8:
+        inputshapestring += "xi8"
+    else:
+        print("In getShapeString, found an unsupported data type", dtype)
     return inputshapestring
 
 
@@ -227,9 +234,15 @@ def runTorchMLIRGeneration(
         # start phases[2]
         curphase = phases[2]
         logfilename = "onnxtotorch.log"
-        commandstring = "/bin/torch-mlir-opt -convert-torch-onnx-to-torch "
+        commandstring = "/bin/torch-mlir-opt"
         if args.torchtolinalg:
-            commandstring += "-convert-torch-to-linalg "
+            commandstring += " -pass-pipeline='builtin.module(func.func(convert-torch-onnx-to-torch),"
+            commandstring += (
+                "torch-lower-to-backend-contract,func.func(cse,canonicalize),"
+            )
+            commandstring += "torch-backend-to-linalg-on-tensors-backend-pipeline)' "
+        else:
+            commandstring += " -convert-torch-onnx-to-torch "
 
         # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
         # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
@@ -277,10 +290,18 @@ def runCodeGeneration(
         print(f"Test {testName} failed[{curphase}]")
         return 1
     logfilename = "iree-compile.log"
+    commandname = (
+        "/tools/iree-compile --iree-input-demote-i64-to-i32 --iree-hal-target-backends="
+        + args.backend
+        + " "
+    )
+    if args.torchtolinalg:
+        commandname += " --iree-input-type=tm_tensor"
+    else:
+        commandname += " --iree-input-type=torch"
     scriptcommand = (
         SHARED_IREE_BUILD
-        + "/tools/iree-compile --iree-hal-target-backends="
-        + args.backend
+        + commandname
         + " "
         + torchmlirfilename
         + " > "
@@ -330,10 +351,10 @@ def runInference(
     if modelinput.numel() > 0:
         modelinputbinfilename = "inference_input.bin"
         writeInferenceInputBinFile(modelinput, modelinputbinfilename)
-        inputshapestring = getShapeString(modelinput, args.dtype)
+        inputshapestring = getShapeString(modelinput)
         inputarg = ' --input="' + inputshapestring + "=@" + modelinputbinfilename + '"'
 
-    outputshapestring = getShapeString(goldoutput, args.dtype)
+    outputshapestring = getShapeString(goldoutput)
     outputarg = " --output=@" + infoutputfilename + " "
     scriptcommand = (
         SHARED_IREE_BUILD
@@ -533,6 +554,8 @@ def initializer(tm_path, iree_path):
 
 def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
     # print(f"In runFrameworkTests - torch mlir build - {TORCH_MLIR_BUILD}")
+    if len(testsList) == 0:
+        return
     poolSize = args.jobs
     print(
         f"Running {frameworkname} tests with dtype={args.dtype} mode={args.mode} runfrom={args.runfrom} framework={frameworkname}"
