@@ -69,9 +69,6 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
 
 def logAndReturn(commandslog, timelog, resultdict, retval):
     pickle.dump(resultdict, timelog)
-    # for i in resultdict:
-    #     listitem = [i] + resultdict[i]
-    #     print(listitem, file=timelog)
     timelog.close()
     commandslog.close()
     return retval
@@ -204,7 +201,7 @@ def runTorchMLIRGeneration(
     start = time.time()
     curphase = phases[0]
     if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
+        print("Test", testName, "failed [" + curphase + "]")
         end = time.time()
         resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -227,7 +224,7 @@ def runTorchMLIRGeneration(
         )
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
-            print("Test", testName, "failed[" + curphase + "]")
+            print("Test", testName, "failed [" + curphase + "]")
             end = time.time()
             resultdict[curphase] = ["failed", end - start]
             return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -262,7 +259,7 @@ def runTorchMLIRGeneration(
 
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
-            print("Test", testName, "failed[" + curphase + "]")
+            print("Test", testName, "failed [" + curphase + "]")
             end = time.time()
             resultdict[curphase] = ["failed", end - start]
             return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -291,7 +288,7 @@ def runCodeGeneration(
         or not os.path.getsize(torchmlirfilename) > 0
     ):
         print(f"The torch MLIR {torchmlirfilename} does not exist or is empty.")
-        print(f"Test {testName} failed[{curphase}]")
+        print(f"Test {testName} failed [{curphase}]")
         return 1
     logfilename = "iree-compile.log"
     commandname = (
@@ -315,7 +312,7 @@ def runCodeGeneration(
     )
     start = time.time()
     if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
+        print("Test", testName, "failed [" + curphase + "]")
         end = time.time()
         resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -346,7 +343,7 @@ def runInference(
             vmfbfilename,
             "does not exist or is empty. Make sure you have run previous phases.",
         )
-        print("Test", testName, "failed[" + curphase + "]")
+        print("Test", testName, "failed [" + curphase + "]")
         return 1
     # read the gold output produced by model
     logfilename = "inference.log"
@@ -376,7 +373,7 @@ def runInference(
     start = time.time()
 
     if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed[" + curphase + "]")
+        print("Test", testName, "failed [" + curphase + "]")
         end = time.time()
         resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -412,7 +409,7 @@ def runInference(
         failedinflog = open("failedinference.log", "w")
         print("Gold reference:\n", goldoutput, file=failedinflog)
         print("Output from target hardware:\n", infoutput, file=failedinflog)
-        print("Test", testName, "failed[output-mismatch]")
+        print("Test", testName, "failed [mismatch]")
         end = time.time()
         resultdict[curphase] = ["mismatch", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
@@ -568,7 +565,7 @@ def runFrameworkTests(frameworkname, testsList, args, script_dir, run_dir):
         return
     poolSize = args.jobs
     print(
-        f"Running {frameworkname} tests with dtype={args.dtype} mode={args.mode} runfrom={args.runfrom} framework={frameworkname}"
+        f"Framework:{frameworkname} mode={args.mode} backend={args.backend} runfrom={args.runfrom} runupto={args.runupto}"
     )
     print("Test list:", testsList)
     uniqueTestList = []
@@ -616,6 +613,8 @@ def generateReport(run_dir, testsList, args):
     tableheader = []
     listoftimerows = []
     listofstatusrows = []
+    passlist = []
+    faillist = []
     for test in testsList:
         timelog = run_dir + "/" + test + "/" + "time.pkl"
         if os.path.exists(timelog):
@@ -636,6 +635,11 @@ def generateReport(run_dir, testsList, args):
         for k, v in testdict.items():
             statustablerow += [v[0]]
             timetablerow += [str(v[1])]
+        testfailed = [str for str in ["failed", "mismatch"] if str in statustablerow]
+        if testfailed:
+            faillist += [test]
+        else:
+            passlist += [test]
         listofstatusrows += [statustablerow]
         listoftimerows += [timetablerow]
 
@@ -654,8 +658,11 @@ def generateReport(run_dir, testsList, args):
     elif args.reportformat == "pipe" or args.reportformat == "github":
         suffix = "md"
 
+    # Now write out report files
     timetablefile = run_dir + "/timereport." + suffix
     statustablefile = run_dir + "/statusreport." + suffix
+    passlistfile = run_dir + "/passed.txt"
+    faillistfile = run_dir + "/failed.txt"
     with open(statustablefile, "w") as statusf:
         print("Test run status report\n", file=statusf)
         print(statustable, file=statusf)
@@ -665,6 +672,13 @@ def generateReport(run_dir, testsList, args):
         print("Time (seconds) report\n", file=timef)
         print(timetable, file=timef)
     print(f"Generated time reoprt {timetablefile}")
+
+    with open(passlistfile, "w") as f:
+        for items in passlist:
+            print(items, file=f)
+    with open(faillistfile, "w") as f:
+        for items in faillist:
+            print(items, file=f)
 
 
 def checkBuildAndEnv(run_dir, args):
@@ -749,7 +763,7 @@ def main():
         "-j",
         "--jobs",
         type=int,
-        default=1,
+        default=4,
         help="Number of parallel processes to use per machine for running tests",
     )
     parser.add_argument(
@@ -768,7 +782,7 @@ def main():
         "-m",
         "--mode",
         choices=["direct", "onnx", "ort"],
-        default="direct",
+        default="onnx",
         help="Use framework to torch MLIR, PyTorch to ONNX, or ONNX to ONNX RT flow",
     )
     parser.add_argument(
@@ -798,7 +812,7 @@ def main():
     parser.add_argument(
         "--runupto",
         choices=["torch-mlir", "iree-compile", "inference"],
-        default="torch-mlir",
+        default="inference",
         help="Run upto torch MLIR generation, IREE compilation, or inference.",
     )
     parser.add_argument(
@@ -812,6 +826,10 @@ def main():
         "--tests",
         nargs="*",
         help="Run given specific test(s) only. Other test run options will be ignored.",
+    )
+    parser.add_argument(
+        "--testsfile",
+        help="A file with lists of tests (starting with framework name) to run",
     )
     parser.add_argument(
         "--torchmlircompile",
@@ -850,9 +868,16 @@ def main():
     totalTestList = []
     # if args.tests used, that means run given specific tests, the --frameworks options will be
     # ignored in that case
-    if args.tests:
-        print("Since --tests was specified, --groups tests will not be run")
-        testsList = args.tests
+    if args.tests or args.testsfile:
+        testsList = []
+        print("Since --tests or --testsfile was specified, --groups ignored")
+        if args.tests:
+            testsList = args.tests
+        if args.testsfile:
+            if not os.path.exists(args.testsfile):
+                print(f"The file {args.testsfile} does not exist")
+            with open(args.testsfile, "r") as tf:
+                testsList += tf.read().splitlines()
         # Strip leading/trailing slashes
         # Construct a dictionary of framework name and list of tests in them
         frameworktotests_dict = {"pytorch": [], "onnx": [], "tensorflow": []}
