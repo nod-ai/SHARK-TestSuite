@@ -205,6 +205,8 @@ def runTorchMLIRGeneration(
     curphase = phases[0]
     if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
+        end = time.time()
+        resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
     resultdict[curphase] = ["passed", end - start]
@@ -226,6 +228,8 @@ def runTorchMLIRGeneration(
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed[" + curphase + "]")
+            end = time.time()
+            resultdict[curphase] = ["failed", end - start]
             return logAndReturn(commandslog, timelog, resultdict, 1)
         end = time.time()
         resultdict[curphase] = ["passed", end - start]
@@ -259,6 +263,8 @@ def runTorchMLIRGeneration(
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed[" + curphase + "]")
+            end = time.time()
+            resultdict[curphase] = ["failed", end - start]
             return logAndReturn(commandslog, timelog, resultdict, 1)
         end = time.time()
         resultdict[curphase] = ["passed", end - start]
@@ -284,9 +290,7 @@ def runCodeGeneration(
         not os.path.exists(torchmlirfilename)
         or not os.path.getsize(torchmlirfilename) > 0
     ):
-        print(
-            f"The torch MLIR {torchmlirfilename} does not exist or is empty. Make sure you have run previous phases.",
-        )
+        print(f"The torch MLIR {torchmlirfilename} does not exist or is empty.")
         print(f"Test {testName} failed[{curphase}]")
         return 1
     logfilename = "iree-compile.log"
@@ -312,6 +316,8 @@ def runCodeGeneration(
     start = time.time()
     if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
+        end = time.time()
+        resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
     resultdict[curphase] = ["passed", end - start]
@@ -371,6 +377,8 @@ def runInference(
 
     if launchCommand(args, scriptcommand, commandslog):
         print("Test", testName, "failed[" + curphase + "]")
+        end = time.time()
+        resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
     outputshape = goldoutput.size()
@@ -405,6 +413,8 @@ def runInference(
         print("Gold reference:\n", goldoutput, file=failedinflog)
         print("Output from target hardware:\n", infoutput, file=failedinflog)
         print("Test", testName, "failed[output-mismatch]")
+        end = time.time()
+        resultdict[curphase] = ["mismatch", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
 
     resultdict[curphase] = ["passed", end - start]
@@ -602,7 +612,6 @@ def checkAndSetEnvironments(args):
 
 
 def generateReport(run_dir, testsList, args):
-    print(f"Generting report for rundir {run_dir}")
     reportdict = {}
     tableheader = []
     listoftimerows = []
@@ -631,12 +640,31 @@ def generateReport(run_dir, testsList, args):
         listoftimerows += [timetablerow]
 
     # Now add header and value rows and tabulate
-    statustable = [tableheader] + listofstatusrows
-    timetable = [tableheader] + listoftimerows
-    print("\nTest run status report:\n")
-    print(tabulate.tabulate(statustable, headers="firstrow", tablefmt="pipe"))
-    print("\nTime (seconds) report:\n")
-    print(tabulate.tabulate(timetable, headers="firstrow", tablefmt="pipe"))
+    statustablerows = [tableheader] + listofstatusrows
+    timetablerows = [tableheader] + listoftimerows
+    statustable = tabulate.tabulate(
+        statustablerows, headers="firstrow", tablefmt=args.reportformat
+    )
+    timetable = tabulate.tabulate(
+        timetablerows, headers="firstrow", tablefmt=args.reportformat
+    )
+    suffix = "txt"
+    if args.reportformat == "html":
+        suffix = "html"
+    elif args.reportformat == "pipe" or args.reportformat == "github":
+        suffix = "md"
+
+    timetablefile = run_dir + "/timereport." + suffix
+    statustablefile = run_dir + "/statusreport." + suffix
+    with open(statustablefile, "w") as statusf:
+        print("Test run status report\n", file=statusf)
+        print(statustable, file=statusf)
+    print(f"Generated status reoprt {statustablefile}")
+
+    with open(timetablefile, "w") as timef:
+        print("Time (seconds) report\n", file=timef)
+        print(timetable, file=timef)
+    print(f"Generated time reoprt {timetablefile}")
 
 
 def checkBuildAndEnv(run_dir, args):
@@ -757,9 +785,9 @@ def main():
     )
     parser.add_argument(
         "--reportformat",
-        choices=["tabulate", "csv", "html"],
-        default="tabulate",
-        help="Format of the test report summary file",
+        choices=["pipe", "github", "html"],
+        default="pipe",
+        help="Format of the test report summary file. It takes tablefmt value of python tabulate",
     )
     parser.add_argument(
         "--runfrom",
