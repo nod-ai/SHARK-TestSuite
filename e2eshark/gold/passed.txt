@@ -1,0 +1,5 @@
+onnx/combinations/constant_constantofshape
+pytorch/combinations/mlp
+pytorch/models/resnet50
+pytorch/operators/conv2d
+pytorch/operators/linear
