@@ -14,6 +14,8 @@ from torch_mlir import ir
 from torch_mlir.dialects import torch as torch_d
 from torch_mlir import fx
 
+# old torch_mlir.compile path
+from torch_mlir import torchscript
 
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -70,7 +72,7 @@ elif runmode == "direct":
     torch_mlir_model = None
     # override mechanism to get torch MLIR as per model
     if args.torchmlircompile == "compile" or test_torchmlircompile == "compile":
-        torch_mlir_model = torch_mlir.compile(
+        torch_mlir_model = torchscript.compile(
             model,
             (test_input),
             output_type="torch",
