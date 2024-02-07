@@ -12,24 +12,10 @@ import torch.export
 from torch_mlir.extras.fx_importer import FxImporter
 from torch_mlir import ir
 from torch_mlir.dialects import torch as torch_d
+from torch_mlir import fx
 
-
-def export_and_import(
-    f,
-    *args,
-    fx_importer: Optional[FxImporter] = None,
-    constraints: Optional[torch.export.Constraint] = None,
-    **kwargs,
-):
-    context = ir.Context()
-    torch_d.register_dialect(context)
-
-    if fx_importer is None:
-        fx_importer = FxImporter(context=context)
-    prog = torch.export.export(f, args, kwargs, constraints=constraints)
-    fx_importer.import_frozen_exported_program(prog)
-    return fx_importer.module_op
-
+# old torch_mlir.compile path
+from torch_mlir import torchscript
 
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -86,7 +72,7 @@ elif runmode == "direct":
     torch_mlir_model = None
     # override mechanism to get torch MLIR as per model
     if args.torchmlircompile == "compile" or test_torchmlircompile == "compile":
-        torch_mlir_model = torch_mlir.compile(
+        torch_mlir_model = torchscript.compile(
             model,
             (test_input),
             output_type="torch",
@@ -94,7 +80,7 @@ elif runmode == "direct":
             verbose=False,
         )
     else:
-        torch_mlir_model = export_and_import(model, test_input)
+        torch_mlir_model = fx.export_and_import(model, test_input, model_name=args.outfileprefix)
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
