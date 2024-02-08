@@ -1,9 +1,7 @@
-# This file constitutes end part of runmodel.py
-# tools/stubs/onnxstartmodel.py + model.py in test dir + this file
-# makes up the runmodel.py
-
-# input_name and onnx_output will be declared and set
-# by middle model.py
+# run.pl creates runmodel.py by concatenating this file model.py
+# and tools/stubs/onnxmodel.py
+# See https://onnx.ai/onnx/intro/python.html for intro on creating
+# onnx model using python onnx API
 
 # Issue: https://github.com/llvm/torch-mlir/issues/2764
 # Description: ConstantOfShape whose input (tensor shape) is determined by a Constant node
@@ -52,10 +50,6 @@ input_name = ""
 # Get the name of the input of the model
 # input_name = inputs.name
 
-# TBD: Use iobinding and ortvalue explicitly as per
-# https://onnxruntime.ai/docs/api/python/api_summary.html
-# call inference session
-# test_output = [session.run([], {input_name: test_input})[0]]
 test_output = numpy.array([session.run([], {})[0]], dtype=numpy.int64)
 print("Input:", test_input)
 print("Output:", test_output)
