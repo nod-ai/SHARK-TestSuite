@@ -36,12 +36,12 @@ outfileprefix += "." + dtype
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 
-# test_input and test_output are defined in model.py as numpy array which
-# is prepended to this file
-# to have uniform way to run test
+# test_input and test_output are defined in model.py as
+# list of numpy array, each input and output is an element
+# of the list.
 # same input and output as torch .pt
-pttest_input = torch.from_numpy(test_input)
-pttest_output = torch.from_numpy(test_output)
+pttest_input = [torch.from_numpy(arr) for arr in test_input]
+pttest_output = [torch.from_numpy(arr) for arr in test_output]
 print(pttest_input, pttest_output)
 torch.save(pttest_input, inputsavefilename)
 torch.save(pttest_output, outputsavefilename)
