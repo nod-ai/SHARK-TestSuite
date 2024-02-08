@@ -328,7 +328,6 @@ def runInference(
     vmfbfilename,
     modelinputptfilename,
     goldoutputptfilename,
-    infoutputfilename,
     scriptcommand,
     commandslog,
     timelog,
@@ -347,18 +346,29 @@ def runInference(
         return 1
     # read the gold output produced by model
     logfilename = "inference.log"
-    modelinput = loadTorchSave(modelinputptfilename)
-    goldoutput = loadTorchSave(goldoutputptfilename)
+    getinfoutfilename = lambda i: "inference_output" + "." + str(i) + ".bin"
+    # Each input or output loaded here is a python list of
+    # torch tensor
+    modelinputlist = loadTorchSave(modelinputptfilename)
+    goldoutputlist = loadTorchSave(goldoutputptfilename)
     inputarg = ""
     # If there is no input the do not pass --input
-    if modelinput.numel() > 0:
-        modelinputbinfilename = "inference_input.bin"
-        writeInferenceInputBinFile(modelinput, modelinputbinfilename)
-        inputshapestring = getShapeString(modelinput)
-        inputarg = ' --input="' + inputshapestring + "=@" + modelinputbinfilename + '"'
-
-    outputshapestring = getShapeString(goldoutput)
-    outputarg = " --output=@" + infoutputfilename + " "
+    if len(modelinputlist) > 0:
+        for i, modelinput in enumerate(modelinputlist):
+            if modelinput.numel() > 0:
+                modelinputbinfilename = "inference_input." + str(i) + ".bin"
+                writeInferenceInputBinFile(modelinput, modelinputbinfilename)
+                inputshapestring = getShapeString(modelinput)
+                inputarg += (
+                    ' --input="'
+                    + inputshapestring
+                    + "=@"
+                    + modelinputbinfilename
+                    + '" '
+                )
+    for i, goldoutput in enumerate(goldoutputlist):
+        infoutputfilename = getinfoutfilename(i)
+        outputarg = " --output=@" + infoutputfilename + " "
     scriptcommand = (
         SHARED_IREE_BUILD
         + "/tools/iree-run-module --module="
@@ -378,41 +388,45 @@ def runInference(
         resultdict[curphase] = ["failed", end - start]
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
-    outputshape = goldoutput.size()
-    torchdtype = goldoutput.dtype
-    infoutput = loadRawBinaryAsTorchSensor(infoutputfilename, outputshape, torchdtype)
-    if args.verbose:
-        inerencelog = open(logfilename, "a")
-        print("Gold reference:\n", goldoutput, file=inerencelog)
-        print("Output from target hardware:\n", infoutput, file=inerencelog)
 
-    goldoutput = goldoutput.flatten()
-    infoutput = infoutput.flatten()
-    # print("After flatten")
-    inferencematched = False
-    # if shapes do not match, we have a problem as comparison routines may crash
-    # so gauard it
-    if infoutput.shape != goldoutput.shape:
+    for i, goldoutput in enumerate(goldoutputlist):
+        outputshape = goldoutput.size()
+        torchdtype = goldoutput.dtype
+        infoutputfilename = getinfoutfilename(i)
+        infoutput = loadRawBinaryAsTorchSensor(
+            infoutputfilename, outputshape, torchdtype
+        )
+        if args.verbose:
+            inerencelog = open(logfilename, "a")
+            print(f"Gold reference[{i}]:{goldoutput}\n", file=inerencelog)
+            print(f"Inference Output[{i}] {infoutput}:\n", file=inerencelog)
+
+        goldoutput = goldoutput.flatten()
+        infoutput = infoutput.flatten()
         inferencematched = False
-    else:
-        if args.zerotolerance:
-            # If each element matches exactly only then torch.equal is true
-            inferencematched = torch.equal(infoutput, goldoutput)
+        # if shapes do not match, we have a problem as comparison routines may crash
+        # so gauard it
+        if infoutput.shape != goldoutput.shape:
+            inferencematched = False
         else:
-            rtol = 1e-03
-            atol = 1e-03
-            inferencematched = torch.allclose(
-                infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
-            )
+            if args.zerotolerance:
+                # If each element matches exactly only then torch.equal is true
+                inferencematched = torch.equal(infoutput, goldoutput)
+            else:
+                rtol = 1e-03
+                atol = 1e-03
+                inferencematched = torch.allclose(
+                    infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
+                )
 
-    if not inferencematched:
-        failedinflog = open("failedinference.log", "w")
-        print("Gold reference:\n", goldoutput, file=failedinflog)
-        print("Output from target hardware:\n", infoutput, file=failedinflog)
-        print("Test", testName, "failed [mismatch]")
-        end = time.time()
-        resultdict[curphase] = ["mismatch", end - start]
-        return logAndReturn(commandslog, timelog, resultdict, 1)
+        if not inferencematched:
+            failedinflog = open("failedinference.log", "w")
+            print(f"Gold reference[{i}]:{goldoutput}\n", file=failedinflog)
+            print(f"Inference Output[{i}] {infoutput}:\n", infoutput, file=failedinflog)
+            print("Test", testName, "failed [mismatch]")
+            end = time.time()
+            resultdict[curphase] = ["mismatch", end - start]
+            return logAndReturn(commandslog, timelog, resultdict, 1)
 
     resultdict[curphase] = ["passed", end - start]
 
@@ -429,7 +443,6 @@ def runTest(aTuple):
     goldoutputptfilename = (
         testRunDir + "/" + modelname + "." + args.dtype + ".goldoutput.pt"
     )
-    infoutputfilename = testRunDir + "/" + modelname + "." + args.dtype + ".output.bin"
     phases = ["model-run", "onnx-import", "torch-mlir", "iree-compile", "inference"]
     resultdict = {}
     for phase in phases:
@@ -540,7 +553,6 @@ def runTest(aTuple):
             vmfbfilename,
             modelinputptfilename,
             goldoutputptfilename,
-            infoutputfilename,
             scriptcommand,
             commandslog,
             timelog,
