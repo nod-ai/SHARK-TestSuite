@@ -178,6 +178,7 @@ python ./tools/onnxutil.py onnx/models/resnet50_vaiq_int8/model.onnx -f
 ```
 ### Adding new tests
 
+#### Adding test in framework pytorch
 Let us say you wanted to add a new test to the framework "pytorch" to test maxpool  i.e. start with
 pytorch model of maxpool, use run of the model as reference gold output and compare IREE compiled
 output on your target backend. 
@@ -198,15 +199,14 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    ```
    python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct --runupto torch-mlir --torchtolinalg
    ```
-   Note that I did not specify -i for IREE build as I am running only upto torch-mlir. Also, I have added --torchtolinalg
-   to make sure I test upto linalg lowerging as I am not running iree-compile
+   Note that I did not specify -i for IREE build as I am running only upto torch-mlir. Also, I have added --torchtolinalg to make sure I test upto linalg lowerging as I am not running iree-compile
 
    Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
 
    If you want to test upto inference, then provide your iree build in addition as -i option and run as
 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
 
    As before, run above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
@@ -218,3 +218,30 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    
    Once you are satisfied, git add pytorch/operators/maxpool_2d_large/model.py, commit and publish it. 
    If that is a passing test and not in gold/passed.txt, add that passing test there as well
+
+   #### Adding test in framework onnx
+
+   Similarly to add a test in framework onnx for say cumsum operator, First google 
+   pytorch ONNX.Cumsum and study behavior of the operator. For example, study
+   https://onnx.ai/onnx/operators/onnx__CumSum.html . 
+
+   If you do not already know how to write an ONNX model using ONNX Python API, study
+   https://onnx.ai/onnx/intro/python.html
+
+
+   Then take following steps:
+   1. Use an appropriate suffix to describe what you are intending to test say cumsum_small
+   2. mkdir -p onnx/operators/cumsum_small
+   3. cd onnx/operators/cumsum_small
+   4. cp -pr onnx/operators/gemm/model.py .
+   5. modify model.py to model behavior of ONNX.cumsum
+   6. run 'python ./model.py' to see input and output values, verify them to be as desired 
+   
+   Then test it as: 
+
+   ```
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests onnx/operators/cumsum_small --mode direct --runupto inference --torchtolinalg
+   ```
+
+   Then follow steps similar to the one described above for pytorch framework to test more and add 
+   the test to the repo.

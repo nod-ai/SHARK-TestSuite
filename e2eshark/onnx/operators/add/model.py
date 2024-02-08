@@ -1,6 +1,6 @@
 # run.pl creates runmodel.py by concatenating this file model.py
 # and tools/stubs/onnxmodel.py
-# Description: testing gemm
+# Description: testing add
 # See https://onnx.ai/onnx/intro/python.html for intro on creating
 # onnx model using python onnx API
 import numpy
@@ -12,20 +12,20 @@ from onnx.checker import check_model
 
 # Create an input (ValueInfoProto)
 X = make_tensor_value_info("X", TensorProto.FLOAT, [4, 5])
-Y = make_tensor_value_info("Y", TensorProto.FLOAT, [5, 3])
+Y = make_tensor_value_info("Y", TensorProto.FLOAT, [4, 5])
 
 # Create an output
-Z = make_tensor_value_info("Z", TensorProto.FLOAT, [4, 3])
+Z = make_tensor_value_info("Z", TensorProto.FLOAT, [4, 5])
 
 # Create a node (NodeProto)
-gemmnode = make_node(
-    "Gemm", ["X", "Y"], ["Z"], "gemmnode"  # node name  # inputs  # outputs
+addnode = make_node(
+    "Add", ["X", "Y"], ["Z"], "addnode"  # node name  # inputs  # outputs
 )
 
 # Create the graph (GraphProto)
 graph = make_graph(
-    [gemmnode],
-    "gemmgraph",
+    [addnode],
+    "addgraph",
     [X, Y],
     [Z],
 )
@@ -39,9 +39,10 @@ onnx_model.opset_import[0].version = 19
 with open("model.onnx", "wb") as f:
     f.write(onnx_model.SerializeToString())
 
+
 session = onnxruntime.InferenceSession("model.onnx", None)
 test_input_X = numpy.random.randn(4, 5).astype(numpy.float32)
-test_input_Y = numpy.random.randn(5, 3).astype(numpy.float32)
+test_input_Y = numpy.random.randn(4, 5).astype(numpy.float32)
 # gets X in inputs[0] and Y in inputs[1]
 inputs = session.get_inputs()
 # gets Z in outputs[0]
