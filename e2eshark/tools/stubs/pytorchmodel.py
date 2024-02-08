@@ -58,6 +58,14 @@ outfileprefix += "." + dtype
 
 # test_input and test_output are defined in model.py as torch tensor which
 # is prepended to this file
+# At present only one input tensor and one output tensor is supported
+# for pytorch
+if isinstance(test_input, list):
+    print("At present only one input for pytorch model is supported\n")
+    sys.exit(1)
+if isinstance(test_output, list):
+    print("At present only one output for Pytoch model is supported\n")
+    sys.exit(1)
 
 if dtype == "bf16":
     model = model.to(torch.bfloat16)
@@ -86,5 +94,10 @@ elif runmode == "direct":
 
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
-torch.save(test_input, inputsavefilename)
-torch.save(test_output, outputsavefilename)
+
+# run.pl supports list of inputs and ouputs, but pytorch test
+# does not support that yet, for now create a one element list
+test_input_list = [test_input]
+test_output_list = [test_output]
+torch.save(test_input_list, inputsavefilename)
+torch.save(test_output_list, outputsavefilename)
