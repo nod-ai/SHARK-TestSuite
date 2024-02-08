@@ -80,7 +80,7 @@ elif runmode == "direct":
             verbose=False,
         )
     else:
-        torch_mlir_model = fx.export_and_import(model, test_input, model_name=args.outfileprefix)
+        torch_mlir_model = fx.export_and_import(model, test_input)
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
