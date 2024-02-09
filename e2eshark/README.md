@@ -2,18 +2,18 @@
 
  This test suite enables developers to add small (operator level) to large (full model)
  end-2-end tests that compare output of running a model in a Framework 
- (e.g. Pytorch, ONNX) to the output of running the IREE commpiled artefact of 
+ (e.g. Pytorch, ONNX) to the output of running the IREE-compiled artefact of 
  the same model on a target backend (e.g. CPU, AIE). If the difference in outputs
  is within a tolerable limit, then the test is reported as have passed, else the 
  test is reported as have failed. In case of a failing test, the stage of the 
  failure is reported. 
 
- The test suite organized starting with a framework name: pytorch, tensorflow, onnx. 
+ The test suite is organized starting with a framework name: pytorch, tensorflow, onnx. 
  For each framework category, multiple modes are tested. 
 
  - pytroch : starting model is a pytorch model
  - tensorflow : stating model is a tensorflow model (planned for later)
- - onnx : starting model is an onnx model generated using onnx python API or a onnx zip file
+ - onnx : starting model is an onnx model generated using onnx python API or a an existing onnx model (zipped)
  
  Following, upto three, modes are supported based upon what is possible for a framework:
 
@@ -21,8 +21,8 @@
  - onnx: Framework -> ONNX -> Import as Torch ONNX in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
  - ort: Framework -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend (planned for later)
 
- If Framework is 'onnx', then mode 'direct' will mean same as 'onnx'. For onnx/operators and onnx/combinations 
- the onnx model should be created using ONNX Python APIs. For onnx/models, a prebuilt onnx should be checked 
+ If Framework is 'onnx', then mode 'direct' will mean same as 'onnx'. For onnx/operators and onnx/combinations,  
+ the onnx model should be created using ONNX Python APIs. For onnx/models, a prebuilt onnx model should be checked 
  in as a zip file.
  
  The target backend can be any IREE supported backend: llvm-cpu, amd-aie etc.
@@ -30,15 +30,15 @@
 ## Contents
  The contents are as below. Substitute 'Framework' by one of: pytorch, tensoflow, onnx
  - requirements.txt : 'pip install -r requirements.txt' to install needed additional 
-                       packages not in your venv or conda. If you have a venv or conda 
-                       environment for torch mlir or iree build, you can install 
+                       packages not already in your venv or conda. If you have a venv or conda 
+                       environment for building torch mlir or iree, you can install 
                        this on top of that
  - run.py : Run 'python run.py --help' to learn about the script. This is the script to 
             run a specific test, all tests in a framework, all frameworks as per choice of a user
  - Framework/operators: This has operator level tests. Example: pytorch/operators/conv2d
  - Framework/combinations: This has small tests testing combination of operators such as 
                            pytorch/combinations/mlp testing a multi-layer perceptron which 
-                           has torch.linear followed by torch.relu and repeated a few times
+                           has torch.linear followed by torch.relu and optionally repeated a few times
  - Framework/models: This has full model test. Since this is full model test, you may need 
                      necesary permsisions to download a model such as for llama2 you will 
                      need hugging face token. You should run 'huggingface-cli login' and 
@@ -47,28 +47,31 @@
                      passing tests, please update this. After your changes in torch MLIR or IREE, 
                      run all the tests upto inference and make sure that your are passing at least 
                      at the level of gold/passed.txt
- - tools/stubs/onnxmodel.py : This is concatenated to 'model.py' in test directory to form a 
+ - tools/stubs/onnxmodel.py : This is concatenated to the 'model.py' in the test directory to form a 
                               runmodel.py for tests of framework 'onnx'
  - tools/stubs/pytorchmodel.py : This is concatenated to 'model.py' in test directory to form a 
-                                 runmodel.py for tests of framework 'pytorch'
+                                 runmodel.py for the tests of framework 'pytorch'
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
  cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
- as per your choice. The default name for the run-directory is 'test-run'.
+ as per your choice. The default name for the run directory is 'test-run'.
 
- You will be required to pass --hfhome argument to the run.py to point to a directory where 
- model weights etc. from Hugging Face will be downloaded. This can be large so set it to
+ Note that, you will be required to pass --hfhome argument to the run.py to point to a directory where 
+ model weights etc. from Hugging Face will be downloaded. The downloaded data can be large so set it to
  other than your home, preferably with 100 GB or more free space.
 
 ## Setting up
 
-You will need to have a local build of torch MLIR and IREE. 
+You will need to have a local build of torch MLIR and IREE. It should work with an installation of IREE too
+as it just neeeds torch-mlir-opt, iree-compile and iree-run-module binaries. the option passed to --torchmlirbuild (-c)
+should point to a directory where bin/torch-mlir-opt can be found and the option passed to --ireebuild (-i) should 
+point to a directory where tools/iree-compile and tools/iree-run-module can be found.
 
 To get a local build of torch MLIR, follow:
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md
 
-For torch MLIR build, build the torch_mlir python wheel and install it in your python env
+For torch MLIR build, build the torch_mlir python wheel and install it in your python env in addition
 (preferrred to ensure that you have the latest and greatest changes):
 
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md#build-python-packages 
@@ -107,9 +110,9 @@ pip install --upgrade pip
 Make sure you do not skip the pip upgrade above as older pip may not able to handle pytorch deps
 Then install needed packages as below:
 ```
-pip install -r <your local torch MLIR repo>/requirements.txt
-pip install -r <your local torch MLIR repo>/torchvision-requirements.txt
-pip install <your local torch MLIR repo>/torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
+pip install -r 'your local torch MLIR repo'/requirements.txt
+pip install -r 'your local torch MLIR repo'/torchvision-requirements.txt
+pip install 'your local torch MLIR repo'/torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
 pip install -r ./requirements.txt
 ```
 Once setup, in any new shell you can activate the same env everytime you want to use it 
@@ -123,9 +126,9 @@ conda activate e2e
 ### Running tests
 
 Example 1:
-Run the tests in operators, combinations of the default framework (i.e. pytorch),
-Use framework to onnx to torch MLIR path (--mode onnx) and run upto inference on default llvm-cpu backend
-target, use four processor cores (--jobs 4) on your machine, generate report file after running
+Run the tests in operators, combinations folders of the default framework (i.e. pytorch),
+Use framework to onnx to torch MLIR path (--mode onnx) and run upto inference (default) using llvm-cpu backend (default),
+use four processor cores (default --jobs 4) on your machine, generate report file after finishing test run
 ```
 python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --report
 ```
@@ -166,7 +169,7 @@ python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_d
 Example 3:
 Run given test pytorch/models/opt-125M upto inference (default for --runupto) on target AMD AIE backend
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' --frameworks onnx --runupto inference -i 'path_to_your_iree_build_dir' --tests pytorch/models/opt-125M --backend amd-aie
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' --frameworks onnx -i 'path_to_your_iree_build_dir' --tests pytorch/models/opt-125M --backend amd-aie
 ```
 
 Example 4:
@@ -180,7 +183,7 @@ python ./tools/onnxutil.py onnx/models/resnet50_vaiq_int8/model.onnx -f
 
 #### Adding test in framework pytorch
 Let us say you wanted to add a new test to the framework "pytorch" to test maxpool  i.e. start with
-pytorch model of maxpool, use run of the model as reference gold output and compare IREE compiled
+pytorch model of maxpool, use run of the model as reference gold output and compare that with IREE compiled
 output on your target backend. 
 
 First google pytorch maxpool and read about the corresponding behavior of
@@ -193,7 +196,7 @@ Now take following steps:
 3. cd pytorch/operators/maxpool_2d_large
 4. cp -pr pytorch/operators/conv2d/model.py .
 5. modify model.py
-6. You can run 'python ./model.py' to see input and output values printed to test 
+6. You can run 'python ./model.py' to see input and output values
 
 Once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
    ```
@@ -221,7 +224,7 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
 
    #### Adding test in framework onnx
 
-   Similarly to add a test in framework onnx for say cumsum operator, First google 
+   Similarly to add a test in framework onnx, for say cumsum operator, First google 
    pytorch ONNX.Cumsum and study behavior of the operator. For example, study
    https://onnx.ai/onnx/operators/onnx__CumSum.html . 
 
