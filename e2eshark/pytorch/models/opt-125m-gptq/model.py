@@ -26,11 +26,11 @@ test_output = model.generate(
     max_length=100,
     top_p=0.95,
     temperature=1.0,
-)[0]
+)
 print("Input:", test_input)
 print("Output:", test_output)
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(test_output))
+print("Response:", tokenizer.decode(test_output[0]))
 # Do not enforce any particular strategy for getting torch MLIR
 # By default set it to None, set it to
 # 'compile' : to force using torch_mllir.compile

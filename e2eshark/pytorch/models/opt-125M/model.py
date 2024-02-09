@@ -2,20 +2,33 @@ import sys, argparse
 import torch
 import torch.nn as nn
 import torch_mlir
-from transformers import OPTModel, AutoTokenizer
+from transformers import OPTForCausalLM, AutoTokenizer
 
-test_model_name = "facebook/opt-125M"
-model = OPTModel.from_pretrained(
-    test_model_name,
+modelname = "facebook/opt-125M"
+tokenizer = AutoTokenizer.from_pretrained(modelname)
+model = OPTForCausalLM.from_pretrained(
+    modelname,
     num_labels=2,
     output_attentions=False,
     output_hidden_states=False,
     torchscript=True,
 )
+model.to("cpu")
 model.eval()
-tokenizer = AutoTokenizer.from_pretrained(test_model_name)
-test_input = torch.tensor([tokenizer.encode("The test prommpt")])
-test_output = model(test_input)[0]
+prompt = "What is nature of our existence?"
+encoding = tokenizer(prompt, return_tensors="pt")
+test_input = encoding["input_ids"].cpu()
+# test_output = model(test_input)[0]
+test_output = model.generate(
+    test_input,
+    do_sample=True,
+    top_k=50,
+    max_length=100,
+    top_p=0.95,
+    temperature=1.0,
+)
+print("Prompt:", prompt)
+print("Response:", tokenizer.decode(test_output[0]))
 print("Input:", test_input)
 print("Output:", test_output)
 # Do not enforce any particular strategy for getting torch MLIR
