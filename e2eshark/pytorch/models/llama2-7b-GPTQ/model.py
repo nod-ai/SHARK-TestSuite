@@ -31,10 +31,10 @@ test_output = model.generate(
     max_length=100,
     top_p=0.95,
     temperature=1.0,
-)[0]
+)
 # forward_out = model.forward(test_input)
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(test_output))
+print("Response:", tokenizer.decode(test_output[0]))
 print("Input:", test_input)
 print("Output:", test_output)
 test_torchmlircompile = None

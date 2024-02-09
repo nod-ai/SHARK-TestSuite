@@ -5,7 +5,6 @@ import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
 modelname = "meta-llama/Llama-2-7b-hf"
-
 tokenizer = LlamaTokenizer.from_pretrained(modelname)
 model = LlamaForCausalLM.from_pretrained(
     modelname,
@@ -26,10 +25,9 @@ test_output = model.generate(
     max_length=100,
     top_p=0.95,
     temperature=1.0,
-)[0]
-attention_mask = encoding["attention_mask"]
+)
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(test_output))
+print("Response:", tokenizer.decode(test_output[0]))
 print("Input:", test_input)
 print("Output:", test_output)
 # Do not enforce any particular strategy for getting torch MLIR
