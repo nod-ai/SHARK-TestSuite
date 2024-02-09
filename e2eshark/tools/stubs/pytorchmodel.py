@@ -95,9 +95,11 @@ elif runmode == "direct":
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 
-# run.pl supports list of inputs and ouputs, but pytorch test
-# does not support that yet, for now create a one element list
-test_input_list = [test_input]
-test_output_list = [test_output]
+test_input_list = test_input
+test_output_list = test_output
+if not isinstance(test_input, list):
+    test_input_list = [test_input]
+if not isinstance(test_output, list):
+    test_output_list = [test_output]
 torch.save(test_input_list, inputsavefilename)
 torch.save(test_output_list, outputsavefilename)
