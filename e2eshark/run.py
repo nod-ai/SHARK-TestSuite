@@ -136,7 +136,17 @@ def unpackBytearray(barray, num_elem, dtype):
         num_array = struct.unpack("q" * num_elem, barray)
     elif dtype == torch.float32 or dtype == torch.float:
         num_array = struct.unpack("f" * num_elem, barray)
-    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
+    elif dtype == torch.bfloat16:
+        num_array = struct.unpack("h" * num_elem, barray)
+        temptensor = torch.tensor(num_array, dtype=torch.int16)
+        rettensor = temptensor.view(dtype=torch.bfloat16)
+        return rettensor
+    elif dtype == torch.float16:
+        num_array = struct.unpack("h" * num_elem, barray)
+        temptensor = torch.tensor(num_array, dtype=torch.int16)
+        rettensor = temptensor.view(dtype=torch.float16)
+        return rettensor
+    elif dtype == torch.int16:
         num_array = struct.unpack("h" * num_elem, barray)
     elif dtype == torch.int8:
         num_array = struct.unpack("b" * num_elem, barray)
@@ -155,8 +165,11 @@ def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
     # Total bytes
     tensor_num_bytes = (num_elem * dtype.itemsize).item()
     barray = bytearray(binarydata[0:tensor_num_bytes])
+    # for byte in barray:
+    #    print(f"{byte:02X}", end="")
     rettensor = unpackBytearray(barray, num_elem, dtype)
     reshapedtensor = rettensor.reshape(list(shape))
+    f.close()
     return reshapedtensor
 
 
@@ -167,7 +180,11 @@ def packTensor(modelinput):
         bytearr = struct.pack("%sq" % len(mylist), *mylist)
     elif dtype == torch.float32 or dtype == torch.float:
         bytearr = struct.pack("%sf" % len(mylist), *mylist)
-    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
+    elif dtype == torch.bfloat16 or dtype == torch.float16:
+        reinterprted = modelinput.view(dtype=torch.int16)
+        mylist = reinterprted.flatten().tolist()
+        bytearr = struct.pack("%sh" % len(mylist), *mylist)
+    elif dtype == torch.int16:
         bytearr = struct.pack("%sh" % len(mylist), *mylist)
     elif dtype == torch.int8:
         bytearr = struct.pack("%sb" % len(mylist), *mylist)
@@ -181,6 +198,15 @@ def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
         bytearr = packTensor(modelinput)
         f.write(bytearr)
         f.close()
+
+
+def dumpInferenceInputBinFile(modelinput, modelinputbinfilename):
+    outputshape = modelinput.size()
+    torchdtype = modelinput.dtype
+    rettensor = loadRawBinaryAsTorchSensor(
+        modelinputbinfilename, outputshape, torchdtype
+    )
+    print(f"{rettensor}")
 
 
 def runTorchMLIRGeneration(
@@ -197,7 +223,7 @@ def runTorchMLIRGeneration(
     resultdict,
 ):
     if args.verbose:
-        print("Ruuning torch MLIR generation for", testName)
+        print("Running torch MLIR generation for", testName)
     start = time.time()
     curphase = phases[0]
     if launchCommand(args, scriptcommand, commandslog):
@@ -280,7 +306,7 @@ def runCodeGeneration(
     resultdict,
 ):
     if args.verbose:
-        print("Ruuning code generation for", testName)
+        print("Running code generation for", testName)
     # Compile torch MLIR using IREE to binary to target backend
     curphase = phases[3]
     if (
@@ -334,7 +360,7 @@ def runInference(
     resultdict,
 ):
     if args.verbose:
-        print("Ruuning inference for", testName)
+        print("Running inference for", testName)
     curphase = phases[4]
     if not os.path.exists(vmfbfilename) or not os.path.getsize(vmfbfilename) > 0:
         print(
@@ -352,12 +378,21 @@ def runInference(
     modelinputlist = loadTorchSave(modelinputptfilename)
     goldoutputlist = loadTorchSave(goldoutputptfilename)
     inputarg = ""
+    if args.verbose:
+        print(f"Loaded: {modelinputptfilename} and {goldoutputptfilename}")
+        print(
+            f"input list length: {len(modelinputlist)}, output list length: {len(goldoutputptfilename)}"
+        )
     # If there is no input the do not pass --input
     if len(modelinputlist) > 0:
+
         for i, modelinput in enumerate(modelinputlist):
             if modelinput.numel() > 0:
                 modelinputbinfilename = "inference_input." + str(i) + ".bin"
+                if args.verbose:
+                    print(f"Creating: {modelinputbinfilename}")
                 writeInferenceInputBinFile(modelinput, modelinputbinfilename)
+                # dumpInferenceInputBinFile(modelinput, modelinputbinfilename)
                 inputshapestring = getShapeString(modelinput)
                 inputarg += (
                     ' --input="'
@@ -366,6 +401,8 @@ def runInference(
                     + modelinputbinfilename
                     + '" '
                 )
+    if args.verbose:
+        print(f"Created: inference_input.n.bin files")
     for i, goldoutput in enumerate(goldoutputlist):
         infoutputfilename = getinfoutfilename(i)
         outputarg = " --output=@" + infoutputfilename + " "
@@ -393,6 +430,10 @@ def runInference(
         outputshape = goldoutput.size()
         torchdtype = goldoutput.dtype
         infoutputfilename = getinfoutfilename(i)
+        if args.verbose:
+            print(
+                f"Out shape: {outputshape} Dtype: {torchdtype} Loading {infoutputfilename}"
+            )
         infoutput = loadRawBinaryAsTorchSensor(
             infoutputfilename, outputshape, torchdtype
         )
@@ -744,7 +785,7 @@ def main():
         "--dtype",
         choices=["fp32", "bf16"],
         default="fp32",
-        help="Tensor datatype to use for fp32 models. If a model is already in int4, int8, fp16 or bf16, then this switch has no effect",
+        help="Casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
     )
     parser.add_argument(
         "-f",

@@ -56,21 +56,10 @@ if not outfileprefix:
 
 outfileprefix += "." + dtype
 
-# test_input and test_output are defined in model.py as torch tensor which
-# is prepended to this file
-# At present only one input tensor and one output tensor is supported
-# for pytorch
-if isinstance(test_input, list):
-    print("At present only one input for pytorch model is supported\n")
-    sys.exit(1)
-if isinstance(test_output, list):
-    print("At present only one output for Pytoch model is supported\n")
-    sys.exit(1)
-
 if dtype == "bf16":
     model = model.to(torch.bfloat16)
-    # casting input to bfloat16 crashes torch.onnx.export, so skip it
     test_input = test_input.to(torch.bfloat16)
+    test_output = model(test_input)
 
 if runmode == "onnx" or runmode == "ort":
     onnx_name = outfileprefix + ".onnx"
