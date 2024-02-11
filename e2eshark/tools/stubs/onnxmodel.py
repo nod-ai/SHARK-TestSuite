@@ -11,10 +11,10 @@ parser = argparse.ArgumentParser(description=msg, epilog="")
 
 parser.add_argument(
     "-d",
-    "--dtype",
-    choices=["fp32", "bf16"],
-    default="fp32",
-    help="Tensor datatype to use",
+    "--todtype",
+    choices=["default", "fp32", "fp16", "bf16"],
+    default="none",
+    help="If not default, casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
 )
 parser.add_argument(
     "-m",
@@ -29,10 +29,14 @@ parser.add_argument(
     help="Prefix of output files written by this model",
 )
 args = parser.parse_args()
-dtype = args.dtype
+if args.todtype != "default":
+    print(
+        "Onnx does not support model.to(dtype). Default dtype of the model will be used."
+    )
+
 runmode = args.mode
 outfileprefix = args.outfileprefix
-outfileprefix += "." + dtype
+outfileprefix += "." + args.todtype
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 

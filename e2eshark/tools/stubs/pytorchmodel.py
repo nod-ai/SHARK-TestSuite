@@ -22,10 +22,10 @@ parser = argparse.ArgumentParser(description=msg, epilog="")
 
 parser.add_argument(
     "-d",
-    "--dtype",
-    choices=["fp32", "bf16"],
-    default="fp32",
-    help="Tensor datatype to use",
+    "--todtype",
+    choices=["default", "fp32", "fp16", "bf16"],
+    default="none",
+    help="If not default, casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
 )
 parser.add_argument(
     "-m",
@@ -39,7 +39,7 @@ parser.add_argument(
     "--torchmlircompile",
     choices=["compile", "fximport"],
     default="fximport",
-    help="Use torch_mlir.compile, or Fx importer",
+    help="Use torch_mlir.torchscript.compile, or Fx importer",
 )
 parser.add_argument(
     "-o",
@@ -47,18 +47,31 @@ parser.add_argument(
     help="Prefix of output files written by this model",
 )
 args = parser.parse_args()
-dtype = args.dtype
 runmode = args.mode
 outfileprefix = args.outfileprefix
 
 if not outfileprefix:
     outfileprefix = test_modelname
 
-outfileprefix += "." + dtype
+outfileprefix += "." + args.todtype
 
-if dtype == "bf16":
-    model = model.to(torch.bfloat16)
-    test_input = test_input.to(torch.bfloat16)
+
+def getTorchDType(dtypestr):
+    if dtypestr == "fp32":
+        return torch.float32
+    elif dtypestr == "fp16":
+        return torch.float16
+    elif dtypestr == "bf16":
+        return torch.bfloat16
+    else:
+        print("Unknown dtype {dtypestr} returning torch.float32")
+        return torch.float32
+
+
+if args.todtype != "default":
+    dtype = getTorchDType(args.todtype)
+    model = model.to(dtype)
+    test_input = test_input.to(dtype)
     test_output = model(test_input)
 
 if runmode == "onnx" or runmode == "ort":
