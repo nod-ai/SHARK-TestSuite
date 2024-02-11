@@ -237,7 +237,7 @@ def runTorchMLIRGeneration(
         # start phases[1]
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
-        torchonnxfilename = modelname + "." + args.dtype + ".torch-onnx.mlir"
+        torchonnxfilename = modelname + "." + args.todtype + ".torch-onnx.mlir"
         logfilename = "torch-onnx.log"
         scriptcommand = (
             "python -m torch_mlir.tools.import_onnx "
@@ -480,9 +480,11 @@ def runTest(aTuple):
     (frameworkname, testName, args, script_dir, run_dir) = aTuple
     testRunDir = run_dir + "/" + testName
     modelname = os.path.basename(testName)
-    modelinputptfilename = testRunDir + "/" + modelname + "." + args.dtype + ".input.pt"
+    modelinputptfilename = (
+        testRunDir + "/" + modelname + "." + args.todtype + ".input.pt"
+    )
     goldoutputptfilename = (
-        testRunDir + "/" + modelname + "." + args.dtype + ".goldoutput.pt"
+        testRunDir + "/" + modelname + "." + args.todtype + ".goldoutput.pt"
     )
     phases = ["model-run", "onnx-import", "torch-mlir", "iree-compile", "inference"]
     resultdict = {}
@@ -512,18 +514,18 @@ def runTest(aTuple):
     testargs = ""
     torchmlirfilename = ""
     onnxfilename = ""
-    vmfbfilename = modelname + "." + args.dtype + ".vmfb"
+    vmfbfilename = modelname + "." + args.todtype + ".vmfb"
     if frameworkname == "pytorch":
         stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
-        onnxfilename = modelname + "." + args.dtype + ".onnx"
-        torchmlirfilename = modelname + "." + args.dtype + ".pytorch.torch.mlir"
+        onnxfilename = modelname + "." + args.todtype + ".onnx"
+        torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
         testargs += " --torchmlircompile " + args.torchmlircompile
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct":
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
-        torchmlirfilename = modelname + "." + args.dtype + ".onnx.torch.mlir"
+        torchmlirfilename = modelname + "." + args.todtype + ".onnx.torch.mlir"
         onnxfilename = "model.onnx"
         if getTestKind(testName) == "models":
             onnxfilename = testAbsPath + "/model.onnx"
@@ -535,7 +537,12 @@ def runTest(aTuple):
         print("Framework ", frameworkname, " not supported")
         return 1
     testargs += (
-        " --dtype " + args.dtype + " --mode " + mode + " --outfileprefix " + modelname
+        " --todtype "
+        + args.todtype
+        + " --mode "
+        + mode
+        + " --outfileprefix "
+        + modelname
     )
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
     logfilename = modelname + ".log"
@@ -782,10 +789,10 @@ def main():
     )
     parser.add_argument(
         "-d",
-        "--dtype",
-        choices=["fp32", "bf16"],
-        default="fp32",
-        help="Casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
+        "--todtype",
+        choices=["default", "fp32", "fp16", "bf16"],
+        default="default",
+        help="If not default, casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
     )
     parser.add_argument(
         "-f",
@@ -888,7 +895,7 @@ def main():
         "--torchmlircompile",
         choices=["compile", "fximport"],
         default="fximport",
-        help="Use torch_mlir.compile, or Fx importer",
+        help="Use torch_mlir.torchscript.compile, or Fx importer",
     )
     parser.add_argument(
         "-v",
