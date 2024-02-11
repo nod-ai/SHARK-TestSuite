@@ -103,5 +103,7 @@ if not isinstance(test_input, list):
     test_input_list = [test_input]
 if not isinstance(test_output, list):
     test_output_list = [test_output]
-torch.save(test_input_list, inputsavefilename)
-torch.save(test_output_list, outputsavefilename)
+test_input_list_save = [t.detach() for t in test_input_list]
+test_output_list_save = [t.detach() for t in test_output_list]
+torch.save(test_input_list_save, inputsavefilename)
+torch.save(test_output_list_save, outputsavefilename)
