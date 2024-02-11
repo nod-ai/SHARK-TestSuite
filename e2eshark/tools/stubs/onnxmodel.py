@@ -13,7 +13,7 @@ parser.add_argument(
     "-d",
     "--todtype",
     choices=["default", "fp32", "fp16", "bf16"],
-    default="none",
+    default="default",
     help="If not default, casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
 )
 parser.add_argument(
