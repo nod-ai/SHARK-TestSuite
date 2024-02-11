@@ -347,6 +347,21 @@ def runCodeGeneration(
     return 0
 
 
+# ∣input−other∣ ≤ atol + rtol × ∣other∣
+# returns (atol, rtol)
+# Pytorch torch.testing defaults:
+#    bf16: atol=1e-05, rtol=1.6e-02
+#    fp16: atol=1e-05, rtol=1e-03
+#    fp32: atol=1e-05, rtol=1.3e-06
+def getTolerances(torchdtype):
+    if torchdtype == torch.bfloat16:
+        return (1e-02, 2e-02)
+    elif torchdtype == torch.float16:
+        return (1e-04, 1e-03)
+    else:
+        return (1e-04, 1e-05)
+
+
 def runInference(
     testName,
     args,
@@ -439,8 +454,9 @@ def runInference(
         )
         if args.verbose:
             inerencelog = open(logfilename, "a")
-            print(f"Gold reference[{i}]:{goldoutput}\n", file=inerencelog)
-            print(f"Inference Output[{i}] {infoutput}:\n", file=inerencelog)
+            torch.set_printoptions(profile="full")
+            print(f"Gold reference[{i}]:\n{goldoutput}\n", file=inerencelog)
+            print(f"Inference Output[{i}]:\n {infoutput}:\n", file=inerencelog)
 
         goldoutput = goldoutput.flatten()
         infoutput = infoutput.flatten()
@@ -448,22 +464,31 @@ def runInference(
         # if shapes do not match, we have a problem as comparison routines may crash
         # so gauard it
         if infoutput.shape != goldoutput.shape:
+            print("shape mismatch")
             inferencematched = False
         else:
             if args.zerotolerance:
                 # If each element matches exactly only then torch.equal is true
                 inferencematched = torch.equal(infoutput, goldoutput)
             else:
-                rtol = 1e-03
-                atol = 1e-03
-                inferencematched = torch.allclose(
-                    infoutput, goldoutput, rtol=rtol, atol=atol, equal_nan=False
-                )
+                atol, rtol = getTolerances(torchdtype)
+                inferencematched = torch.allclose(infoutput, goldoutput, rtol, atol)
 
         if not inferencematched:
             failedinflog = open("failedinference.log", "w")
-            print(f"Gold reference[{i}]:{goldoutput}\n", file=failedinflog)
-            print(f"Inference Output[{i}] {infoutput}:\n", infoutput, file=failedinflog)
+            torch.set_printoptions(profile="full")
+            print(f"Gold reference[output[{i}]]:\n{goldoutput}\n", file=failedinflog)
+            print(f"Inference Output[output[{i}]]:\n{infoutput}:\n", file=failedinflog)
+            diff = torch.eq(
+                infoutput,
+                goldoutput,
+            )
+            print(f"Element-wise difference[output[{i}]]:\n{diff}\n", file=failedinflog)
+            percentdiff = torch.sum(diff).item() / diff.nelement() * 100
+            print(
+                f"Percentage element-wise match[{i}]:{percentdiff:.2f}%\n",
+                file=failedinflog,
+            )
             print("Test", testName, "failed [mismatch]")
             end = time.time()
             resultdict[curphase] = ["mismatch", end - start]
