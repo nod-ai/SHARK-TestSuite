@@ -248,3 +248,18 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
 
    Then follow steps similar to the one described above for pytorch framework to test more and add 
    the test to the repo.
+
+   ### Testing for different dtypes
+   The model (test) writer should decide on a specific data type (dtype) to use. Name the test with a suffix 
+   of dtype to indicate its dtype if not fp32. As an exmaple a 8-bit VAI quantized model (test) for resnet50 should preferably be named as restnet50_vaiq_int8 vs a fp32 model (test) as simply resnet50.
+
+   If a framework has support for casting a model and tensor to a particular type then using switch --todtype you can
+   run the same model with a different dtype. As an example, Pytorch has model.to(dtype) and tensor.to(dtype) for floating point types only, so for any of pytorch tests you can run test by passing --todtype 'an_allowed_value' . 
+   
+   Model, parameters and inputs are cast to new dtype. As long as framework run of model and IREE compiled run of model match we are able to test torch-mlir and IREE, even if the values are not exactly the same as the original values, this way of testing can help us detect many low hanging bugs. 
+   
+   The exmaple run below casts the model and input tensor to bf16 for test pytorch/combinations/mlp (which is originally written as fp32 model):
+
+   ```
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/combinations/mlp --mode onnx --runupto inference --torchtolinalg --todtype bf16
+   ```
