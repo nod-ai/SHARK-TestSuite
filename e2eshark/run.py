@@ -677,6 +677,9 @@ def checkAndSetEnvironments(args):
     HF_HOME = os.environ.get("HF_HOME")
     if args.hfhome:
         HF_HOME = args.hfhome
+        HF_HOME = os.path.expanduser(HF_HOME)
+        HF_HOME = os.path.abspath(HF_HOME)
+        
     if HF_HOME:
         if not os.path.exists(HF_HOME):
             print(
@@ -769,6 +772,7 @@ def generateReport(run_dir, testsList, args):
 def checkBuildAndEnv(run_dir, args):
     if args.torchmlirbuild:
         TORCH_MLIR_BUILD = args.torchmlirbuild
+    TORCH_MLIR_BUILD = os.path.expanduser(TORCH_MLIR_BUILD)
     TORCH_MLIR_BUILD = os.path.abspath(TORCH_MLIR_BUILD)
     if not os.path.exists(TORCH_MLIR_BUILD):
         print(
@@ -786,6 +790,7 @@ def checkBuildAndEnv(run_dir, args):
                 "If --runupto is 'iree-compile' or 'inference' then a valid IREE build is needed. Specify a valid IREE build directory using --ireebuild or set IREE_BUILD in run.py"
             )
             sys.exit(1)
+        IREE_BUILD = os.path.expanduser(IREE_BUILD)
         IREE_BUILD = os.path.abspath(IREE_BUILD)
         if not os.path.exists(IREE_BUILD):
             print("IREE build directory", IREE_BUILD, "does not exist.")
