@@ -16,6 +16,7 @@ from torch_mlir import fx
 
 # old torch_mlir.compile path
 from torch_mlir import torchscript
+from utils import getOutputTensorList
 
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -71,7 +72,12 @@ def getTorchDType(dtypestr):
 if args.todtype != "default":
     dtype = getTorchDType(args.todtype)
     model = model.to(dtype)
-    test_input = test_input.to(dtype)
+    # not all model need the input re-casted
+    # add cases for models as needed
+    if "opt" in test_modelname:
+        pass
+    else:
+        test_input = test_input.to(dtype)
     test_output = model(test_input)
 
 if runmode == "onnx" or runmode == "ort":
@@ -99,10 +105,19 @@ outputsavefilename = outfileprefix + ".goldoutput.pt"
 
 test_input_list = test_input
 test_output_list = test_output
+
 if not isinstance(test_input, list):
     test_input_list = [test_input]
-if not isinstance(test_output, list):
+
+if isinstance(test_output_list, tuple):
+    # handles only nested tuples for now
+    test_output_list = getOutputTensorList(test_output)
+
+if not isinstance(test_output_list, list):
     test_output_list = [test_output]
+else:
+    print("model result expected to be List[Tensors] "
+          f"but got {type(test_output)}")
 test_input_list_save = [t.detach() for t in test_input_list]
 test_output_list_save = [t.detach() for t in test_output_list]
 torch.save(test_input_list_save, inputsavefilename)

@@ -4,10 +4,10 @@ import torch.nn as nn
 import torch_mlir
 from transformers import OPTForCausalLM, AutoTokenizer
 
-modelname = "facebook/opt-125M"
-tokenizer = AutoTokenizer.from_pretrained(modelname)
+test_modelname = "facebook/opt-125M"
+tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 model = OPTForCausalLM.from_pretrained(
-    modelname,
+    test_modelname,
     num_labels=2,
     output_attentions=False,
     output_hidden_states=False,
