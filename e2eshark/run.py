@@ -234,13 +234,14 @@ def runTorchMLIRGeneration(
     end = time.time()
     resultdict[curphase] = ["passed", end - start]
     if mode == "onnx" or mode == "ort":
+        torch_mlir_pythonpath = SHARED_TORCH_MLIR_BUILD + "/tools/torch-mlir/python_packages/torch_mlir"
         # start phases[1]
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
         torchonnxfilename = modelname + "." + args.todtype + ".torch-onnx.mlir"
         logfilename = "torch-onnx.log"
         scriptcommand = (
-            "python -m torch_mlir.tools.import_onnx "
+            f"PYTHONPATH={torch_mlir_pythonpath} python -m torch_mlir.tools.import_onnx "
             + onnxfilename
             + " -o "
             + torchonnxfilename
