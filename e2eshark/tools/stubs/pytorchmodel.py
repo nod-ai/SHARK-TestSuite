@@ -74,7 +74,8 @@ if args.todtype != "default":
     model = model.to(dtype)
     # not all model need the input re-casted
     # add cases for models as needed
-    if "opt" in test_modelname:
+    if test_modelname is not None and \
+       "opt" in test_modelname:
         pass
     else:
         test_input = test_input.to(dtype)

@@ -4,10 +4,10 @@ import torch.nn as nn
 import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
-modelname = "meta-llama/Llama-2-7b-hf"
-tokenizer = LlamaTokenizer.from_pretrained(modelname)
+test_modelname = "meta-llama/Llama-2-7b-hf"
+tokenizer = LlamaTokenizer.from_pretrained(test_modelname)
 model = LlamaForCausalLM.from_pretrained(
-    modelname,
+    test_modelname,
     low_cpu_mem_usage=True,
     attn_implementation="eager",
     torchscript=True,

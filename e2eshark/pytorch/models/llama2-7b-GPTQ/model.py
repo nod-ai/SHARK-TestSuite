@@ -8,7 +8,7 @@ from transformers import (
     GPTQConfig,
 )
 
-modelname = "TheBloke/Llama-2-7B-GPTQ"
+test_modelname = "TheBloke/Llama-2-7B-GPTQ"
 kwargs = {
     "torch_dtype": torch.float32,
     "trust_remote_code": True,
@@ -17,10 +17,10 @@ quantization_config = GPTQConfig(bits=8, disable_exllama=True)
 kwargs["quantization_config"] = quantization_config
 kwargs["device_map"] = "cpu"
 model = AutoModelForCausalLM.from_pretrained(
-    modelname, low_cpu_mem_usage=True, attn_implementation="eager", **kwargs
+    test_modelname, low_cpu_mem_usage=True, attn_implementation="eager", **kwargs
 )
 # model.output_hidden_states = False
-tokenizer = AutoTokenizer.from_pretrained(modelname)
+tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 test_input = encoding["input_ids"].cpu()
