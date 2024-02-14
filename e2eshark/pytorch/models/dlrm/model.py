@@ -547,3 +547,4 @@ print("Onput:", test_output)
 # 'fximport' : to force using PyTorch 2.0 Fx Import
 # Force usage of torch_mlir.compile
 test_torchmlircompile = "compile"
+test_modelname = None

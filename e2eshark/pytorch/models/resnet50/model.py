@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch_mlir
 from torchvision.models import resnet50, ResNet50_Weights
 
+test_modelname = "resnet50"
 weights = ResNet50_Weights.DEFAULT
 model = resnet50(weights=weights)
 model.eval()
