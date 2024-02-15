@@ -19,6 +19,8 @@ tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 test_input = encoding["input_ids"].cpu()
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = False
 test_output = model.generate(
     test_input,
     do_sample=True,
