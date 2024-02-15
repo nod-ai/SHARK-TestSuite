@@ -4,10 +4,10 @@ import torch.nn as nn
 import torch_mlir
 from transformers import OPTForCausalLM, AutoTokenizer
 
-modelname = "facebook/opt-125M"
-tokenizer = AutoTokenizer.from_pretrained(modelname)
+test_modelname = "facebook/opt-125M"
+tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 model = OPTForCausalLM.from_pretrained(
-    modelname,
+    test_modelname,
     num_labels=2,
     output_attentions=False,
     output_hidden_states=False,
@@ -18,6 +18,8 @@ model.eval()
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 test_input = encoding["input_ids"].cpu()
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = True
 # test_output = model(test_input)[0]
 test_output = model.generate(
     test_input,

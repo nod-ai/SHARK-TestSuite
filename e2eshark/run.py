@@ -419,9 +419,13 @@ def runInference(
                 )
     if args.verbose:
         print(f"Created: inference_input.n.bin files")
-    for i, goldoutput in enumerate(goldoutputlist):
+
+    outputarg = ""
+    # expecting goldoutputlist to be a List[Tensors]
+    # each tensor corresponding to a vmfb output
+    for i in range(len(goldoutputlist)):
         infoutputfilename = getinfoutfilename(i)
-        outputarg = " --output=@" + infoutputfilename + " "
+        outputarg += " --output=@" + infoutputfilename + " "
     scriptcommand = (
         SHARED_IREE_BUILD
         + "/tools/iree-run-module --module="
@@ -521,7 +525,8 @@ def runTest(aTuple):
     testAbsPath = script_dir + "/" + testName
 
     toolsDirAbsPath = script_dir + "/tools"
-    stubrunmodelpy = toolsDirAbsPath + "stubs/pytorchmodel.py"
+    stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
+    utilspy = toolsDirAbsPath + "/stubs/utils.py"
     modelpy = testAbsPath + "/model.py"
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
@@ -546,6 +551,13 @@ def runTest(aTuple):
         onnxfilename = modelname + "." + args.todtype + ".onnx"
         torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
         testargs += " --torchmlircompile " + args.torchmlircompile
+        # create a symlink to the utils file inside the test dir
+        if not os.path.exists(utilspy):
+            print(f"[ERR] utils.py file missing")
+            sys.exit()
+        symUtilspy = os.path.join(testRunDir, "utils.py")
+        if not os.path.exists(symUtilspy):
+            os.symlink(utilspy, symUtilspy)
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct":

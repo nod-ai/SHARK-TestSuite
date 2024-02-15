@@ -15,6 +15,8 @@ class op_linear(nn.Module):
 
 model = op_linear()
 test_input = torch.randn(8, 3)
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = False
 test_output = model(test_input)
 print("Input:", test_input)
 print("Output:", test_output)

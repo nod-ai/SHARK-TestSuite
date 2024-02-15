@@ -517,6 +517,8 @@ for i in range(ln_emb.size):
 # Run the model with the sample query and profiler
 dlrm_ref.eval()
 test_input = [batch_dense_X, batch_lS_o, batch_lS_i]
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = True
 
 # model = make_fx(  # type: ignore[no-untyped-call]
 #    dlrm_ref,
@@ -547,3 +549,4 @@ print("Onput:", test_output)
 # 'fximport' : to force using PyTorch 2.0 Fx Import
 # Force usage of torch_mlir.compile
 test_torchmlircompile = "compile"
+test_modelname = None
