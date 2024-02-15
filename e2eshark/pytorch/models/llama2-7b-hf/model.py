@@ -4,10 +4,10 @@ import torch.nn as nn
 import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
-modelname = "meta-llama/Llama-2-7b-hf"
-tokenizer = LlamaTokenizer.from_pretrained(modelname)
+test_modelname = "meta-llama/Llama-2-7b-hf"
+tokenizer = LlamaTokenizer.from_pretrained(test_modelname)
 model = LlamaForCausalLM.from_pretrained(
-    modelname,
+    test_modelname,
     low_cpu_mem_usage=True,
     attn_implementation="eager",
     torchscript=True,
@@ -18,6 +18,8 @@ model.output_hidden_states = False
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 test_input = encoding["input_ids"].cpu()
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = False
 test_output = model.generate(
     test_input,
     do_sample=True,

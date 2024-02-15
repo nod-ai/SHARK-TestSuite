@@ -17,6 +17,8 @@ class op_conv2d(nn.Module):
 
 model = op_conv2d()
 test_input = torch.randn(2, 8, 12, 16)
+# Flag to prevent casting of input to a different dtype
+keep_input_dtype = False
 test_output = model(test_input)
 print("Input:", test_input)
 print("Output:", test_output)
