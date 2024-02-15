@@ -112,11 +112,10 @@ if isinstance(test_output_list, tuple):
     # handles only nested tuples for now
     test_output_list = getOutputTensorList(test_output)
 
+# model result expected to be List[Tensors]
 if not isinstance(test_output_list, list):
     test_output_list = [test_output]
-else:
-    print("model result expected to be List[Tensors] "
-          f"but got {type(test_output)}")
+
 test_input_list_save = [t.detach() for t in test_input_list]
 test_output_list_save = [t.detach() for t in test_output_list]
 torch.save(test_input_list_save, inputsavefilename)
