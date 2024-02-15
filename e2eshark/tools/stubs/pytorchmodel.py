@@ -70,14 +70,12 @@ def getTorchDType(dtypestr):
 
 
 if args.todtype != "default":
+    # convert the model to given dtype
     dtype = getTorchDType(args.todtype)
     model = model.to(dtype)
     # not all model need the input re-casted
-    # add cases for models as needed
-    if test_modelname is not None and \
-       "opt" in test_modelname:
-        pass
-    else:
+    # use `keep_input_dtype` to prevent conversion
+    if not keep_input_dtype:
         test_input = test_input.to(dtype)
     test_output = model(test_input)
 
