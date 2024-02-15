@@ -19,7 +19,7 @@ prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 test_input = encoding["input_ids"].cpu()
 # Flag to prevent casting of input to a different dtype
-keep_input_dtype = False
+keep_input_dtype = True
 test_output = model.generate(
     test_input,
     do_sample=True,
