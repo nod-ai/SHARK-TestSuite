@@ -234,7 +234,9 @@ def runTorchMLIRGeneration(
     end = time.time()
     resultdict[curphase] = ["passed", end - start]
     if mode == "onnx" or mode == "ort":
-        torch_mlir_pythonpath = SHARED_TORCH_MLIR_BUILD + "/tools/torch-mlir/python_packages/torch_mlir"
+        torch_mlir_pythonpath = (
+            SHARED_TORCH_MLIR_BUILD + "/tools/torch-mlir/python_packages/torch_mlir"
+        )
         # start phases[1]
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
@@ -323,7 +325,7 @@ def runCodeGeneration(
         + args.backend
         + " "
     )
-    if args.torchtolinalg:
+    if args.mode == "onnx" and args.torchtolinalg:
         commandname += " --iree-input-type=tm_tensor"
     else:
         commandname += " --iree-input-type=torch"
@@ -692,7 +694,7 @@ def checkAndSetEnvironments(args):
         HF_HOME = args.hfhome
         HF_HOME = os.path.expanduser(HF_HOME)
         HF_HOME = os.path.abspath(HF_HOME)
-        
+
     if HF_HOME:
         if not os.path.exists(HF_HOME):
             print(
