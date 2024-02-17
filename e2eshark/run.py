@@ -504,50 +504,57 @@ def runInference(
     resultdict[curphase] = ["passed", end - start]
 
 
-def runTest(aTuple):
-    curdir = os.getcwd()
-    # Do not construct absolute path here as this will run
-    # in a new process and cur dir may change over time giving
-    # unpredicatble results
-    (frameworkname, testName, args, script_dir, run_dir) = aTuple
-    testRunDir = run_dir + "/" + testName
-    modelname = os.path.basename(testName)
-    modelinputptfilename = (
-        testRunDir + "/" + modelname + "." + args.todtype + ".input.pt"
-    )
-    goldoutputptfilename = (
-        testRunDir + "/" + modelname + "." + args.todtype + ".goldoutput.pt"
-    )
-    phases = ["model-run", "onnx-import", "torch-mlir", "iree-compile", "inference"]
-    resultdict = {}
-    for phase in phases:
-        # Put status and time taken for each phase
-        resultdict[phase] = ["notrun", 0.0]
+def runTestUsingSharkTurbine(
+    frameworkname,
+    testName,
+    args,
+    toolsDirAbsPath,
+    modelname,
+    utilspy,
+    testRunDir,
+    testAbsPath,
+    modelpy,
+    runmodelpy,
+    commandslog,
+    timelog,
+    resultdict,
+    phases,
+    vmfbfilename,
+    modelinputptfilename,
+    goldoutputptfilename,
+):
+    # TBD
+    return 0
 
-    testAbsPath = script_dir + "/" + testName
 
-    toolsDirAbsPath = script_dir + "/tools"
+def runTestUsingClassicalFlow(
+    frameworkname,
+    testName,
+    args,
+    toolsDirAbsPath,
+    modelname,
+    utilspy,
+    testRunDir,
+    testAbsPath,
+    modelpy,
+    runmodelpy,
+    commandslog,
+    timelog,
+    resultdict,
+    phases,
+    vmfbfilename,
+    modelinputptfilename,
+    goldoutputptfilename,
+):
     stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
-    utilspy = toolsDirAbsPath + "/stubs/utils.py"
-    modelpy = testAbsPath + "/model.py"
-    # This is the generated runmodel.py which will be run
-    runmodelpy = "runmodel.py"
-    # For args.framework == onnx, onnx is starting point, so mode is
-    # forced to onnx if it is direct
     mode = args.mode
-
-    if args.verbose:
-        print("Running:", testName, "[ Proc:", os.getpid(), "]")
-    if changeToTestDir(testRunDir):
-        return 1
-
-    # Open files to log commands run and time taken
-    commandslog = open("commands.log", "w")
-    timelog = open("time.pkl", "wb")
     testargs = ""
     torchmlirfilename = ""
     onnxfilename = ""
-    vmfbfilename = modelname + "." + args.todtype + ".vmfb"
+    if args.verbose:
+        print(f"Running classical flow for test {testName}")
+
+    # If not using shark turbine, then run individual phases
     if frameworkname == "pytorch":
         stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
         onnxfilename = modelname + "." + args.todtype + ".onnx"
@@ -590,6 +597,8 @@ def runTest(aTuple):
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
     )
 
+    if args.verbose:
+        print(f"Running classical flow model-run for test {testName}")
     # phases 0 to 2
     if args.runfrom == "model-run":
         if runTorchMLIRGeneration(
@@ -648,7 +657,96 @@ def runTest(aTuple):
         ):
             return 1
 
+    return 0
+
+
+def runTest(aTuple):
+    curdir = os.getcwd()
+    # Do not construct absolute path here as this will run
+    # in a new process and cur dir may change over time giving
+    # unpredicatble results
+    (frameworkname, testName, args, script_dir, run_dir) = aTuple
+    testRunDir = run_dir + "/" + testName
+    modelname = os.path.basename(testName)
+    modelinputptfilename = (
+        testRunDir + "/" + modelname + "." + args.todtype + ".input.pt"
+    )
+    goldoutputptfilename = (
+        testRunDir + "/" + modelname + "." + args.todtype + ".goldoutput.pt"
+    )
+    phases = ["model-run", "onnx-import", "torch-mlir", "iree-compile", "inference"]
+    resultdict = {}
+    for phase in phases:
+        # Put status and time taken for each phase
+        resultdict[phase] = ["notrun", 0.0]
+
+    testAbsPath = script_dir + "/" + testName
+
+    toolsDirAbsPath = script_dir + "/tools"
+
+    utilspy = toolsDirAbsPath + "/stubs/utils.py"
+    modelpy = testAbsPath + "/model.py"
+    # This is the generated runmodel.py which will be run
+    runmodelpy = "runmodel.py"
+    # For args.framework == onnx, onnx is starting point, so mode is
+    # forced to onnx if it is direct
+
+    if args.verbose:
+        print("Running:", testName, "[ Proc:", os.getpid(), "]")
+    if changeToTestDir(testRunDir):
+        return 1
+
+    # Open files to log commands run and time taken
+    commandslog = open("commands.log", "w")
+    timelog = open("time.pkl", "wb")
+    vmfbfilename = modelname + "." + args.todtype + ".vmfb"
+    # Shark turbine runs an integrated e2e flow
+    retStatus = 0
+    if args.mode == "turbine":
+        retStatus = runTestUsingSharkTurbine(
+            frameworkname,
+            testName,
+            args,
+            toolsDirAbsPath,
+            modelname,
+            utilspy,
+            testRunDir,
+            testAbsPath,
+            modelpy,
+            runmodelpy,
+            commandslog,
+            timelog,
+            resultdict,
+            phases,
+            vmfbfilename,
+            modelinputptfilename,
+            goldoutputptfilename,
+        )
+    else:
+        retStatus = runTestUsingClassicalFlow(
+            frameworkname,
+            testName,
+            args,
+            toolsDirAbsPath,
+            modelname,
+            utilspy,
+            testRunDir,
+            testAbsPath,
+            modelpy,
+            runmodelpy,
+            commandslog,
+            timelog,
+            resultdict,
+            phases,
+            vmfbfilename,
+            modelinputptfilename,
+            goldoutputptfilename,
+        )
+
     os.chdir(curdir)
+    if retStatus:
+        return 1
+
     print("Test", testName, "passed")
     return logAndReturn(commandslog, timelog, resultdict, 0)
 
@@ -767,12 +865,10 @@ def generateReport(run_dir, testsList, args):
     passlistfile = run_dir + "/passed.txt"
     faillistfile = run_dir + "/failed.txt"
     with open(statustablefile, "w") as statusf:
-        print("Test run status report\n", file=statusf)
         print(statustable, file=statusf)
     print(f"Generated status reoprt {statustablefile}")
 
     with open(timetablefile, "w") as timef:
-        print("Time (seconds) report\n", file=timef)
         print(timetable, file=timef)
     print(f"Generated time reoprt {timetablefile}")
 
@@ -886,9 +982,9 @@ def main():
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["direct", "onnx", "ort"],
+        choices=["direct", "turbine", "onnx", "ort"],
         default="onnx",
-        help="Use framework to torch MLIR, PyTorch to ONNX, or ONNX to ONNX RT flow",
+        help="direct=Fx/TS->torch-mlir, turbine=integrated-e2e, onnx=exportonnx-to-torch-mlir, ort=exportonnx-to-ortep",
     )
     parser.add_argument(
         "--norun",
