@@ -4,7 +4,7 @@
 import sys, argparse
 import torch_mlir
 import numpy
-import io
+import io, pickle
 
 # Fx importer related
 from typing import Optional
@@ -37,7 +37,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "-p",
-    "--torchmlircompile",
+    "--torchmlirimport",
     choices=["compile", "fximport"],
     default="fximport",
     help="Use torch_mlir.torchscript.compile, or Fx importer",
@@ -49,12 +49,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 runmode = args.mode
-outfileprefix = args.outfileprefix
-
-if not outfileprefix:
-    outfileprefix = test_modelname
-
-outfileprefix += "." + args.todtype
+outfileprefix = args.outfileprefix + "." + args.todtype
 
 
 def getTorchDType(dtypestr):
@@ -74,49 +69,55 @@ if args.todtype != "default":
     dtype = getTorchDType(args.todtype)
     model = model.to(dtype)
     # not all model need the input re-casted
-    # use `keep_input_dtype` to prevent conversion
-    if not keep_input_dtype:
-        test_input = test_input.to(dtype)
-    test_output = model(test_input)
+    if E2ESHARK_CHECK["inputtodtype"]:
+        E2ESHARK_CHECK["input"] = E2ESHARK_CHECK["input"].to(dtype)
+    E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
 
 if runmode == "onnx" or runmode == "ort":
     onnx_name = outfileprefix + ".onnx"
-    onnx_program = torch.onnx.export(model, test_input, onnx_name)
+    onnx_program = torch.onnx.export(model, E2ESHARK_CHECK["input"], onnx_name)
 elif runmode == "direct":
     torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
     torch_mlir_model = None
     # override mechanism to get torch MLIR as per model
-    if args.torchmlircompile == "compile" or test_torchmlircompile == "compile":
+    if (
+        args.torchmlirimport == "compile"
+        or E2ESHARK_CHECK["torchmlirimport"] == "compile"
+    ):
         torch_mlir_model = torchscript.compile(
             model,
-            (test_input),
+            (E2ESHARK_CHECK["input"]),
             output_type="torch",
             use_tracing=True,
             verbose=False,
         )
     else:
-        torch_mlir_model = fx.export_and_import(model, test_input)
+        torch_mlir_model = fx.export_and_import(model, E2ESHARK_CHECK["input"])
     with open(torch_mlir_name, "w+") as f:
         f.write(torch_mlir_model.operation.get_asm())
 
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 
-test_input_list = test_input
-test_output_list = test_output
+test_input_list = E2ESHARK_CHECK["input"]
+test_output_list = E2ESHARK_CHECK["output"]
 
-if not isinstance(test_input, list):
-    test_input_list = [test_input]
+if not isinstance(E2ESHARK_CHECK["input"], list):
+    test_input_list = [E2ESHARK_CHECK["input"]]
 
 if isinstance(test_output_list, tuple):
     # handles only nested tuples for now
-    test_output_list = getOutputTensorList(test_output)
+    test_output_list = getOutputTensorList(E2ESHARK_CHECK["output"])
 
 # model result expected to be List[Tensors]
 if not isinstance(test_output_list, list):
-    test_output_list = [test_output]
+    test_output_list = [E2ESHARK_CHECK["output"]]
 
 test_input_list_save = [t.detach() for t in test_input_list]
 test_output_list_save = [t.detach() for t in test_output_list]
 torch.save(test_input_list_save, inputsavefilename)
 torch.save(test_output_list_save, outputsavefilename)
+
+# Save the E2ESHARK_CHECK
+with open("E2ESHARK_CHECK.pkl", "wb") as tchkf:
+    pickle.dump(E2ESHARK_CHECK, tchkf)

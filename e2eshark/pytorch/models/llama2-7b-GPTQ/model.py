@@ -8,6 +8,26 @@ from transformers import (
     GPTQConfig,
 )
 
+# These are pieckled and saved and used by tools/stubs python and run.pl.
+# If adding new fields, make sure the field has default value and have updated
+# tools/stubs and run.pl to handle the new fields
+E2ESHARK_CHECK = {
+    # this is input applied to the model
+    "input": None,
+    # this is output gotten from the model
+    "output": None,
+    # Controls how to import a graph from PyTorch into MLIR, options are: compile or fximport
+    "torchmlirimport": "fximport",
+    # By default, the input.to(dtype) is called, set it to False to not do so
+    "inputtodtype": True,
+    # Apply listed function (tools/stub and run.pl must be able to find definition)
+    # on output from target in sequence to post process output and compare the final
+    # output,
+    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
+    "postprocess": None,
+}
+
+
 test_modelname = "TheBloke/Llama-2-7B-GPTQ"
 kwargs = {
     "torch_dtype": torch.float32,
@@ -23,20 +43,20 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
-test_input = encoding["input_ids"].cpu()
-# Flag to prevent casting of input to a different dtype
-keep_input_dtype = False
-test_output = model.generate(
-    test_input,
+E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
+E2ESHARK_CHECK["output"] = model.generate(
+    E2ESHARK_CHECK["input"],
     do_sample=True,
     top_k=50,
     max_length=100,
     top_p=0.95,
     temperature=1.0,
 )
-# forward_out = model.forward(test_input)
+# forward_out = model.forward(E2ESHARK_CHECK["input"])
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(test_output[0]))
-print("Input:", test_input)
-print("Output:", test_output)
-test_torchmlircompile = None
+print("Response:", tokenizer.decode(E2ESHARK_CHECK["output"][0]))
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])
+# For geneartive AI models, input is int and should be kept that way for
+# casted models as well
+E2ESHARK_CHECK["inputtodtype"] = False
