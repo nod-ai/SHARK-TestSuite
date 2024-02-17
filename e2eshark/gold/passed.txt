@@ -1,5 +1,11 @@
 onnx/combinations/constant_constantofshape
+onnx/operators/add 
+onnx/operators/CumSum 
+onnx/operators/Shape 
+onnx/operators/Pow 
+onnx/operators/Sigmoid 
 pytorch/combinations/mlp
 pytorch/models/resnet50
 pytorch/operators/conv2d
 pytorch/operators/linear
+
