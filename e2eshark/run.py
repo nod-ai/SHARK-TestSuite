@@ -67,6 +67,15 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
     ofile.close()
 
 
+def loadTestCheckedDictionary():
+    testCheckedDict = None
+    pklfilename = "E2ESHARK_CHECK.pkl"
+    if os.path.exists(pklfilename):
+        with open(pklfilename, "rb") as pkf:
+            testCheckedDict = pickle.load(pkf)
+    return testCheckedDict
+
+
 def logAndReturn(commandslog, timelog, resultdict, retval):
     pickle.dump(resultdict, timelog)
     timelog.close()
@@ -504,48 +513,78 @@ def runInference(
     resultdict[curphase] = ["passed", end - start]
 
 
-def runTestUsingSharkTurbine(
-    frameworkname,
-    testName,
-    args,
-    toolsDirAbsPath,
-    modelname,
-    utilspy,
-    testRunDir,
-    testAbsPath,
-    modelpy,
-    runmodelpy,
-    commandslog,
-    timelog,
-    resultdict,
-    phases,
-    vmfbfilename,
-    modelinputptfilename,
-    goldoutputptfilename,
-):
+def runTestUsingSharkTurbine(args_tuple):
+    (
+        frameworkname,
+        testName,
+        args,
+        toolsDirAbsPath,
+        modelname,
+        utilspy,
+        testRunDir,
+        testAbsPath,
+        modelpy,
+        runmodelpy,
+        commandslog,
+        timelog,
+        resultdict,
+        phases,
+        vmfbfilename,
+        modelinputptfilename,
+        goldoutputptfilename,
+    ) = args_tuple
     # TBD
+    print("Running test using turbine is not implemented yet")
+    sys.exit(1)
     return 0
 
 
-def runTestUsingClassicalFlow(
-    frameworkname,
-    testName,
-    args,
-    toolsDirAbsPath,
-    modelname,
-    utilspy,
-    testRunDir,
-    testAbsPath,
-    modelpy,
-    runmodelpy,
-    commandslog,
-    timelog,
-    resultdict,
-    phases,
-    vmfbfilename,
-    modelinputptfilename,
-    goldoutputptfilename,
-):
+def runTestUsingVAIML(args_tuple):
+    (
+        frameworkname,
+        testName,
+        args,
+        toolsDirAbsPath,
+        modelname,
+        utilspy,
+        testRunDir,
+        testAbsPath,
+        modelpy,
+        runmodelpy,
+        commandslog,
+        timelog,
+        resultdict,
+        phases,
+        vmfbfilename,
+        modelinputptfilename,
+        goldoutputptfilename,
+    ) = args_tuple
+    # TBD
+    print("Running test using VAI-ML is not implemented yet")
+    sys.exit(1)
+    return 0
+
+
+def runTestUsingClassicalFlow(args_tuple):
+    (
+        frameworkname,
+        testName,
+        args,
+        toolsDirAbsPath,
+        modelname,
+        utilspy,
+        testRunDir,
+        testAbsPath,
+        modelpy,
+        runmodelpy,
+        commandslog,
+        timelog,
+        resultdict,
+        phases,
+        vmfbfilename,
+        modelinputptfilename,
+        goldoutputptfilename,
+    ) = args_tuple
     stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
     mode = args.mode
     testargs = ""
@@ -559,7 +598,7 @@ def runTestUsingClassicalFlow(
         stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
         onnxfilename = modelname + "." + args.todtype + ".onnx"
         torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
-        testargs += " --torchmlircompile " + args.torchmlircompile
+        testargs += " --torchmlirimport " + args.torchmlirimport
         # create a symlink to the utils file inside the test dir
         if not os.path.exists(utilspy):
             print(f"[ERR] utils.py file missing")
@@ -620,6 +659,13 @@ def runTestUsingClassicalFlow(
         print("Test", testName, "passed")
         return logAndReturn(commandslog, timelog, resultdict, 0)
 
+    # Load the E2ESHARK_CHECK.pkl file saved by model run
+    testCheckedDict = loadTestCheckedDictionary()
+    if args.verbose:
+        print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
+        for key, value in testCheckedDict.items():
+            print(f" {key}: {value}")
+
     if args.runfrom == "model-run" or args.runfrom == "torch-mlir":
         if runCodeGeneration(
             testName,
@@ -657,6 +703,8 @@ def runTestUsingClassicalFlow(
         ):
             return 1
 
+    print("Test", testName, "passed")
+    return logAndReturn(commandslog, timelog, resultdict, 0)
     return 0
 
 
@@ -702,53 +750,37 @@ def runTest(aTuple):
     vmfbfilename = modelname + "." + args.todtype + ".vmfb"
     # Shark turbine runs an integrated e2e flow
     retStatus = 0
+    args_tuple = (
+        frameworkname,
+        testName,
+        args,
+        toolsDirAbsPath,
+        modelname,
+        utilspy,
+        testRunDir,
+        testAbsPath,
+        modelpy,
+        runmodelpy,
+        commandslog,
+        timelog,
+        resultdict,
+        phases,
+        vmfbfilename,
+        modelinputptfilename,
+        goldoutputptfilename,
+    )
     if args.mode == "turbine":
-        retStatus = runTestUsingSharkTurbine(
-            frameworkname,
-            testName,
-            args,
-            toolsDirAbsPath,
-            modelname,
-            utilspy,
-            testRunDir,
-            testAbsPath,
-            modelpy,
-            runmodelpy,
-            commandslog,
-            timelog,
-            resultdict,
-            phases,
-            vmfbfilename,
-            modelinputptfilename,
-            goldoutputptfilename,
-        )
+        retStatus = runTestUsingSharkTurbine(args_tuple)
+    elif args.mode == "vaiml":
+        runTestUsingVAIML(args_tuple)
     else:
-        retStatus = runTestUsingClassicalFlow(
-            frameworkname,
-            testName,
-            args,
-            toolsDirAbsPath,
-            modelname,
-            utilspy,
-            testRunDir,
-            testAbsPath,
-            modelpy,
-            runmodelpy,
-            commandslog,
-            timelog,
-            resultdict,
-            phases,
-            vmfbfilename,
-            modelinputptfilename,
-            goldoutputptfilename,
-        )
+        retStatus = runTestUsingClassicalFlow(args_tuple)
 
     os.chdir(curdir)
     if retStatus:
         return 1
 
-    print("Test", testName, "passed")
-    return logAndReturn(commandslog, timelog, resultdict, 0)
+    return 0
 
 
 def initializer(tm_path, iree_path):
@@ -982,7 +1014,7 @@ def main():
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["direct", "turbine", "onnx", "ort"],
+        choices=["direct", "turbine", "onnx", "ort", "vaiml"],
         default="onnx",
         help="direct=Fx/TS->torch-mlir, turbine=integrated-e2e, onnx=exportonnx-to-torch-mlir, ort=exportonnx-to-ortep",
     )
@@ -1000,9 +1032,9 @@ def main():
     )
     parser.add_argument(
         "--reportformat",
-        choices=["pipe", "github", "html"],
+        choices=["pipe", "github", "html", "csv"],
         default="pipe",
-        help="Format of the test report summary file. It takes tablefmt value of python tabulate",
+        help="Format of the test report summary file. It takes subset of tablefmt value of python tabulate",
     )
     parser.add_argument(
         "--runfrom",
@@ -1033,7 +1065,7 @@ def main():
         help="A file with lists of tests (starting with framework name) to run",
     )
     parser.add_argument(
-        "--torchmlircompile",
+        "--torchmlirimport",
         choices=["compile", "fximport"],
         default="fximport",
         help="Use torch_mlir.torchscript.compile, or Fx importer",

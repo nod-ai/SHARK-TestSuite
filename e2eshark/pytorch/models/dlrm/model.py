@@ -5,6 +5,25 @@ import torch.nn as nn
 from torch.fx.experimental.proxy_tensor import make_fx
 from torch_mlir.dynamo import _get_decomposition_table
 
+# These are pieckled and saved and used by tools/stubs python and run.pl.
+# If adding new fields, make sure the field has default value and have updated
+# tools/stubs and run.pl to handle the new fields
+E2ESHARK_CHECK = {
+    # this is input applied to the model
+    "input": None,
+    # this is output gotten from the model
+    "output": None,
+    # Controls how to import a graph from PyTorch into MLIR, options are: compile or fximport
+    "torchmlirimport": "fximport",
+    # By default, the input.to(dtype) is called, set it to False to not do so
+    "inputtodtype": True,
+    # Apply listed function (tools/stub and run.pl must be able to find definition)
+    # on output from target in sequence to post process output and compare the final
+    # output,
+    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
+    "postprocess": None,
+}
+
 
 class DLRM_Net(nn.Module):
     def create_mlp(self, ln, sigmoid_layer):
@@ -516,7 +535,7 @@ for i in range(ln_emb.size):
 
 # Run the model with the sample query and profiler
 dlrm_ref.eval()
-test_input = [batch_dense_X, batch_lS_o, batch_lS_i]
+E2ESHARK_CHECK["input"] = [batch_dense_X, batch_lS_o, batch_lS_i]
 # Flag to prevent casting of input to a different dtype
 keep_input_dtype = True
 
@@ -529,8 +548,8 @@ model = torch.jit.trace(dlrm_ref, (batch_dense_X, batch_lS_o, batch_lS_i))
 model.eval()
 
 print(f"INFO: Running inference using fx graph to generate reference data...")
-test_output = model(batch_dense_X, batch_lS_o, batch_lS_i)
-sorted, indices = torch.sort(test_output, dim=0, descending=True)
+E2ESHARK_CHECK["output"] = model(batch_dense_X, batch_lS_o, batch_lS_i)
+sorted, indices = torch.sort(E2ESHARK_CHECK["output"], dim=0, descending=True)
 top_n = batch_size if batch_size < 5 else 5
 print(f"INFO: Clickthrough probability of top {top_n} ads:")
 header_format = "{0:4s}|{1:20s}"
@@ -541,12 +560,6 @@ print(header_format.format(4 * "-", 20 * "-"))
 for i in range(top_n):
     print(cell_format.format(indices[i][0].item(), sorted[i][0] * 100))
 
-print("Input:", test_input)
-print("Onput:", test_output)
-# Do not enforce any particular strategy for getting torch MLIR
-# By default set it to None, set it to
-# 'compile' : to force using torch_mllir.compile
-# 'fximport' : to force using PyTorch 2.0 Fx Import
-# Force usage of torch_mlir.compile
-test_torchmlircompile = "compile"
-test_modelname = None
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])
+E2ESHARK_CHECK["torchmlirimport"] = "compile"
