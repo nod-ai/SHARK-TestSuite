@@ -107,6 +107,7 @@ if not isinstance(E2ESHARK_CHECK["input"], list):
 
 if isinstance(test_output_list, tuple):
     # handles only nested tuples for now
+    print(f"Found tuple {len(test_output_list)} {test_output_list}")
     test_output_list = getOutputTensorList(E2ESHARK_CHECK["output"])
 
 # model result expected to be List[Tensors]

@@ -37,7 +37,8 @@ model.output_hidden_states = False
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
-E2ESHARK_CHECK["output"] = model.generate(
+E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
+model_response = model.generate(
     E2ESHARK_CHECK["input"],
     do_sample=True,
     top_k=50,
@@ -46,7 +47,7 @@ E2ESHARK_CHECK["output"] = model.generate(
     temperature=1.0,
 )
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(E2ESHARK_CHECK["output"][0]))
+print("Response:", tokenizer.decode(model_response[0]))
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
 # For geneartive AI models, input is int and should be kept that way for

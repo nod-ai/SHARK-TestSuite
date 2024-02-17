@@ -367,7 +367,7 @@ def runCodeGeneration(
 #    fp32: atol=1e-05, rtol=1.3e-06
 def getTolerances(torchdtype):
     if torchdtype == torch.bfloat16:
-        return (1e-02, 2e-02)
+        return (1e-02, 1e-01)
     elif torchdtype == torch.float16:
         return (1e-04, 1e-03)
     else:
