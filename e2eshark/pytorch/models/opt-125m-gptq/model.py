@@ -4,6 +4,25 @@ import torch.nn as nn
 import torch_mlir
 from transformers import AutoModelForCausalLM, AutoTokenizer, GPTQConfig
 
+# These are pieckled and saved and used by tools/stubs python and run.pl.
+# If adding new fields, make sure the field has default value and have updated
+# tools/stubs and run.pl to handle the new fields
+E2ESHARK_CHECK = {
+    # this is input applied to the model
+    "input": None,
+    # this is output gotten from the model
+    "output": None,
+    # Controls how to import a graph from PyTorch into MLIR, options are: compile or fximport
+    "torchmlirimport": "fximport",
+    # By default, the input.to(dtype) is called, set it to False to not do so
+    "inputtodtype": True,
+    # Apply listed function (tools/stub and run.pl must be able to find definition)
+    # on output from target in sequence to post process output and compare the final
+    # output,
+    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
+    "postprocess": None,
+}
+
 test_modelname = "facebook/opt-125m"
 quantizedmodelname = "jlsilva/facebook-opt-125m-gptq4bit"
 kwargs = {
@@ -18,23 +37,19 @@ model = AutoModelForCausalLM.from_pretrained(quantizedmodelname, **kwargs)
 tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
-test_input = encoding["input_ids"].cpu()
-# Flag to prevent casting of input to a different dtype
-keep_input_dtype = False
-test_output = model.generate(
-    test_input,
+E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
+E2ESHARK_CHECK["output"] = model.generate(
+    E2ESHARK_CHECK["input"],
     do_sample=True,
     top_k=50,
     max_length=100,
     top_p=0.95,
     temperature=1.0,
 )
-print("Input:", test_input)
-print("Output:", test_output)
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(test_output[0]))
-# Do not enforce any particular strategy for getting torch MLIR
-# By default set it to None, set it to
-# 'compile' : to force using torch_mllir.compile
-# 'fximport' : to force using PyTorch 2.0 Fx Import
-test_torchmlircompile = None
+print("Response:", tokenizer.decode(E2ESHARK_CHECK["output"][0]))
+# For geneartive AI models, input is int and should be kept that way for
+# casted models as well
+E2ESHARK_CHECK["inputtodtype"] = False
