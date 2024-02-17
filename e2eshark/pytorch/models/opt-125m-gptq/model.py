@@ -38,7 +38,8 @@ tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
-E2ESHARK_CHECK["output"] = model.generate(
+E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
+model_response = model.generate(
     E2ESHARK_CHECK["input"],
     do_sample=True,
     top_k=50,
@@ -46,10 +47,10 @@ E2ESHARK_CHECK["output"] = model.generate(
     top_p=0.95,
     temperature=1.0,
 )
+print("Prompt:", prompt)
+print("Response:", tokenizer.decode(model_response[0]))
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
-print("Prompt:", prompt)
-print("Response:", tokenizer.decode(E2ESHARK_CHECK["output"][0]))
 # For geneartive AI models, input is int and should be kept that way for
 # casted models as well
 E2ESHARK_CHECK["inputtodtype"] = False
