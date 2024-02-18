@@ -3,11 +3,25 @@
 # Description: testing CumSum
 # See https://onnx.ai/onnx/intro/python.html for intro on creating
 # onnx model using python onnx API
-import numpy
+import numpy, torch, sys
 import onnxruntime
 from onnx import numpy_helper, TensorProto, save_model
-from onnx.helper import make_model, make_node, make_graph, make_tensor_value_info, make_tensor
+from onnx.helper import (
+    make_model,
+    make_node,
+    make_graph,
+    make_tensor_value_info,
+    make_tensor,
+)
 from onnx.checker import check_model
+
+# import from e2eshark/tools to allow running in current dir, for run through
+# run.pl, commutils is symbolically linked to allow any rundir to work
+sys.path.insert(0, "../../../tools/stubs")
+from commonutils import E2ESHARK_CHECK_DEF
+
+# Create an instance of it for this test
+E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
 
 # Create an input (ValueInfoProto)
 X = make_tensor_value_info("X", TensorProto.FLOAT, [4, 5])
@@ -55,12 +69,14 @@ test_input_X = numpy.random.randn(4, 5).astype(numpy.float32)
 inputs = session.get_inputs()
 outputs = session.get_outputs()
 
-test_input = [test_input_X]
-
-test_output = session.run(
+model_output = session.run(
     [outputs[0].name],
     {inputs[0].name: test_input_X},
 )
+
+# Moving to torch to handle bfloat16 as numpy does not support bfloat16
+test_input = [torch.from_numpy(test_input_X)]
+test_output = [torch.from_numpy(arr) for arr in model_output]
 
 print("Input:", test_input)
 print("Output:", test_output)
