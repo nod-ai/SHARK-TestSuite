@@ -16,7 +16,7 @@ from torch_mlir import fx
 
 # old torch_mlir.compile path
 from torch_mlir import torchscript
-from utils import getOutputTensorList
+from commonutils import getOutputTensorList, E2ESHARK_CHECK_DEF, postProcess
 
 msg = "The script to run a model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -107,16 +107,21 @@ if not isinstance(E2ESHARK_CHECK["input"], list):
 
 if isinstance(test_output_list, tuple):
     # handles only nested tuples for now
+    print(f"Found tuple {len(test_output_list)} {test_output_list}")
     test_output_list = getOutputTensorList(E2ESHARK_CHECK["output"])
 
 # model result expected to be List[Tensors]
 if not isinstance(test_output_list, list):
     test_output_list = [E2ESHARK_CHECK["output"]]
 
-test_input_list_save = [t.detach() for t in test_input_list]
-test_output_list_save = [t.detach() for t in test_output_list]
-torch.save(test_input_list_save, inputsavefilename)
-torch.save(test_output_list_save, outputsavefilename)
+E2ESHARK_CHECK["input"] = [t.detach() for t in test_input_list]
+E2ESHARK_CHECK["output"] = [t.detach() for t in test_output_list]
+
+E2ESHARK_CHECK["output"] = postProcess(E2ESHARK_CHECK)
+
+# TBD, move to using E2ESHARK_CHECK pickle save
+torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
+torch.save(E2ESHARK_CHECK["output"], outputsavefilename)
 
 # Save the E2ESHARK_CHECK
 with open("E2ESHARK_CHECK.pkl", "wb") as tchkf:

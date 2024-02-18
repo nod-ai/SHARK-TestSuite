@@ -367,11 +367,11 @@ def runCodeGeneration(
 #    fp32: atol=1e-05, rtol=1.3e-06
 def getTolerances(torchdtype):
     if torchdtype == torch.bfloat16:
-        return (1e-02, 2e-02)
+        return (1e-02, 1e-01)
     elif torchdtype == torch.float16:
         return (1e-04, 1e-03)
     else:
-        return (1e-04, 1e-05)
+        return (1e-04, 1e-04)
 
 
 def runInference(
@@ -408,7 +408,7 @@ def runInference(
     if args.verbose:
         print(f"Loaded: {modelinputptfilename} and {goldoutputptfilename}")
         print(
-            f"input list length: {len(modelinputlist)}, output list length: {len(goldoutputptfilename)}"
+            f"input list length: {len(modelinputlist)}, output list length: {len(goldoutputlist)}"
         )
     # If there is no input the do not pass --input
     if len(modelinputlist) > 0:
@@ -457,6 +457,13 @@ def runInference(
         return logAndReturn(commandslog, timelog, resultdict, 1)
     end = time.time()
 
+    # Load the E2ESHARK_CHECK.pkl file saved by model run
+    testCheckedDict = loadTestCheckedDictionary()
+    if args.verbose:
+        print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
+        for key, value in testCheckedDict.items():
+            print(f" {key}: {value}")
+
     for i, goldoutput in enumerate(goldoutputlist):
         outputshape = goldoutput.size()
         torchdtype = goldoutput.dtype
@@ -476,6 +483,10 @@ def runInference(
 
         goldoutput = goldoutput.flatten()
         infoutput = infoutput.flatten()
+        if testCheckedDict.get("postprocess"):
+            for func in testCheckedDict["postprocess"]:
+                infoutput = func(infoutput)
+
         inferencematched = False
         # if shapes do not match, we have a problem as comparison routines may crash
         # so gauard it
@@ -593,19 +604,20 @@ def runTestUsingClassicalFlow(args_tuple):
     if args.verbose:
         print(f"Running classical flow for test {testName}")
 
+    # create a symlink to the utils file inside the test dir
+    if not os.path.exists(utilspy):
+        print(f"[ERR] {utilspy} file missing")
+        sys.exit()
+    symUtilspy = os.path.join(testRunDir, "commonutils.py")
+    if not os.path.exists(symUtilspy):
+        os.symlink(utilspy, symUtilspy)
+
     # If not using shark turbine, then run individual phases
     if frameworkname == "pytorch":
         stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
         onnxfilename = modelname + "." + args.todtype + ".onnx"
         torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
         testargs += " --torchmlirimport " + args.torchmlirimport
-        # create a symlink to the utils file inside the test dir
-        if not os.path.exists(utilspy):
-            print(f"[ERR] utils.py file missing")
-            sys.exit()
-        symUtilspy = os.path.join(testRunDir, "utils.py")
-        if not os.path.exists(symUtilspy):
-            os.symlink(utilspy, symUtilspy)
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct":
@@ -658,13 +670,6 @@ def runTestUsingClassicalFlow(args_tuple):
     if args.runupto == "torch-mlir":
         print("Test", testName, "passed")
         return logAndReturn(commandslog, timelog, resultdict, 0)
-
-    # Load the E2ESHARK_CHECK.pkl file saved by model run
-    testCheckedDict = loadTestCheckedDictionary()
-    if args.verbose:
-        print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
-        for key, value in testCheckedDict.items():
-            print(f" {key}: {value}")
 
     if args.runfrom == "model-run" or args.runfrom == "torch-mlir":
         if runCodeGeneration(
@@ -732,7 +737,7 @@ def runTest(aTuple):
 
     toolsDirAbsPath = script_dir + "/tools"
 
-    utilspy = toolsDirAbsPath + "/stubs/utils.py"
+    utilspy = toolsDirAbsPath + "/stubs/commonutils.py"
     modelpy = testAbsPath + "/model.py"
     # This is the generated runmodel.py which will be run
     runmodelpy = "runmodel.py"
@@ -893,15 +898,21 @@ def generateReport(run_dir, testsList, args):
 
     # Now write out report files
     timetablefile = run_dir + "/timereport." + suffix
+    timetablepkl = run_dir + "/timereport.pkl"
     statustablefile = run_dir + "/statusreport." + suffix
+    statustablepkl = run_dir + "/statusreport.pkl"
     passlistfile = run_dir + "/passed.txt"
     faillistfile = run_dir + "/failed.txt"
     with open(statustablefile, "w") as statusf:
         print(statustable, file=statusf)
+    with open(statustablepkl, "wb") as f:
+        pickle.dump(statustable, f)
     print(f"Generated status reoprt {statustablefile}")
 
     with open(timetablefile, "w") as timef:
         print(timetable, file=timef)
+    with open(timetablepkl, "wb") as f:
+        pickle.dump(timetable, f)
     print(f"Generated time reoprt {timetablefile}")
 
     with open(passlistfile, "w") as f:

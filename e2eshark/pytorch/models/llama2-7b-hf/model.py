@@ -4,24 +4,13 @@ import torch.nn as nn
 import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
-# These are pieckled and saved and used by tools/stubs python and run.pl.
-# If adding new fields, make sure the field has default value and have updated
-# tools/stubs and run.pl to handle the new fields
-E2ESHARK_CHECK = {
-    # this is input applied to the model
-    "input": None,
-    # this is output gotten from the model
-    "output": None,
-    # Controls how to import a graph from PyTorch into MLIR, options are: compile or fximport
-    "torchmlirimport": "fximport",
-    # By default, the input.to(dtype) is called, set it to False to not do so
-    "inputtodtype": True,
-    # Apply listed function (tools/stub and run.pl must be able to find definition)
-    # on output from target in sequence to post process output and compare the final
-    # output,
-    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
-    "postprocess": None,
-}
+# import from e2eshark/tools to allow running in current dir, for run through
+# run.pl, commutils is symbolically linked to allow any rundir to work
+sys.path.insert(0, "../../../tools/stubs")
+from commonutils import E2ESHARK_CHECK_DEF
+
+# Create an instance of it for this test
+E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
 
 test_modelname = "meta-llama/Llama-2-7b-hf"
 tokenizer = LlamaTokenizer.from_pretrained(test_modelname)
@@ -37,7 +26,8 @@ model.output_hidden_states = False
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
-E2ESHARK_CHECK["output"] = model.generate(
+E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
+model_response = model.generate(
     E2ESHARK_CHECK["input"],
     do_sample=True,
     top_k=50,
@@ -46,7 +36,7 @@ E2ESHARK_CHECK["output"] = model.generate(
     temperature=1.0,
 )
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(E2ESHARK_CHECK["output"][0]))
+print("Response:", tokenizer.decode(model_response[0]))
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
 # For geneartive AI models, input is int and should be kept that way for
