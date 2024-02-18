@@ -14,7 +14,7 @@ E2ESHARK_CHECK_DEF = {
     # on output from target in sequence to post process output and compare the final
     # output. The functions imported from commonutils will be visible, so can
     # put post processing code here
-    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
+    # Exmaple: "postprocess": [torch.nn.functional.softmax]
     "postprocess": None,
 }
 
@@ -42,8 +42,9 @@ def postProcess(E2ESHARK_CHECK):
     # Call chain of post processing -- run.pl will do same on backend inference output
     if E2ESHARK_CHECK.get("postprocess"):
         for item in test_output:
+            # Run post processing pipeline
             for func in E2ESHARK_CHECK["postprocess"]:
-                item = [func(item)]
+                item = func(item)
             postprocess_output += [item]
     else:
         postprocess_output = test_output
