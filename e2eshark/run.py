@@ -906,13 +906,13 @@ def generateReport(run_dir, testsList, args):
     with open(statustablefile, "w") as statusf:
         print(statustable, file=statusf)
     with open(statustablepkl, "wb") as f:
-        pickle.dump(statustable, f)
+        pickle.dump(statustablerows, f)
     print(f"Generated status reoprt {statustablefile}")
 
     with open(timetablefile, "w") as timef:
         print(timetable, file=timef)
     with open(timetablepkl, "wb") as f:
-        pickle.dump(timetable, f)
+        pickle.dump(timetablerows, f)
     print(f"Generated time reoprt {timetablefile}")
 
     with open(passlistfile, "w") as f:
