@@ -15,7 +15,7 @@ sys.path.insert(0, "../../../tools/stubs")
 from commonutils import E2ESHARK_CHECK_DEF
 
 # Create an instance of it for this test
-E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
+E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
 
 # Create an input (ValueInfoProto)
@@ -49,8 +49,8 @@ with open("model.onnx", "wb") as f:
 
 
 session = onnxruntime.InferenceSession("model.onnx", None)
-test_input_X = numpy.random.randn(4, 5).astype(numpy.float32)
-test_input_Y = numpy.random.randn(4, 5).astype(numpy.float32)
+model_input_X = numpy.random.randn(4, 5).astype(numpy.float32)
+model_input_Y = numpy.random.randn(4, 5).astype(numpy.float32)
 # gets X in inputs[0] and Y in inputs[1]
 inputs = session.get_inputs()
 # gets Z in outputs[0]
@@ -58,12 +58,15 @@ outputs = session.get_outputs()
 
 model_output = session.run(
     [outputs[0].name],
-    {inputs[0].name: test_input_X, inputs[1].name: test_input_Y},
+    {inputs[0].name: model_input_X, inputs[1].name: model_input_Y},
 )
 
 # Moving to torch to handle bfloat16 as numpy does not support bfloat16
-test_input = [torch.from_numpy(test_input_X), torch.from_numpy(test_input_Y)]
-test_output = [torch.from_numpy(arr) for arr in model_output]
+E2ESHARK_CHECK["input"] = [
+    torch.from_numpy(model_input_X),
+    torch.from_numpy(model_input_Y),
+]
+E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
-print("Input:", test_input)
-print("Output:", test_output)
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])

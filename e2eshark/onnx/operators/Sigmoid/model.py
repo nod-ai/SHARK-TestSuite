@@ -9,7 +9,7 @@ sys.path.insert(0, "../../../tools/stubs")
 from commonutils import E2ESHARK_CHECK_DEF
 
 # Create an instance of it for this test
-E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
+E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
 
 # Create an input (ValueInfoProto)
@@ -43,27 +43,27 @@ with open(model_path, "wb") as f:
 
 # Initialize the ONNX runtime session and run inference
 session = onnxruntime.InferenceSession(model_path, None)
-test_input_X = numpy.random.randn(3, 4).astype(numpy.float32)  # Match the input shape
+model_input_X = numpy.random.randn(3, 4).astype(numpy.float32)  # Match the input shape
 
 inputs = session.get_inputs()
 outputs = session.get_outputs()
 
 model_output = session.run(
     [outputs[0].name],
-    {inputs[0].name: test_input_X},
+    {inputs[0].name: model_input_X},
 )
 
-print("Input shape:", test_input_X.shape)
+print("Input shape:", model_input_X.shape)
 print("Output shape:", numpy.array(model_output[0]).shape)
 
 # things that need to be kept constant for every test:
 # 1. Define Input and Output Shapes Clearly: Each test must start by defining the input tensor shapes using make_tensor_value_info, ensuring the dimensions match the expected input for the operation being tested.
-# 2. There must be a test_inputs and test_outputs list so that the test harness code can access the input and output data for validation.
+# 2. There must be a E2ESHARK_CHECK['input']s and E2ESHARK_CHECK['output']s list so that the test harness code can access the input and output data for validation.
 # 3. The model must be saved as model.onnx in the current working directory
 
 # Moving to torch to handle bfloat16 as numpy does not support bfloat16
-test_input = [torch.from_numpy(test_input_X)]
-test_output = [torch.from_numpy(arr) for arr in model_output]
+E2ESHARK_CHECK["input"] = [torch.from_numpy(model_input_X)]
+E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
-print("Input:", test_input)
-print("Output:", test_output)
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])
