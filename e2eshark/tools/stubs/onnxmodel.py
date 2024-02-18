@@ -41,11 +41,8 @@ outfileprefix += "." + args.todtype
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 
-E2ESHARK_CHECK["output"] = test_output
-E2ESHARK_CHECK["input"] = test_input
 
 E2ESHARK_CHECK["output"] = postProcess(E2ESHARK_CHECK)
-
 # TBD, remobe torch.save and use the .pkl instead
 torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
 torch.save(E2ESHARK_CHECK["output"], outputsavefilename)

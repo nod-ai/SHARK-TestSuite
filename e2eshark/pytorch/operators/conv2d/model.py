@@ -9,7 +9,7 @@ sys.path.insert(0, "../../../tools/stubs")
 from commonutils import E2ESHARK_CHECK_DEF
 
 # Create an instance of it for this test
-E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
+E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
 
 class op_conv2d(nn.Module):
