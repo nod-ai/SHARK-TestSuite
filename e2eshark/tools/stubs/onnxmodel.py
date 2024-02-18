@@ -4,7 +4,8 @@
 import numpy
 import onnxruntime
 import sys, argparse
-import torch
+import torch, pickle
+from commonutils import getOutputTensorList, E2ESHARK_CHECK_DEF, postProcess
 
 msg = "The script to run an ONNX model test"
 parser = argparse.ArgumentParser(description=msg, epilog="")
@@ -40,12 +41,15 @@ outfileprefix += "." + args.todtype
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
 
-# test_input and test_output are defined in model.py as
-# list of numpy array, each input and output is an element
-# of the list.
-# same input and output as torch .pt
-pttest_input = [torch.from_numpy(arr) for arr in test_input]
-pttest_output = [torch.from_numpy(arr) for arr in test_output]
-print(pttest_input, pttest_output)
-torch.save(pttest_input, inputsavefilename)
-torch.save(pttest_output, outputsavefilename)
+E2ESHARK_CHECK["output"] = test_output
+E2ESHARK_CHECK["input"] = test_input
+
+E2ESHARK_CHECK["output"] = postProcess(E2ESHARK_CHECK)
+
+# TBD, remobe torch.save and use the .pkl instead
+torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
+torch.save(E2ESHARK_CHECK["output"], outputsavefilename)
+
+# Save the E2ESHARK_CHECK
+with open("E2ESHARK_CHECK.pkl", "wb") as f:
+    pickle.dump(E2ESHARK_CHECK, f)

@@ -1,25 +1,13 @@
-import torch
+import torch, sys
 import torch.nn as nn
 
+# import from e2eshark/tools to allow running in current dir, for run through
+# run.pl, commutils is symbolically linked to allow any rundir to work
+sys.path.insert(0, "../../../tools/stubs")
+from commonutils import E2ESHARK_CHECK_DEF
 
-# These are pieckled and saved and used by tools/stubs python and run.pl.
-# If adding new fields, make sure the field has default value and have updated
-# tools/stubs and run.pl to handle the new fields
-E2ESHARK_CHECK = {
-    # this is input applied to the model
-    "input": None,
-    # this is output gotten from the model
-    "output": None,
-    # Controls how to import a graph from PyTorch into MLIR, options are: compile or fximport
-    "torchmlirimport": "fximport",
-    # By default, the input.to(dtype) is called, set it to False to not do so
-    "inputtodtype": True,
-    # Apply listed function (tools/stub and run.pl must be able to find definition)
-    # on output from target in sequence to post process output and compare the final
-    # output,
-    # Exmaple: "postprocess": [torch.nn.functional.softmax, torch.topk]
-    "postprocess": None,
-}
+# Create an instance of it for this test
+E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
 
 
 class mlp(nn.Module):
