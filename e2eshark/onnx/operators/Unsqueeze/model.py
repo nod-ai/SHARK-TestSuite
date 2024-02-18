@@ -16,7 +16,7 @@ sys.path.insert(0, "../../../tools/stubs")
 from commonutils import E2ESHARK_CHECK_DEF
 
 # Create an instance of it for this test
-E2ESHARK_CHECK = E2ESHARK_CHECK_DEF
+E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
 
 # Create an input (ValueInfoProto)
@@ -67,7 +67,7 @@ with open("model.onnx", "wb") as f:
 
 # Initialize the ONNX runtime session and run inference
 session = onnxruntime.InferenceSession("model.onnx", None)
-test_input_X = numpy.random.randn(2, 3, 4).astype(
+model_input_X = numpy.random.randn(2, 3, 4).astype(
     numpy.float32
 )  # Match the input shape
 inputs = session.get_inputs()
@@ -75,20 +75,20 @@ outputs = session.get_outputs()
 
 model_output = session.run(
     [outputs[0].name],
-    {inputs[0].name: test_input_X},
+    {inputs[0].name: model_input_X},
 )
 
 
-print("Input shape:", test_input_X.shape)
+print("Input shape:", model_input_X.shape)
 print("Output shape:", numpy.array(model_output[0]).shape)
 
 # things that need to be kept constant for every test:
-# - each test must have a test_input and test_output variable defined by the end of the script
+# - each test must have a E2ESHARK_CHECK['input'] and E2ESHARK_CHECK['output'] variable defined by the end of the script
 # - each test must write a model.onnx named exactly that
 
 # Moving to torch to handle bfloat16 as numpy does not support bfloat16
-test_input = [torch.from_numpy(test_input_X)]
-test_output = [torch.from_numpy(arr) for arr in model_output]
+E2ESHARK_CHECK["input"] = [torch.from_numpy(model_input_X)]
+E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
-print("Input:", test_input)
-print("Output:", test_output)
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])

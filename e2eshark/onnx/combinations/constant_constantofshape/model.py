@@ -44,7 +44,7 @@ with open("model.onnx", "wb") as f:
     f.write(onnx_model.SerializeToString())
 
 session = onnxruntime.InferenceSession("model.onnx", None)
-test_input_X = numpy.array([])
+model_input_X = numpy.array([])
 # There is no input for this one
 inputs = session.get_inputs()
 # gets Z in outputs[0]
@@ -55,11 +55,11 @@ model_output = session.run(
     [outputs[0].name],
     {},
 )
-# test_input and test_output are list of pytorch arrays
+# E2ESHARK_CHECK['input'] and E2ESHARK_CHECK['output'] are list of pytorch arrays
 # each index into list is one input or one output in the
 # order it appears in the model. for this test case it is empty
-test_input = []
-test_output = [torch.from_numpy(arr) for arr in model_output]
+E2ESHARK_CHECK["input"] = []
+E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
-print("Input:", test_input)
-print("Output:", test_output)
+print("Input:", E2ESHARK_CHECK["input"])
+print("Output:", E2ESHARK_CHECK["output"])

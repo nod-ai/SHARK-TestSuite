@@ -462,7 +462,7 @@ def runInference(
     if args.verbose:
         print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
         for key, value in testCheckedDict.items():
-            print(f" {key}: {value}")
+            print(f" {key} ")
 
     for i, goldoutput in enumerate(goldoutputlist):
         outputshape = goldoutput.size()
