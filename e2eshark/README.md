@@ -51,8 +51,13 @@
                               runmodel.py for tests of framework 'onnx'
  - tools/stubs/pytorchmodel.py : This is concatenated to 'model.py' in test directory to form a 
                                  runmodel.py for the tests of framework 'pytorch'
+ - tools/stubs/commonutils.py: Utilities common to other tools/stubs files as weel as model.py
+                     This also defined a dictionary named as E2ESHARK_CHECK_DEF, an instance of
+                     which is created for each test. This allows serializing input, output, any 
+                     special controls, post processing recipe to be passed around
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
  - tools/reportutil.py: Given two different run directories, create a merged report
+
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
  cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
@@ -186,14 +191,29 @@ Merge reports from two different run directories named as 'fp32" and "bf16" and 
 ```
 python tools/reportutil.py --do merge fp32 bf16 
 ```
-An example merged view report:
+An example merged report:
 ```
-| test-name                                  | model-run-fp32   | model-run-bf16   | onnx-import-fp32   | onnx-import-bf16   | torch-mlir-fp32   | torch-mlir-bf16   | iree-compile-fp32   | iree-compile-bf16   | inference-fp32   | inference-bf16   |
-|--------------------------------------------|------------------|------------------|--------------------|--------------------|-------------------|-------------------|---------------------|---------------------|------------------|------------------|
-| pytorch/models/llama2-7b-GPTQ              | failed           | failed           | notrun             | notrun             | notrun            | notrun            | notrun              | notrun              | notrun           | notrun           |
-| pytorch/models/opt-125M                    | passed           | passed           | passed             | passed             | passed            | passed            | passed              | passed              | passed           | mismatch         |
-| pytorch/models/llama2-7b-hf                | passed           | passed           | passed             | passed             | passed            | passed            | passed              | passed              | mismatch         | mismatch         |
+| test-name                     | model-run-fp32 | model-run-bf16 | onnx-import-fp32 | onnx-import-bf16 | torch-mlir-fp32 | torch-mlir-bf16 | iree-compile-fp32 | iree-compile-bf16 | inference-fp32 | inference-bf16 |
+| ----------------------------- | -------------- | -------------- | ---------------- | ---------------- | --------------- | --------------- | ----------------- | ----------------- | -------------- | -------------- |
+| pytorch/models/llama2-7b-GPTQ | failed         | failed         | notrun           | notrun           | notrun          | notrun          | notrun            | notrun            | notrun         | notrun         |
+| pytorch/models/opt-125M       | passed         | passed         | passed           | passed           | passed          | passed          | passed            | passed            | passed         | mismatch       |
+| pytorch/models/llama2-7b-hf   | passed         | passed         | passed           | passed           | passed          | passed          | passed            | passed            | mismatch       | mismatch       |
 ```
+
+Example 6:
+Diff reports from two different run directories named as 'fp32" and "bf16" and show whether each test run matched or differed
+```
+python tools/reportutil.py --do diff fp32 bf16 
+```
+An example diff report:
+```
+| test-name                      | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
+| onnx/models/resnet50_vaiq_int8 | differ    | differ      | differ     | differ       | differ    |
+| pytorch/models/opt-125M        | same      | same        | same       | same         | differ    |
+| pytorch/models/dlrm            | differ    | differ      | same       | same         | same      |
+```
+
 ### Adding new tests
 
 #### Adding test in framework pytorch

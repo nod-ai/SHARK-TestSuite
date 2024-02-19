@@ -36,34 +36,63 @@ def createMergedHeader(runnames, oneheader):
     return mergedheader
 
 
+def getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen):
+    listOfRuns = []
+    for run in runnames:
+        if dictOfRuns.get(run):
+            listOfRuns += [dictOfRuns[run]]
+        else:
+            listOfRuns += [["NA" for i in range(headerlen)]]
+    return listOfRuns
+
+
 def createMergedRows(runnames, reportdict, headerlen):
     mergedrows = []
     for test, dictOfRuns in reportdict.items():
         merged = [test]
-        listOfRuns = []
-        for run in runnames:
-            if dictOfRuns.get(run):
-                listOfRuns += [dictOfRuns[run]]
-            else:
-                listOfRuns += [["NA" for i in range(headerlen)]]
-
+        listOfRuns = getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen)
         # zip creates a tuple by taking same index value from each of the
         # unpacked (using * operator) run in listOfRuns
-        for runs in zip(*listOfRuns):
-            merged.extend(runs)
+        for cellItemTuple in zip(*listOfRuns):
+            merged.extend(cellItemTuple)
 
         mergedrows += [merged]
 
     return mergedrows
 
 
-def addToDict(reportdict, reportpkl, runname):
+def createDiffRows(runnames, reportdict, headerlen):
+    diffrows = []
+    for test, dictOfRuns in reportdict.items():
+        diff = [test]
+        listOfRuns = getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen)
+
+        # zip creates a tuple by taking same index value from each of the
+        # unpacked (using * operator) run in listOfRuns
+        matched = False
+        for cellItemTuple in zip(*listOfRuns):
+            matched = all(cellItemTuple[0] == j for j in cellItemTuple)
+            if matched:
+                diff.extend(["same"])
+            else:
+                diffidentifier = "differ"
+                if args.verbose:
+                    diffidentifier = ",".join(cellItemTuple)
+                diff.extend([diffidentifier])
+        diffrows += [diff]
+    return diffrows
+
+
+def addToDict(reportdict, reportpkl, runname, skiptestslist):
     table = loadTable(reportpkl)
     # skip test name, hence from 1
     header = [table[0][1:]]
     # skip table header, hence index from 1
     for i in range(1, len(table)):
         testname = table[i][0]
+        print(f"{testname}")
+        if testname in skiptestslist:
+            continue
         # Add to dictionary of testname to dictionary of run name
         if reportdict.get(testname):
             reportdict[testname][runname] = table[i][1:]
@@ -71,6 +100,25 @@ def addToDict(reportdict, reportpkl, runname):
             reportdict[testname] = {runname: table[i][1:]}
 
     return header
+
+
+def createMergedReport(args, reportdict, runnames, oneheader):
+    # Create merged header
+    mergedheader = createMergedHeader(runnames, oneheader)
+    mergedrows = createMergedRows(runnames, reportdict, len(oneheader))
+    mergedtable = tabulate.tabulate(
+        mergedrows, headers=mergedheader, tablefmt=args.reportformat
+    )
+    return mergedtable
+
+
+def createDiffReport(args, reportdict, runnames, oneheader):
+    diffheader = ["test-name"] + oneheader
+    diffrows = createDiffRows(runnames, reportdict, len(oneheader))
+    difftable = tabulate.tabulate(
+        diffrows, headers=diffheader, tablefmt=args.reportformat
+    )
+    return difftable
 
 
 if __name__ == "__main__":
@@ -107,17 +155,34 @@ if __name__ == "__main__":
         default="status",
         help="Process status report vs time report",
     )
+    parser.add_argument(
+        "-s",
+        "--skiptestsfile",
+        help="A file with lists of tests that shouuld be skipped during comparision or merging",
+    )
+
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Print details in the reports",
+    )
 
     args = parser.parse_args()
-    if args.do == "diff":
-        print(f"Ability to diff reports is not implemented yet.")
-        sys.exit(1)
     dirlist = args.inputdirs
     reportdict = {}
     allheaders = []
     runnames = []
+    testlist = []
     mergedreportfilename = ""
-
+    if args.skiptestsfile:
+        if not os.path.exists(args.skiptestsfile):
+            print(f"The file {args.skiptestsfile} does not exist")
+        with open(args.skiptestsfile, "r") as tf:
+            testlist += tf.read().splitlines()
+    skiptestslist = [item.strip().strip(os.sep) for item in testlist]
+    print(f"{skiptestslist}")
     for item in dirlist:
         rundir = os.path.abspath(item)
         runname = os.path.basename(rundir)
@@ -133,18 +198,16 @@ if __name__ == "__main__":
         if not os.path.exists(reportpkl):
             print(f"{reportpkl} does not exist. This report will be ignored.")
             continue
-        allheaders += addToDict(reportdict, reportpkl, runname)
+        allheaders += addToDict(reportdict, reportpkl, runname, skiptestslist)
 
     oneheader = checkAndGetHeader(allheaders)
-    # Create merged header
-    mergedheader = createMergedHeader(runnames, oneheader)
-    mergedrows = createMergedRows(runnames, reportdict, len(oneheader))
-    mergedtable = tabulate.tabulate(
-        mergedrows, headers=mergedheader, tablefmt=args.reportformat
-    )
+    if args.do == "merge":
+        outtable = createMergedReport(args, reportdict, runnames, oneheader)
+    else:
+        outtable = createDiffReport(args, reportdict, runnames, oneheader)
+
     outf = sys.stdout
     if args.output:
         outf = open(args.output, "w")
-    print(mergedtable, file=outf)
-
+    print(outtable, file=outf)
     sys.exit(0)
