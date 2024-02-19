@@ -45,6 +45,7 @@ parser.add_argument(
 parser.add_argument(
     "-o",
     "--outfileprefix",
+    default="model",
     help="Prefix of output files written by this model",
 )
 args = parser.parse_args()

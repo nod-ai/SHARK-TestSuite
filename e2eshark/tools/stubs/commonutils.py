@@ -12,9 +12,11 @@ E2ESHARK_CHECK_DEF = {
     "inputtodtype": True,
     # Apply listed function (tools/stub and run.pl must be able to find definition)
     # on output from target in sequence to post process output and compare the final
-    # output. The functions imported from commonutils will be visible, so can
-    # put post processing code here
-    # Exmaple: "postprocess": [torch.nn.functional.softmax]
+    # output instead.
+    # First arg to function is the output, any additional args should be added as a list
+    # list of function and its 1+args as tuple should be provided
+    # Exmaple: "postprocess": [(torch.nn.functional.softmax, [0])]
+    # which will be called as output = torch.nn.functional.softmax(output, 0)
     "postprocess": None,
 }
 
@@ -43,8 +45,8 @@ def postProcess(E2ESHARK_CHECK):
     if E2ESHARK_CHECK.get("postprocess"):
         for item in test_output:
             # Run post processing pipeline
-            for func in E2ESHARK_CHECK["postprocess"]:
-                item = func(item)
+            for func, argextra in E2ESHARK_CHECK["postprocess"]:
+                item = func(item, *argextra)
             postprocess_output += [item]
     else:
         postprocess_output = test_output

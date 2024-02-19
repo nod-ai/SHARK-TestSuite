@@ -8,8 +8,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
-# Apply softmax after output
-E2ESHARK_CHECK["postprocess"] = [torch.nn.functional.softmax]
+
 
 # The generated or checked in onnx file must always be called model.onnx
 # the tools/stubs/onnxmodel.py is appended to model.py
@@ -33,9 +32,12 @@ outputs = session.get_outputs()
 model_output = session.run(
     [outputs[0].name],
     {inputs[0].name: model_input_X},
-)
+)[0]
 E2ESHARK_CHECK["input"] = [torch.from_numpy(model_input_X)]
 E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
+
+# Apply softmax after output, calls as softmax(ouput, 0)
+E2ESHARK_CHECK["postprocess"] = [(torch.nn.functional.softmax, [0])]
