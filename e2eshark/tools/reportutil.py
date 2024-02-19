@@ -10,8 +10,8 @@ def loadTable(reportpkl):
     return table
 
 
-def checkAndGetHeader(headers):
-    retheader = None
+def checkAndGetHeader(headers, column_indices):
+    retheader = []
     # Check if headers match, else cannot process
     for i, item in enumerate(headers):
         for j in range(i + 1, len(headers)):
@@ -21,36 +21,54 @@ def checkAndGetHeader(headers):
                     f"One of them had: {headers[i]}\nWhile the other had:{headers[j]}"
                 )
                 sys.exit(1)
+    # Check column indices
+    for i in column_indices:
+        if i < 0 or i >= len(headers[0]):
+            print(
+                f"The --column index {i} is out of range. Valid range is: {0}:{len(headers[0])-1}"
+            )
+            sys.exit(1)
+
     # pick one of the headers as merged header to be build
     if len(headers) > 0:
-        retheader = headers[0]
+        retheader = selectColumns(headers[0], column_indices)
     return retheader
 
 
-def createMergedHeader(runnames, oneheader):
+def selectColumns(row, column_indices):
+    # Assumes indices have been chedked in column_indices within range earlier
+    if len(column_indices) == 0:
+        return row
+    selectedcolumns = [row[i] for i in column_indices]
+    return selectedcolumns
+
+
+def createMergedHeader(runnames, header):
     mergedheader = ["test-name"]
-    for i in range(len(oneheader)):
+    for i in range(len(header)):
         for run in runnames:
-            columnname = oneheader[i] + "-" + run
+            columnname = header[i] + "-" + run
             mergedheader += [columnname]
     return mergedheader
 
 
-def getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen):
+def getCanonicalizedListOfRuns(runnames, dictOfRuns, column_indices, rowlen):
     listOfRuns = []
     for run in runnames:
         if dictOfRuns.get(run):
-            listOfRuns += [dictOfRuns[run]]
+            listOfRuns += [selectColumns(dictOfRuns[run], column_indices)]
         else:
-            listOfRuns += [["NA" for i in range(headerlen)]]
+            listOfRuns += [["NA" for i in range(rowlen)]]
     return listOfRuns
 
 
-def createMergedRows(runnames, reportdict, headerlen):
+def createMergedRows(runnames, reportdict, column_indices, rowlen):
     mergedrows = []
     for test, dictOfRuns in reportdict.items():
         merged = [test]
-        listOfRuns = getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen)
+        listOfRuns = getCanonicalizedListOfRuns(
+            runnames, dictOfRuns, column_indices, rowlen
+        )
         # zip creates a tuple by taking same index value from each of the
         # unpacked (using * operator) run in listOfRuns
         for cellItemTuple in zip(*listOfRuns):
@@ -61,11 +79,13 @@ def createMergedRows(runnames, reportdict, headerlen):
     return mergedrows
 
 
-def createDiffRows(runnames, reportdict, headerlen):
+def createDiffRows(runnames, reportdict, column_indices, rowlen):
     diffrows = []
     for test, dictOfRuns in reportdict.items():
         diff = [test]
-        listOfRuns = getCanonicalizedListOfRuns(runnames, dictOfRuns, headerlen)
+        listOfRuns = getCanonicalizedListOfRuns(
+            runnames, dictOfRuns, column_indices, rowlen
+        )
 
         # zip creates a tuple by taking same index value from each of the
         # unpacked (using * operator) run in listOfRuns
@@ -90,7 +110,6 @@ def addToDict(reportdict, reportpkl, runname, skiptestslist):
     # skip table header, hence index from 1
     for i in range(1, len(table)):
         testname = table[i][0]
-        print(f"{testname}")
         if testname in skiptestslist:
             continue
         # Add to dictionary of testname to dictionary of run name
@@ -102,19 +121,19 @@ def addToDict(reportdict, reportpkl, runname, skiptestslist):
     return header
 
 
-def createMergedReport(args, reportdict, runnames, oneheader):
+def createMergedReport(args, reportdict, runnames, header, column_indices):
     # Create merged header
-    mergedheader = createMergedHeader(runnames, oneheader)
-    mergedrows = createMergedRows(runnames, reportdict, len(oneheader))
+    mergedheader = createMergedHeader(runnames, header)
+    mergedrows = createMergedRows(runnames, reportdict, column_indices, len(header))
     mergedtable = tabulate.tabulate(
         mergedrows, headers=mergedheader, tablefmt=args.reportformat
     )
     return mergedtable
 
 
-def createDiffReport(args, reportdict, runnames, oneheader):
-    diffheader = ["test-name"] + oneheader
-    diffrows = createDiffRows(runnames, reportdict, len(oneheader))
+def createDiffReport(args, reportdict, runnames, header, column_indices):
+    diffheader = ["test-name"] + header
+    diffrows = createDiffRows(runnames, reportdict, column_indices, len(header))
     difftable = tabulate.tabulate(
         diffrows, headers=diffheader, tablefmt=args.reportformat
     )
@@ -128,6 +147,11 @@ if __name__ == "__main__":
         "inputdirs",
         nargs="*",
         help="Input test run directory names",
+    )
+    parser.add_argument(
+        "-c",
+        "--columns",
+        help="Provide a a,b,c indices to select header columns to inculde in report. Default is all.",
     )
     parser.add_argument(
         "-d",
@@ -176,13 +200,18 @@ if __name__ == "__main__":
     runnames = []
     testlist = []
     mergedreportfilename = ""
+    column_indices = []
+    # Filter the columns using the column indices
+    if args.columns:
+        indices_string_list = args.columns.split(",")
+        column_indices = [int(str) for str in indices_string_list]
+
     if args.skiptestsfile:
         if not os.path.exists(args.skiptestsfile):
             print(f"The file {args.skiptestsfile} does not exist")
         with open(args.skiptestsfile, "r") as tf:
             testlist += tf.read().splitlines()
     skiptestslist = [item.strip().strip(os.sep) for item in testlist]
-    print(f"{skiptestslist}")
     for item in dirlist:
         rundir = os.path.abspath(item)
         runname = os.path.basename(rundir)
@@ -199,12 +228,18 @@ if __name__ == "__main__":
             print(f"{reportpkl} does not exist. This report will be ignored.")
             continue
         allheaders += addToDict(reportdict, reportpkl, runname, skiptestslist)
-
-    oneheader = checkAndGetHeader(allheaders)
+    if len(allheaders) == 0:
+        print(f"No valid reports found")
+        sys.exit(1)
+    oneheader = checkAndGetHeader(allheaders, column_indices)
     if args.do == "merge":
-        outtable = createMergedReport(args, reportdict, runnames, oneheader)
+        outtable = createMergedReport(
+            args, reportdict, runnames, oneheader, column_indices
+        )
     else:
-        outtable = createDiffReport(args, reportdict, runnames, oneheader)
+        outtable = createDiffReport(
+            args, reportdict, runnames, oneheader, column_indices
+        )
 
     outf = sys.stdout
     if args.output:
