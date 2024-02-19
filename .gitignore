@@ -28,3 +28,6 @@
 *.safetensors
 *.gguf
 *.vmfb
+
+# Test report files
+test-run
