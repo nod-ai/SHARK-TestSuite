@@ -52,6 +52,7 @@
  - tools/stubs/pytorchmodel.py : This is concatenated to 'model.py' in test directory to form a 
                                  runmodel.py for the tests of framework 'pytorch'
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
+ - tools/reportutil.py: Given two different run directories, create a merged report
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
  cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
@@ -178,6 +179,20 @@ total count of operator instances
 
  ```
 python ./tools/onnxutil.py onnx/models/resnet50_vaiq_int8/model.onnx -f
+```
+
+Example 5:
+Merge reports from two different run directories named as 'fp32" and "bf16" and show a combined comparision view
+```
+python tools/reportutil.py --do merge fp32 bf16 
+```
+An example merged view report:
+```
+| test-name                                  | model-run-fp32   | model-run-bf16   | onnx-import-fp32   | onnx-import-bf16   | torch-mlir-fp32   | torch-mlir-bf16   | iree-compile-fp32   | iree-compile-bf16   | inference-fp32   | inference-bf16   |
+|--------------------------------------------|------------------|------------------|--------------------|--------------------|-------------------|-------------------|---------------------|---------------------|------------------|------------------|
+| pytorch/models/llama2-7b-GPTQ              | failed           | failed           | notrun             | notrun             | notrun            | notrun            | notrun              | notrun              | notrun           | notrun           |
+| pytorch/models/opt-125M                    | passed           | passed           | passed             | passed             | passed            | passed            | passed              | passed              | passed           | mismatch         |
+| pytorch/models/llama2-7b-hf                | passed           | passed           | passed             | passed             | passed            | passed            | passed              | passed              | mismatch         | mismatch         |
 ```
 ### Adding new tests
 
