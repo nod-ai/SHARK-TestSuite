@@ -39,5 +39,11 @@ E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
 
-# Apply softmax after output, calls as softmax(ouput, 0)
-E2ESHARK_CHECK["postprocess"] = [(torch.nn.functional.softmax, [0])]
+# Post process output to do:
+# sort(topk(torch.nn.functional.softmax(output, 0), 2)[1])[0]
+# Top most probability
+E2ESHARK_CHECK["postprocess"] = [
+    (torch.nn.functional.softmax, [0], False, 0),
+    (torch.topk, [2], True, 1),
+    (torch.sort, [], True, 0),
+]
