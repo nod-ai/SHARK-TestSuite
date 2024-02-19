@@ -374,6 +374,25 @@ def getTolerances(torchdtype):
         return (1e-04, 1e-04)
 
 
+def compareOutputs(args, goldoutput, infoutput, dtype):
+    # if shapes do not match, we have a problem as comparison routines may crash
+    # so gauard it
+    inferencematched = False
+    if infoutput.shape != goldoutput.shape:
+        print(
+            f"Shapes of two tensors do not match: gold: {goldoutput.shape} , inf: {infoutput.shape}"
+        )
+        inferencematched = False
+    else:
+        if args.zerotolerance:
+            # If each element matches exactly only then torch.equal is true
+            inferencematched = torch.equal(infoutput, goldoutput)
+        else:
+            atol, rtol = getTolerances(dtype)
+            inferencematched = torch.allclose(infoutput, goldoutput, rtol, atol)
+    return inferencematched
+
+
 def runInference(
     testName,
     args,
@@ -463,8 +482,10 @@ def runInference(
         print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
         for key, value in testCheckedDict.items():
             print(f" {key} {value}")
+    # get gold postprocessed output list
+    goldpostoutputlist = testCheckedDict["postprocessed_output"]
 
-    for i, goldoutput in enumerate(goldoutputlist):
+    for iout_index, goldoutput in enumerate(goldoutputlist):
         outputshape = goldoutput.size()
         torchdtype = goldoutput.dtype
         infoutputfilename = getinfoutfilename(i)
@@ -483,23 +504,31 @@ def runInference(
 
         goldoutput = goldoutput.flatten()
         infoutput = infoutput.flatten()
-        if testCheckedDict.get("postprocess"):
-            for func, argextra in testCheckedDict["postprocess"]:
-                infoutput = func(infoutput, *argextra)
 
-        inferencematched = False
-        # if shapes do not match, we have a problem as comparison routines may crash
-        # so gauard it
-        if infoutput.shape != goldoutput.shape:
-            print("shape mismatch")
-            inferencematched = False
-        else:
-            if args.zerotolerance:
-                # If each element matches exactly only then torch.equal is true
-                inferencematched = torch.equal(infoutput, goldoutput)
-            else:
-                atol, rtol = getTolerances(torchdtype)
-                inferencematched = torch.allclose(infoutput, goldoutput, rtol, atol)
+        inferencematched = compareOutputs(args, goldoutput, infoutput, torchdtype)
+
+        if not inferencematched:
+            if args.postprocess and testCheckedDict.get("postprocess"):
+                goldpostoutput = goldpostoutputlist[iout_index]
+                # apply post processing on inference output
+                infpostoutput = infoutput
+                for func, argextra, isRetTuple, tupleIndex in testCheckedDict[
+                    "postprocess"
+                ]:
+                    if len(argextra) > 0:
+                        infpostoutput = func(infpostoutput, *argextra)
+                    else:
+                        infpostoutput = func(infpostoutput)
+                    if isRetTuple:
+                        infpostoutput = infpostoutput[tupleIndex]
+                # now compare the two
+                if args.verbose:
+                    print(f"gold post processed: {goldpostoutput}")
+                    print(f"inference post processed: {infpostoutput}")
+                torchdtype = infpostoutput.dtype
+                inferencematched = compareOutputs(
+                    args, goldpostoutput, infpostoutput, torchdtype
+                )
 
         if not inferencematched:
             failedinflog = open("failedinference.log", "w")
@@ -1034,6 +1063,13 @@ def main():
         action="store_true",
         default=False,
         help="Skip running of tests. Useful for generating test summary after the run.",
+    )
+    parser.add_argument(
+        "-p",
+        "--postprocess",
+        action="store_true",
+        default=False,
+        help="Compare post processed outputs if test has postprocessing installed for determining successful run",
     )
     parser.add_argument(
         "--report",

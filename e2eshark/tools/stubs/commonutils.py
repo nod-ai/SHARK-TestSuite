@@ -10,14 +10,14 @@ E2ESHARK_CHECK_DEF = {
     "torchmlirimport": "fximport",
     # By default, the input.to(dtype) is called, set it to False to not do so
     "inputtodtype": True,
-    # Apply listed function (tools/stub and run.pl must be able to find definition)
-    # on output from target in sequence to post process output and compare the final
-    # output instead.
-    # First arg to function is the output, any additional args should be added as a list
-    # list of function and its 1+args as tuple should be provided
-    # Exmaple: "postprocess": [(torch.nn.functional.softmax, [0])]
-    # which will be called as output = torch.nn.functional.softmax(output, 0)
+    # Apply listed function with its arguments and return value selection repitively
+    # to post-process an output. Each entry in list should be a tuple with four
+    # entries: (function, [args other than input], isReturnTuple, indexOfTupleForTupleReturn)
+    # Exmaple: "postprocess": [(torch.nn.functional.softmax, [0], False, 0), (torch.topk, [5], True, 1)]
+    # which will be called as output = topk(torch.nn.functional.softmax(output, 0), 5)[1]
     "postprocess": None,
+    # Store the post-processed output here
+    "postprocessed_output": None,
 }
 
 
@@ -38,15 +38,20 @@ def getOutputTensorList(test_out):
 
 
 # Apply post processing functions on output
-def postProcess(E2ESHARK_CHECK):
-    test_output = E2ESHARK_CHECK["output"]
+def postProcess(e2esharkDict):
+    test_output = e2esharkDict["output"]
     postprocess_output = []
     # Call chain of post processing -- run.pl will do same on backend inference output
-    if E2ESHARK_CHECK.get("postprocess"):
+    if e2esharkDict.get("postprocess"):
         for item in test_output:
             # Run post processing pipeline
-            for func, argextra in E2ESHARK_CHECK["postprocess"]:
-                item = func(item, *argextra)
+            for func, argextra, isRetTuple, tupleIndex in e2esharkDict["postprocess"]:
+                if len(argextra) > 0:
+                    item = func(item, *argextra)
+                else:
+                    item = func(item)
+                if isRetTuple:
+                    item = item[tupleIndex]
             postprocess_output += [item]
     else:
         postprocess_output = test_output
