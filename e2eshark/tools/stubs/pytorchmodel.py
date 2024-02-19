@@ -118,8 +118,7 @@ if not isinstance(test_output_list, list):
 E2ESHARK_CHECK["input"] = [t.detach() for t in test_input_list]
 E2ESHARK_CHECK["output"] = [t.detach() for t in test_output_list]
 
-E2ESHARK_CHECK["output"] = postProcess(E2ESHARK_CHECK)
-
+E2ESHARK_CHECK["postprocessed_output"] = postProcess(E2ESHARK_CHECK)
 # TBD, move to using E2ESHARK_CHECK pickle save
 torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
 torch.save(E2ESHARK_CHECK["output"], outputsavefilename)
