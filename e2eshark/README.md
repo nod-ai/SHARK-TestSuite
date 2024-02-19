@@ -51,10 +51,10 @@
                               runmodel.py for tests of framework 'onnx'
  - tools/stubs/pytorchmodel.py : This is concatenated to 'model.py' in test directory to form a 
                                  runmodel.py for the tests of framework 'pytorch'
- - tools/stubs/commonutils.py: Utilities common to other tools/stubs files as weel as model.py
-                     This also defined a dictionary named as E2ESHARK_CHECK_DEF, an instance of
+ - tools/stubs/commonutils.py: Utilities common to other tools/stubs files as well as model.py
+                     This also defines a dictionary named as E2ESHARK_CHECK_DEF, an instance of
                      which is created for each test. This allows serializing input, output, any 
-                     special controls, post processing recipe to be passed around
+                     special controls, post processing recipe to be passed from model.py to run.py
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
  - tools/reportutil.py: Given two different run directories, create a merged report
 
