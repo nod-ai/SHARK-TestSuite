@@ -462,7 +462,7 @@ def runInference(
     if args.verbose:
         print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
         for key, value in testCheckedDict.items():
-            print(f" {key} ")
+            print(f" {key} {value}")
 
     for i, goldoutput in enumerate(goldoutputlist):
         outputshape = goldoutput.size()
@@ -484,8 +484,8 @@ def runInference(
         goldoutput = goldoutput.flatten()
         infoutput = infoutput.flatten()
         if testCheckedDict.get("postprocess"):
-            for func in testCheckedDict["postprocess"]:
-                infoutput = func(infoutput)
+            for func, argextra in testCheckedDict["postprocess"]:
+                infoutput = func(infoutput, *argextra)
 
         inferencematched = False
         # if shapes do not match, we have a problem as comparison routines may crash
@@ -1122,14 +1122,16 @@ def main():
                 print(f"The file {args.testsfile} does not exist")
             with open(args.testsfile, "r") as tf:
                 testsList += tf.read().splitlines()
+        # strip whitespace and any os seperator
+        testsList = [item.strip().strip(os.sep) for item in testsList]
+
         # Strip leading/trailing slashes
         # Construct a dictionary of framework name and list of tests in them
         frameworktotests_dict = {"pytorch": [], "onnx": [], "tensorflow": []}
-        for item in testsList:
-            if not os.path.exists(item):
-                print("Test", item, "does not exist")
+        for testName in testsList:
+            if not os.path.exists(testName):
+                print("Test", testName, "does not exist")
                 sys.exit(1)
-            testName = item.strip(os.sep)
             frameworkname = testName.split("/")[0]
             if frameworkname not in frameworktotests_dict:
                 print(
