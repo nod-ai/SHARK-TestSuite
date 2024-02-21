@@ -103,14 +103,16 @@ def createDiffRows(runnames, reportdict, column_indices, rowlen):
     return diffrows
 
 
-def addToDict(reportdict, reportpkl, runname, skiptestslist):
+def addToDict(reportdict, reportpkl, runname, skiporincludetestslist, skiporinclude):
     table = loadTable(reportpkl)
     # skip test name, hence from 1
     header = [table[0][1:]]
     # skip table header, hence index from 1
     for i in range(1, len(table)):
         testname = table[i][0]
-        if testname in skiptestslist:
+        if skiporinclude == "skip" and testname in skiporincludetestslist:
+            continue
+        elif skiporinclude == "include" and not testname in skiporincludetestslist:
             continue
         # Add to dictionary of testname to dictionary of run name
         if reportdict.get(testname):
@@ -138,6 +140,16 @@ def createDiffReport(args, reportdict, runnames, header, column_indices):
         diffrows, headers=diffheader, tablefmt=args.reportformat
     )
     return difftable
+
+
+def getTestsListFromFile(testlistfile):
+    testlist = []
+    if not os.path.exists(testlistfile):
+        print(f"The file {testlistfile} does not exist")
+    with open(testlistfile, "r") as tf:
+        testlist += tf.read().splitlines()
+    testlist = [item.strip().strip(os.sep) for item in testlist]
+    return testlist
 
 
 if __name__ == "__main__":
@@ -173,8 +185,8 @@ if __name__ == "__main__":
         help="Write merged outout into this file. Default is to display on stdout.",
     )
     parser.add_argument(
-        "-t",
-        "--type",
+        "-m",
+        "--mode",
         choices=["status", "time"],
         default="status",
         help="Process status report vs time report",
@@ -182,9 +194,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s",
         "--skiptestsfile",
-        help="A file with lists of tests that shouuld be skipped during comparision or merging",
+        help="A file with lists of tests that should be skipped from consideration",
     )
-
+    parser.add_argument(
+        "-t",
+        "--testsfile",
+        help="A file with lists of only tests (if present in the run report) to consider",
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -194,6 +210,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    if args.skiptestsfile and args.testsfile:
+        print(f"Only one of --skiptestsfile or --testsfile can be used")
+        sys.exit(1)
+
     dirlist = args.inputdirs
     reportdict = {}
     allheaders = []
@@ -201,17 +221,19 @@ if __name__ == "__main__":
     testlist = []
     mergedreportfilename = ""
     column_indices = []
+    skiporincludetestslist = []
+    skiporinclude = None
     # Filter the columns using the column indices
     if args.columns:
         indices_string_list = args.columns.split(",")
         column_indices = [int(str) for str in indices_string_list]
-
     if args.skiptestsfile:
-        if not os.path.exists(args.skiptestsfile):
-            print(f"The file {args.skiptestsfile} does not exist")
-        with open(args.skiptestsfile, "r") as tf:
-            testlist += tf.read().splitlines()
-    skiptestslist = [item.strip().strip(os.sep) for item in testlist]
+        skiporincludetestslist = getTestsListFromFile(args.skiptestsfile)
+        skiporinclude = "skip"
+    if args.testsfile:
+        skiporincludetestslist = getTestsListFromFile(args.testsfile)
+        skiporinclude = "include"
+
     for item in dirlist:
         rundir = os.path.abspath(item)
         runname = os.path.basename(rundir)
@@ -219,7 +241,7 @@ if __name__ == "__main__":
         if not os.path.exists(rundir):
             print("The given file ", rundir, " does not exist\n")
             sys.exit(1)
-        if args.type == "time":
+        if args.mode == "time":
             reportpkl = rundir + "/timereport.pkl"
         else:
             reportpkl = rundir + "/statusreport.pkl"
@@ -227,7 +249,13 @@ if __name__ == "__main__":
         if not os.path.exists(reportpkl):
             print(f"{reportpkl} does not exist. This report will be ignored.")
             continue
-        allheaders += addToDict(reportdict, reportpkl, runname, skiptestslist)
+        allheaders += addToDict(
+            reportdict,
+            reportpkl,
+            runname,
+            skiporincludetestslist,
+            skiporinclude,
+        )
     if len(allheaders) == 0:
         print(f"No valid reports found")
         sys.exit(1)

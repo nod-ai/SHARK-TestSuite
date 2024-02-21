@@ -989,6 +989,16 @@ def checkBuildAndEnv(run_dir, args):
     return (TORCH_MLIR_BUILD, IREE_BUILD)
 
 
+def getTestsListFromFile(testlistfile):
+    testlist = []
+    if not os.path.exists(testlistfile):
+        print(f"The file {testlistfile} does not exist")
+    with open(testlistfile, "r") as tf:
+        testlist += tf.read().splitlines()
+    testlist = [item.strip().strip(os.sep) for item in testlist]
+    return testlist
+
+
 def main():
     global TORCH_MLIR_BUILD, IREE_BUILD
     msg = "The run.py script to run e2e shark tests"
@@ -1062,7 +1072,7 @@ def main():
         "--norun",
         action="store_true",
         default=False,
-        help="Skip running of tests. Useful for generating test summary after the run.",
+        help="Skip running of tests. Useful for generating test summary after the run",
     )
     parser.add_argument(
         "-p",
@@ -1093,7 +1103,7 @@ def main():
         "--runupto",
         choices=["torch-mlir", "iree-compile", "inference"],
         default="inference",
-        help="Run upto torch MLIR generation, IREE compilation, or inference.",
+        help="Run upto torch MLIR generation, IREE compilation, or inference",
     )
     parser.add_argument(
         "-r",
@@ -1102,10 +1112,15 @@ def main():
         help="The test run directory",
     )
     parser.add_argument(
+        "-s",
+        "--skiptestsfile",
+        help="A file with lists of tests that should be skipped",
+    )
+    parser.add_argument(
         "-t",
         "--tests",
         nargs="*",
-        help="Run given specific test(s) only. Other test run options will be ignored.",
+        help="Run given specific test(s) only",
     )
     parser.add_argument(
         "--testsfile",
@@ -1133,6 +1148,10 @@ def main():
     )
 
     args = parser.parse_args()
+    if args.skiptestsfile and args.testsfile:
+        print(f"Only one of --skiptestsfile or --testsfile can be used")
+        sys.exit(1)
+
     # Root dir where run.py is
     script_dir = os.path.dirname(os.path.realpath(__file__))
     run_dir = os.path.abspath(args.rundirectory)
@@ -1146,20 +1165,20 @@ def main():
         print("IREE build:", IREE_BUILD)
     print("Test run directory:", run_dir)
     totalTestList = []
+    skiptestslist = []
     # if args.tests used, that means run given specific tests, the --frameworks options will be
     # ignored in that case
+    if args.skiptestsfile:
+        skiptestslist = getTestsListFromFile(args.skiptestsfile)
+
     if args.tests or args.testsfile:
         testsList = []
         print("Since --tests or --testsfile was specified, --groups ignored")
         if args.tests:
             testsList = args.tests
+            testlist = [item.strip().strip(os.sep) for item in testlist]
         if args.testsfile:
-            if not os.path.exists(args.testsfile):
-                print(f"The file {args.testsfile} does not exist")
-            with open(args.testsfile, "r") as tf:
-                testsList += tf.read().splitlines()
-        # strip whitespace and any os seperator
-        testsList = [item.strip().strip(os.sep) for item in testsList]
+            testsList += getTestsListFromFile(args.testsfile)
 
         # Strip leading/trailing slashes
         # Construct a dictionary of framework name and list of tests in them
@@ -1177,12 +1196,14 @@ def main():
             frameworktotests_dict[frameworkname] += [testName]
         for framework in frameworktotests_dict:
             testsList = frameworktotests_dict[framework]
+            testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
             if not args.norun:
                 runFrameworkTests(framework, testsList, args, script_dir, run_dir)
     else:
         for framework in frameworks:
             testsList = getTestsList(framework, args.groups)
+            testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
             if not args.norun:
                 runFrameworkTests(framework, testsList, args, script_dir, run_dir)
