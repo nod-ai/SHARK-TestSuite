@@ -144,27 +144,30 @@ You can see logs of test run inside test-run/'test sub-directory'. Start with co
 
 The test-run/statusreport.md, test-run/timereport.md, and test-run/summaryreport.md will show nice tables like below to give you detailed status of pass/fail of each stage, time taken by each stage and total counts of passes for each phase. Furthermore, you can compare these reports using tools/reportutil.py to get either a merged view or diff of one or more runs.
 ```
-Status report for run: fp32
+Status report for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
 
 | tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
 | :----------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
+| pytorch/operators/conv2d | passed    | passed      | passed     | passed       | passed    |
 | pytorch/operators/linear | passed    | passed      | passed     | passed       | passed    |
 | pytorch/combinations/mlp | passed    | passed      | passed     | passed       | passed    |
-| onnx/operators/gemm      | passed    | passed      | failed     | notrun       | notrun    |
 
-Time report for run: fp32
+
+Time report for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
 
 | tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
 | :----------------------- | --------: | ----------: | ---------: | -----------: | --------: |
-| pytorch/operators/linear |   2.61056 |    0.414338 | 0.00816703 |     0.836997 |  0.032362 |
-| pytorch/combinations/mlp |   2.59982 |    0.422241 | 0.00923133 |     0.987787 | 0.0329494 |
-| onnx/operators/gemm      |   1.86463 |    0.341445 | 0.00620699 |            0 |         0 |
+| pytorch/operators/conv2d |   3.15231 |    0.425977 |  0.0067625 |     0.570327 | 0.0300162 |
+| pytorch/operators/linear |   3.11147 |    0.422572 | 0.00860119 |     0.825361 | 0.0320294 |
+| pytorch/combinations/mlp |   3.16689 |    0.438611 | 0.00681615 |      1.04092 | 0.0127583 |
 
-Summary (count of passes) for run: fp32
+Summary for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
 
-| tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| ----: | --------: | ----------: | ---------: | -----------: | --------: |
-|     3 |         3 |           3 |          2 |            2 |         2 |
+| items        |   tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------- | ------: | --------: | ----------: | ---------: | -----------: | --------: |
+| total-count  |       3 |         3 |           3 |          3 |            3 |         3 |
+| average-time | 4.41714 |   3.14356 |    0.429053 | 0.00739328 |     0.812203 | 0.0249346 |
+| median-time  | 4.44048 |   3.15231 |    0.425977 | 0.00681615 |     0.825361 | 0.0300162 |
 ```
 
 The test-run/passed.txt has list of all tests that passed and test-run/failed.txt has list of all 
@@ -241,9 +244,20 @@ The diff report for time for runs: fp32 bf16
 python tools/reportutil.py -d diff fp32 bf16 -m summary
 
 The diff report for summary for runs: fp32 bf16
-| test-name | tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| :-------- | ----: | --------: | ----------: | ---------: | -----------: | --------: |
-| count     |     0 |         0 |           0 |          0 |            0 |        -1 |
+| items        |    tests | model-run | onnx-import | torch-mlir | iree-compile |  inference |
+| :----------- | -------: | --------: | ----------: | ---------: | -----------: | ---------: |
+| total-count  |        0 |         0 |           0 |          0 |            0 |         -1 |
+| average-time | 0.241627 |  0.113173 |    0.026411 | 0.00141684 |    0.0643837 |  0.0362426 |
+| median-time  | 0.209797 |  0.109462 |   0.0351717 | 0.00205493 |    0.0539219 | 0.00918627 |
+
+python tools/reportutil.py -d diff fp32 bf16 fp32 -m summary -v -c 4,5
+
+The diff report for summary for runs: fp32 bf16 fp32
+| items        | iree-compile     | inference        |
+| :----------- | :--------------- | :--------------- |
+| total-count  | same             | [3,2,3]          |
+| average-time | [0.81,0.88,0.81] | [0.02,0.06,0.02] |
+| median-time  | [0.83,0.88,0.83] | [0.03,0.04,0.03] |
 
 ```
 The -1 under inference indicates, one test regressed in inference

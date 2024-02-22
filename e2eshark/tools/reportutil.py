@@ -99,15 +99,11 @@ def createMergedRows(args, runnames, reportdict, column_indices, rowlen):
 
 
 def getDiff(args, tuple, diff):
-    # if it is a two lement tuple, then provide exact difference
+    # if it is a two element tuple, then provide exact difference
     # for the pair for numbers, else say differ of match
     if len(tuple) == 2:
-        if args.mode == "time":
+        if args.mode == "time" or args.mode == "summary":
             elemdiff = str(float(tuple[1]) - float(tuple[0]))
-            diff.extend([elemdiff])
-            return
-        elif args.mode == "summary":
-            elemdiff = str(int(tuple[1]) - int(tuple[0]))
             diff.extend([elemdiff])
             return
 
@@ -118,6 +114,14 @@ def getDiff(args, tuple, diff):
     else:
         diffidentifier = "differ"
         if args.verbose:
+            if args.mode == "time" or args.mode == "summary":
+                if isinstance(tuple[0], float):
+                    tuple = [f"{i:.{2}f}" for i in tuple]
+                elif isinstance(tuple[0], int):
+                    tuple = [str(i) for i in tuple]
+                else:
+                    tuple = [f"{j:.{2}f}" for j in [float(i) for i in tuple]]
+
             diffidentifier = "[" + ",".join(tuple) + "]"
         diff.extend([diffidentifier])
     return diff
@@ -136,17 +140,6 @@ def createDiffRows(args, runnames, reportdict, column_indices, rowlen):
             getDiff(args, cellItemTuple, diff)
         diffrows += [diff]
     return diffrows
-
-
-def addCountsToDict(reportdict, reportpkl, runname):
-    table = loadTable(reportpkl)
-    testname = "count"
-    header = [table[0]]
-    if reportdict.get(testname):
-        reportdict[testname][runname] = table[1]
-    else:
-        reportdict[testname] = {runname: table[1]}
-    return header
 
 
 def convertNumToString(rows):
@@ -191,7 +184,10 @@ def createMergedReport(args, reportdict, runnames, header, column_indices):
 
 
 def createDiffReport(args, reportdict, runnames, header, column_indices):
-    diffheader = ["test-name"] + header
+    if args.mode == "summary":
+        diffheader = ["items"] + header
+    else:
+        diffheader = ["test-name"] + header
     diffrows = createDiffRows(args, runnames, reportdict, column_indices, len(header))
     difftable = tabulate.tabulate(
         diffrows, headers=diffheader, tablefmt=args.reportformat
@@ -311,16 +307,14 @@ if __name__ == "__main__":
         if not os.path.exists(reportpkl):
             print(f"{reportpkl} does not exist. This report will be ignored.")
             continue
-        if args.mode == "summary":
-            allheaders += addCountsToDict(reportdict, reportpkl, runname)
-        else:
-            allheaders += addTestsToDict(
-                reportdict,
-                reportpkl,
-                runname,
-                skiporincludetestslist,
-                skiporinclude,
-            )
+
+        allheaders += addTestsToDict(
+            reportdict,
+            reportpkl,
+            runname,
+            skiporincludetestslist,
+            skiporinclude,
+        )
     if len(allheaders) == 0:
         print(f"No valid reports found")
         sys.exit(1)

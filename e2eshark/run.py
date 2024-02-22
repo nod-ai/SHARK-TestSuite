@@ -9,7 +9,7 @@ from multiprocessing import Pool
 import argparse
 import numpy as np
 import torch, io
-import struct, pickle, tabulate
+import struct, pickle, tabulate, statistics
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -881,6 +881,35 @@ def checkAndSetEnvironments(args):
     return 0
 
 
+def convertNumToString(rows):
+    strrows = []
+    for row in rows:
+        strrows += [[str(i) for i in row]]
+    return strrows
+
+
+def getSummaryRows(listofstatusrows, listoftimerows, tableheader):
+    summaryrows = []
+    summarycountrow = [0] * len(tableheader)
+    for row in listofstatusrows:
+        summarycountrow[0] += 1
+        for i in range(1, len(row)):
+            if row[i] == "passed":
+                summarycountrow[i] += 1
+    summarycountrow = ["total-count"] + summarycountrow
+    summaryrows += [summarycountrow]
+    timevaluerows = [[float(str) for str in row[1:]] for row in listoftimerows]
+    # Add average time
+    times = [statistics.mean(tuple) for tuple in zip(*timevaluerows)]
+    avgtimerows = ["average-time"] + [sum(times)] + [str(i) for i in times]
+    summaryrows += [avgtimerows]
+    times = [statistics.median(tuple) for tuple in zip(*timevaluerows)]
+    # Add median time
+    medtimerows = ["median-time"] + [sum(times)] + [str(i) for i in times]
+    summaryrows += [medtimerows]
+    return summaryrows
+
+
 def generateReport(run_dir, testsList, args):
     reportdict = {}
     tableheader = []
@@ -923,14 +952,9 @@ def generateReport(run_dir, testsList, args):
     timetablerows = [tableheader] + listoftimerows
 
     # Build summary
-    summarycountrow = [0] * len(tableheader)
-    for row in listofstatusrows:
-        summarycountrow[0] += 1
-        for i in range(1, len(row)):
-            if row[i] == "passed":
-                summarycountrow[i] += 1
-    summaryrow = [str(i) for i in summarycountrow]
-    summarytabelerows = [tableheader] + [summaryrow]
+    summaryrows = getSummaryRows(listofstatusrows, listoftimerows, tableheader)
+    summarytableheader = ["items"] + tableheader
+    summarytabelerows = [summarytableheader] + summaryrows
     statustable = tabulate.tabulate(
         statustablerows, headers="firstrow", tablefmt=args.reportformat
     )
@@ -957,14 +981,20 @@ def generateReport(run_dir, testsList, args):
     faillistfile = run_dir + "/failed.txt"
     runname = os.path.basename(run_dir)
     with open(statustablefile, "w") as statusf:
-        print(f"Status report for run: {runname}\n", file=statusf)
+        print(
+            f"Status report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            file=statusf,
+        )
         print(statustable, file=statusf)
     with open(statustablepkl, "wb") as f:
         pickle.dump(statustablerows, f)
     print(f"Generated status reoprt {statustablefile}")
 
     with open(timetablefile, "w") as timef:
-        print(f"Time report for run: {runname}\n", file=timef)
+        print(
+            f"Time report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            file=timef,
+        )
         print(timetable, file=timef)
     with open(timetablepkl, "wb") as f:
         pickle.dump(timetablerows, f)
@@ -972,7 +1002,7 @@ def generateReport(run_dir, testsList, args):
 
     with open(summarytablefile, "w") as summaryf:
         print(
-            f"Summary (count of passes) for run: {runname}\n",
+            f"Summary for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
             file=summaryf,
         )
         print(summarytable, file=summaryf)
