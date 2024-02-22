@@ -56,7 +56,9 @@
                      which is created for each test. This allows serializing input, output, any 
                      special controls, post processing recipe to be passed from model.py to run.py
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
- - tools/reportutil.py: Given two different run directories, create a merged report
+ - tools/reportutil.py: Given two or more run directories, diff or merge any of status, time or 
+                      summary reports. For time and summary reports, it tell how many new 
+                      passes (improvements) were seen
 
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
@@ -138,16 +140,31 @@ use four processor cores (default --jobs 4) on your machine, generate report fil
 ```
 python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --report
 ```
-You can see logs of test run inside test-run/'test sub-directory'. The test-run/statusreport.md and test-run/timereport.md
-will show a nice table like below to give you detailed status of pass/fail of each stage. 
-```
-Test run status report
+You can see logs of test run inside test-run/'test sub-directory'. Start with commands.log file. 
 
-| test name                   | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| :-------------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
-| pytorch/models/opt-1.3b     | passed    | passed      | passed     | passed       | failed    |
-| pytorch/models/llama2-7b-hf | passed    | passed      | passed     | passed       | failed    |
-| pytorch/models/resnet50     | passed    | passed      | passed     | passed       | passed    |
+The test-run/statusreport.md, test-run/timereport.md, and test-run/summaryreport.md will show nice tables like below to give you detailed status of pass/fail of each stage, time taken by each stage and total counts of passes for each phase. Furthermore, you can compare these reports using tools/reportutil.py to get either a merged view or diff of one or more runs.
+```
+Status report for run: fp32
+
+| tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
+| pytorch/operators/linear | passed    | passed      | passed     | passed       | passed    |
+| pytorch/combinations/mlp | passed    | passed      | passed     | passed       | passed    |
+| onnx/operators/gemm      | passed    | passed      | failed     | notrun       | notrun    |
+
+Time report for run: fp32
+
+| tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------------------- | --------: | ----------: | ---------: | -----------: | --------: |
+| pytorch/operators/linear |   2.61056 |    0.414338 | 0.00816703 |     0.836997 |  0.032362 |
+| pytorch/combinations/mlp |   2.59982 |    0.422241 | 0.00923133 |     0.987787 | 0.0329494 |
+| onnx/operators/gemm      |   1.86463 |    0.341445 | 0.00620699 |            0 |         0 |
+
+Summary (count of passes) for run: fp32
+
+| tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| ----: | --------: | ----------: | ---------: | -----------: | --------: |
+|     3 |         3 |           3 |          2 |            2 |         2 |
 ```
 
 The test-run/passed.txt has list of all tests that passed and test-run/failed.txt has list of all 

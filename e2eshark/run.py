@@ -1,3 +1,9 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import os, time, glob, sys, zipfile
 from multiprocessing import Pool
 import argparse
@@ -918,12 +924,11 @@ def generateReport(run_dir, testsList, args):
 
     # Build summary
     summarycountrow = [0] * len(tableheader)
-    for row in statustablerows:
+    for row in listofstatusrows:
         summarycountrow[0] += 1
         for i in range(1, len(row)):
             if row[i] == "passed":
                 summarycountrow[i] += 1
-
     summaryrow = [str(i) for i in summarycountrow]
     summarytabelerows = [tableheader] + [summaryrow]
     statustable = tabulate.tabulate(
@@ -972,7 +977,7 @@ def generateReport(run_dir, testsList, args):
         )
         print(summarytable, file=summaryf)
     with open(summarytablepkl, "wb") as f:
-        pickle.dump(summaryrow, f)
+        pickle.dump(summarytabelerows, f)
     print(f"Generated summary reoprt {summarytablefile}")
 
     with open(passlistfile, "w") as f:
