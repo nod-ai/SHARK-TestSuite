@@ -220,16 +220,33 @@ An example merged report:
 Example 6:
 Diff reports from two different run directories named as 'fp32" and "bf16" and show whether each test run matched or differed
 ```
-python tools/reportutil.py --do diff fp32 bf16 
+python tools/reportutil.py --do diff fp32 bf16 -m status -v
+
+The diff report for status for runs: fp32 bf16
+| test-name                | model-run | onnx-import | torch-mlir | iree-compile | inference         |
+| :----------------------- | :-------- | :---------- | :--------- | :----------- | :---------------- |
+| pytorch/operators/linear | same      | same        | same       | same         | [passed,mismatch] |
+| pytorch/combinations/mlp | same      | same        | same       | same         | same              |
+| onnx/operators/gemm      | same      | same        | same       | same         | same              |
+
+python tools/reportutil.py --do diff fp32 bf16 -m time
+
+The diff report for time for runs: fp32 bf16
+| test-name                | model-run | onnx-import |  torch-mlir | iree-compile |  inference |
+| :----------------------- | --------: | ----------: | ----------: | -----------: | ---------: |
+| pytorch/operators/linear |  0.227186 |  -0.0256374 | 0.000367403 |    0.0863338 |  0.0362182 |
+| pytorch/combinations/mlp |  0.245063 |   -0.041338 | 0.000627995 |      0.15707 | -0.0194921 |
+| onnx/operators/gemm      | -0.111096 |   0.0017724 |  0.00060463 |            0 |          0 |
+
+python tools/reportutil.py -d diff fp32 bf16 -m summary
+
+The diff report for summary for runs: fp32 bf16
+| test-name | tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :-------- | ----: | --------: | ----------: | ---------: | -----------: | --------: |
+| count     |     0 |         0 |           0 |          0 |            0 |        -1 |
+
 ```
-An example diff report:
-```
-| test-name                      | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| :----------------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
-| onnx/models/resnet50_vaiq_int8 | differ    | differ      | differ     | differ       | differ    |
-| pytorch/models/opt-125M        | same      | same        | same       | same         | differ    |
-| pytorch/models/dlrm            | differ    | differ      | same       | same         | same      |
-```
+The -1 under inference indicates, one test regressed in inference
 
 ### Adding new tests
 
