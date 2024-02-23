@@ -992,7 +992,7 @@ def generateReport(run_dir, testsList, args):
 
     with open(timetablefile, "w") as timef:
         print(
-            f"Time report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            f"Time (in seconds) report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
             file=timef,
         )
         print(timetable, file=timef)
@@ -1002,7 +1002,7 @@ def generateReport(run_dir, testsList, args):
 
     with open(summarytablefile, "w") as summaryf:
         print(
-            f"Summary for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            f"Summary (time in seconds) for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
             file=summaryf,
         )
         print(summarytable, file=summaryf)
