@@ -103,7 +103,22 @@ def getDiff(args, tuple, diff):
     # for the pair for numbers, else say differ of match
     if len(tuple) == 2:
         if args.mode == "time" or args.mode == "summary":
-            elemdiff = str(float(tuple[1]) - float(tuple[0]))
+            print(f"{tuple}")
+            tuple = [float(i) if isinstance(i, str) else i for i in tuple]
+            if isinstance(tuple[0], int):
+                elemdiffnum = int(tuple[1]) - int(tuple[0])
+                elemdiff = str(elemdiffnum)
+                if args.verbose:
+                    if elemdiffnum == 0:
+                        elemdiff += " (same)"
+                    elif elemdiffnum > 0:
+                        elemdiff += " (improved)"
+                    else:
+                        elemdiff += " (regressed)"
+            else:
+                elemdiffnum = float(tuple[1]) - float(tuple[0])
+                elemdiff = f"{elemdiffnum:.{3}f}"
+
             diff.extend([elemdiff])
             return
 
@@ -116,7 +131,7 @@ def getDiff(args, tuple, diff):
         if args.verbose:
             if args.mode == "time" or args.mode == "summary":
                 if isinstance(tuple[0], float):
-                    tuple = [f"{i:.{2}f}" for i in tuple]
+                    tuple = [f"{i:.{3}f}" for i in tuple]
                 elif isinstance(tuple[0], int):
                     tuple = [str(i) for i in tuple]
                 else:
@@ -147,6 +162,13 @@ def convertNumToString(rows):
     for row in rows:
         strrows += [[str(i) for i in row]]
     return strrows
+
+
+def convertStringToFloat(rows):
+    floatrow = []
+    for row in rows:
+        floatrow += [[float(i) for i in row]]
+    return floatrow
 
 
 def addTestsToDict(
