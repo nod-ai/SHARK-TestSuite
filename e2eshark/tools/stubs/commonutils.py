@@ -1,3 +1,9 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 # These are pickle-saved and used by tools/stubs python and run.pl.
 # If adding new fields, make sure the field has default value and have updated
 # tools/stubs and run.pl to handle the new fields
