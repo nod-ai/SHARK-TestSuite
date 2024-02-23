@@ -103,7 +103,6 @@ def getDiff(args, tuple, diff):
     # for the pair for numbers, else say differ of match
     if len(tuple) == 2:
         if args.mode == "time" or args.mode == "summary":
-            print(f"{tuple}")
             tuple = [float(i) if isinstance(i, str) else i for i in tuple]
             if isinstance(tuple[0], int):
                 elemdiffnum = int(tuple[1]) - int(tuple[0])
