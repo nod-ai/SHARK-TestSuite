@@ -331,7 +331,15 @@ if __name__ == "__main__":
     outf = sys.stdout
     if args.output:
         outf = open(args.output, "w")
-    runstr = " ".join(runnames)
-    print(f"The {args.do} report for {args.mode} for runs: {runstr}", file=outf)
+    runstr = ", ".join(runnames)
+    extramsg = ""
+    if args.mode == "time":
+        extramsg = "(in seconds)"
+    elif args.mode == "summary":
+        extramsg = "(time in seconds)"
+
+    print(
+        f"The {args.do} report for {args.mode} {extramsg} for runs: {runstr}", file=outf
+    )
     print(outtable, file=outf)
     sys.exit(0)
