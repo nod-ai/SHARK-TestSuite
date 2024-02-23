@@ -1,0 +1,60 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: IREE Test Suite
+on:
+  # TODO(scotttodd): run on schedule (nightly), and/or on pushes to `main`
+  pull_request:
+    paths:
+      - "iree_tests/**"
+  workflow_dispatch:
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  linux_x86_64:
+    name: Linux (x86_64)
+    runs-on: ubuntu-latest
+    env:
+      VENV_DIR: ${{ github.workspace }}/.venv
+    steps:
+      - name: "Checking out repository"
+        uses: actions/checkout@v4
+      - name: "Setting up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: "Setup Python venv"
+        run: python3 -m venv ${VENV_DIR}
+
+      # TODO(scotttodd): swap this with workflow artifact downloads
+      # TODO(scotttodd): make this configurable with workflow inputs
+      # TODO(scotttodd): pin to a version? in this repo we could just test latest
+      - name: "Installing IREE nightly release Python packages"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          python3 -m pip install \
+            --find-links https://iree.dev/pip-release-links.html \
+            --upgrade \
+            iree-compiler \
+            iree-runtime
+
+      - name: "Installing other Python requirements"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          python3 -m pip install -r iree_tests/requirements.txt
+
+      - name: "Testing with pytest"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          pytest iree_tests -n auto -rpfE
