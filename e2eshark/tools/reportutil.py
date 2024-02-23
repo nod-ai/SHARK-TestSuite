@@ -1,3 +1,9 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import os, sys, argparse, tabulate, pickle
 
 
@@ -43,8 +49,11 @@ def selectColumns(row, column_indices):
     return selectedcolumns
 
 
-def createMergedHeader(runnames, header):
-    mergedheader = ["test-name"]
+def createMergedHeader(args, runnames, header):
+    if args.mode == "summary":
+        mergedheader = ["items"]
+    else:
+        mergedheader = ["tests"]
     for i in range(len(header)):
         for run in runnames:
             columnname = header[i] + "-" + run
@@ -52,58 +61,119 @@ def createMergedHeader(runnames, header):
     return mergedheader
 
 
-def getCanonicalizedListOfRuns(runnames, dictOfRuns, column_indices, rowlen):
+def getCanonicalizedListOfRuns(args, runnames, dictOfRuns, column_indices, rowlen):
     listOfRuns = []
     for run in runnames:
         if dictOfRuns.get(run):
             listOfRuns += [selectColumns(dictOfRuns[run], column_indices)]
         else:
-            listOfRuns += [["NA" for i in range(rowlen)]]
+            listOfRuns += [
+                ["NA" if args.mode == "status" else 0 for i in range(rowlen)]
+            ]
     return listOfRuns
 
 
-def createMergedRows(runnames, reportdict, column_indices, rowlen):
+def createOneMergedRow(
+    args, runnames, firstColumnIdentifier, dictOfRuns, column_indices, rowlen
+):
+    merged = [firstColumnIdentifier]
+    listOfRuns = getCanonicalizedListOfRuns(
+        args, runnames, dictOfRuns, column_indices, rowlen
+    )
+    # zip creates a tuple by taking same index value from each of the
+    # unpacked (using * operator) run in listOfRuns
+    for cellItemTuple in zip(*listOfRuns):
+        merged.extend(cellItemTuple)
+    return merged
+
+
+def createMergedRows(args, runnames, reportdict, column_indices, rowlen):
     mergedrows = []
     for test, dictOfRuns in reportdict.items():
-        merged = [test]
-        listOfRuns = getCanonicalizedListOfRuns(
-            runnames, dictOfRuns, column_indices, rowlen
+        merged = createOneMergedRow(
+            args, runnames, test, dictOfRuns, column_indices, rowlen
         )
-        # zip creates a tuple by taking same index value from each of the
-        # unpacked (using * operator) run in listOfRuns
-        for cellItemTuple in zip(*listOfRuns):
-            merged.extend(cellItemTuple)
-
         mergedrows += [merged]
 
     return mergedrows
 
 
-def createDiffRows(runnames, reportdict, column_indices, rowlen):
+def getDiff(args, tuple, diff):
+    # if it is a two element tuple, then provide exact difference
+    # for the pair for numbers, else say differ of match
+    if len(tuple) == 2:
+        if args.mode == "time" or args.mode == "summary":
+            print(f"{tuple}")
+            tuple = [float(i) if isinstance(i, str) else i for i in tuple]
+            if isinstance(tuple[0], int):
+                elemdiffnum = int(tuple[1]) - int(tuple[0])
+                elemdiff = str(elemdiffnum)
+                if args.verbose:
+                    if elemdiffnum == 0:
+                        elemdiff += " (same)"
+                    elif elemdiffnum > 0:
+                        elemdiff += " (improved)"
+                    else:
+                        elemdiff += " (regressed)"
+            else:
+                elemdiffnum = float(tuple[1]) - float(tuple[0])
+                elemdiff = f"{elemdiffnum:.{3}f}"
+
+            diff.extend([elemdiff])
+            return
+
+    # Else do exact match for all
+    matched = all(tuple[0] == j for j in tuple)
+    if matched:
+        diff.extend(["same"])
+    else:
+        diffidentifier = "differ"
+        if args.verbose:
+            if args.mode == "time" or args.mode == "summary":
+                if isinstance(tuple[0], float):
+                    tuple = [f"{i:.{3}f}" for i in tuple]
+                elif isinstance(tuple[0], int):
+                    tuple = [str(i) for i in tuple]
+                else:
+                    tuple = [f"{j:.{2}f}" for j in [float(i) for i in tuple]]
+
+            diffidentifier = "[" + ",".join(tuple) + "]"
+        diff.extend([diffidentifier])
+    return diff
+
+
+def createDiffRows(args, runnames, reportdict, column_indices, rowlen):
     diffrows = []
     for test, dictOfRuns in reportdict.items():
         diff = [test]
         listOfRuns = getCanonicalizedListOfRuns(
-            runnames, dictOfRuns, column_indices, rowlen
+            args, runnames, dictOfRuns, column_indices, rowlen
         )
-
         # zip creates a tuple by taking same index value from each of the
         # unpacked (using * operator) run in listOfRuns
-        matched = False
         for cellItemTuple in zip(*listOfRuns):
-            matched = all(cellItemTuple[0] == j for j in cellItemTuple)
-            if matched:
-                diff.extend(["same"])
-            else:
-                diffidentifier = "differ"
-                if args.verbose:
-                    diffidentifier = ",".join(cellItemTuple)
-                diff.extend([diffidentifier])
+            getDiff(args, cellItemTuple, diff)
         diffrows += [diff]
     return diffrows
 
 
-def addToDict(reportdict, reportpkl, runname, skiporincludetestslist, skiporinclude):
+def convertNumToString(rows):
+    strrows = []
+    for row in rows:
+        strrows += [[str(i) for i in row]]
+    return strrows
+
+
+def convertStringToFloat(rows):
+    floatrow = []
+    for row in rows:
+        floatrow += [[float(i) for i in row]]
+    return floatrow
+
+
+def addTestsToDict(
+    reportdict, reportpkl, runname, skiporincludetestslist, skiporinclude
+):
     table = loadTable(reportpkl)
     # skip test name, hence from 1
     header = [table[0][1:]]
@@ -125,8 +195,10 @@ def addToDict(reportdict, reportpkl, runname, skiporincludetestslist, skiporincl
 
 def createMergedReport(args, reportdict, runnames, header, column_indices):
     # Create merged header
-    mergedheader = createMergedHeader(runnames, header)
-    mergedrows = createMergedRows(runnames, reportdict, column_indices, len(header))
+    mergedheader = createMergedHeader(args, runnames, header)
+    mergedrows = createMergedRows(
+        args, runnames, reportdict, column_indices, len(header)
+    )
     mergedtable = tabulate.tabulate(
         mergedrows, headers=mergedheader, tablefmt=args.reportformat
     )
@@ -134,8 +206,11 @@ def createMergedReport(args, reportdict, runnames, header, column_indices):
 
 
 def createDiffReport(args, reportdict, runnames, header, column_indices):
-    diffheader = ["test-name"] + header
-    diffrows = createDiffRows(runnames, reportdict, column_indices, len(header))
+    if args.mode == "summary":
+        diffheader = ["items"] + header
+    else:
+        diffheader = ["test-name"] + header
+    diffrows = createDiffRows(args, runnames, reportdict, column_indices, len(header))
     difftable = tabulate.tabulate(
         diffrows, headers=diffheader, tablefmt=args.reportformat
     )
@@ -187,9 +262,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["status", "time"],
+        choices=["status", "time", "summary"],
         default="status",
-        help="Process status report vs time report",
+        help="Process status report, time report, or summary report (count of passes)",
     )
     parser.add_argument(
         "-s",
@@ -243,13 +318,19 @@ if __name__ == "__main__":
             sys.exit(1)
         if args.mode == "time":
             reportpkl = rundir + "/timereport.pkl"
-        else:
+        elif args.mode == "status":
             reportpkl = rundir + "/statusreport.pkl"
+        elif args.mode == "summary":
+            reportpkl = rundir + "/summaryreport.pkl"
+        else:
+            print(f"The mode {args.mode} is not supported")
+            sys.exit(1)
 
         if not os.path.exists(reportpkl):
             print(f"{reportpkl} does not exist. This report will be ignored.")
             continue
-        allheaders += addToDict(
+
+        allheaders += addTestsToDict(
             reportdict,
             reportpkl,
             runname,
@@ -264,7 +345,7 @@ if __name__ == "__main__":
         outtable = createMergedReport(
             args, reportdict, runnames, oneheader, column_indices
         )
-    else:
+    elif args.do == "diff":
         outtable = createDiffReport(
             args, reportdict, runnames, oneheader, column_indices
         )
@@ -272,5 +353,15 @@ if __name__ == "__main__":
     outf = sys.stdout
     if args.output:
         outf = open(args.output, "w")
+    runstr = ", ".join(runnames)
+    extramsg = ""
+    if args.mode == "time":
+        extramsg = "(in seconds)"
+    elif args.mode == "summary":
+        extramsg = "(time in seconds)"
+
+    print(
+        f"The {args.do} report for {args.mode} {extramsg} for runs: {runstr}", file=outf
+    )
     print(outtable, file=outf)
     sys.exit(0)

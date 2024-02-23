@@ -1,9 +1,15 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import os, time, glob, sys, zipfile
 from multiprocessing import Pool
 import argparse
 import numpy as np
 import torch, io
-import struct, pickle, tabulate
+import struct, pickle, tabulate, statistics
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -875,6 +881,35 @@ def checkAndSetEnvironments(args):
     return 0
 
 
+def convertNumToString(rows):
+    strrows = []
+    for row in rows:
+        strrows += [[str(i) for i in row]]
+    return strrows
+
+
+def getSummaryRows(listofstatusrows, listoftimerows, tableheader):
+    summaryrows = []
+    summarycountrow = [0] * len(tableheader)
+    for row in listofstatusrows:
+        summarycountrow[0] += 1
+        for i in range(1, len(row)):
+            if row[i] == "passed":
+                summarycountrow[i] += 1
+    summarycountrow = ["total-count"] + summarycountrow
+    summaryrows += [summarycountrow]
+    timevaluerows = [[float(str) for str in row[1:]] for row in listoftimerows]
+    # Add average time
+    times = [statistics.mean(tuple) for tuple in zip(*timevaluerows)]
+    avgtimerows = ["average-time"] + [sum(times)] + [str(i) for i in times]
+    summaryrows += [avgtimerows]
+    times = [statistics.median(tuple) for tuple in zip(*timevaluerows)]
+    # Add median time
+    medtimerows = ["median-time"] + [sum(times)] + [str(i) for i in times]
+    summaryrows += [medtimerows]
+    return summaryrows
+
+
 def generateReport(run_dir, testsList, args):
     reportdict = {}
     tableheader = []
@@ -895,13 +930,15 @@ def generateReport(run_dir, testsList, args):
         timetablerow = [test]
         # First time build header
         if len(tableheader) == 0:
-            tableheader += ["test name"]
+            tableheader += ["tests"]
             for k, v in testdict.items():
                 tableheader += [k]
+
         # Now build the rows
         for k, v in testdict.items():
             statustablerow += [v[0]]
             timetablerow += [str(v[1])]
+
         testfailed = [str for str in ["failed", "mismatch"] if str in statustablerow]
         if testfailed:
             faillist += [test]
@@ -913,11 +950,19 @@ def generateReport(run_dir, testsList, args):
     # Now add header and value rows and tabulate
     statustablerows = [tableheader] + listofstatusrows
     timetablerows = [tableheader] + listoftimerows
+
+    # Build summary
+    summaryrows = getSummaryRows(listofstatusrows, listoftimerows, tableheader)
+    summarytableheader = ["items"] + tableheader
+    summarytabelerows = [summarytableheader] + summaryrows
     statustable = tabulate.tabulate(
         statustablerows, headers="firstrow", tablefmt=args.reportformat
     )
     timetable = tabulate.tabulate(
         timetablerows, headers="firstrow", tablefmt=args.reportformat
+    )
+    summarytable = tabulate.tabulate(
+        summarytabelerows, headers="firstrow", tablefmt=args.reportformat
     )
     suffix = "txt"
     if args.reportformat == "html":
@@ -930,19 +975,40 @@ def generateReport(run_dir, testsList, args):
     timetablepkl = run_dir + "/timereport.pkl"
     statustablefile = run_dir + "/statusreport." + suffix
     statustablepkl = run_dir + "/statusreport.pkl"
+    summarytablefile = run_dir + "/summaryreport." + suffix
+    summarytablepkl = run_dir + "/summaryreport.pkl"
     passlistfile = run_dir + "/passed.txt"
     faillistfile = run_dir + "/failed.txt"
+    runname = os.path.basename(run_dir)
     with open(statustablefile, "w") as statusf:
+        print(
+            f"Status report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            file=statusf,
+        )
         print(statustable, file=statusf)
     with open(statustablepkl, "wb") as f:
         pickle.dump(statustablerows, f)
     print(f"Generated status reoprt {statustablefile}")
 
     with open(timetablefile, "w") as timef:
+        print(
+            f"Time (in seconds) report for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            file=timef,
+        )
         print(timetable, file=timef)
     with open(timetablepkl, "wb") as f:
         pickle.dump(timetablerows, f)
     print(f"Generated time reoprt {timetablefile}")
+
+    with open(summarytablefile, "w") as summaryf:
+        print(
+            f"Summary (time in seconds) for run: {runname} using mode:{args.mode} todtype:{args.todtype} backend:{args.backend}\n",
+            file=summaryf,
+        )
+        print(summarytable, file=summaryf)
+    with open(summarytablepkl, "wb") as f:
+        pickle.dump(summarytabelerows, f)
+    print(f"Generated summary reoprt {summarytablefile}")
 
     with open(passlistfile, "w") as f:
         for items in passlist:

@@ -56,7 +56,9 @@
                      which is created for each test. This allows serializing input, output, any 
                      special controls, post processing recipe to be passed from model.py to run.py
  - tools/onnxutil.py : Allows examining an ONNX (protobuf) file
- - tools/reportutil.py: Given two different run directories, create a merged report
+ - tools/reportutil.py: Given two or more run directories, diff or merge any of status, time or 
+                      summary reports. For time and summary reports, it tell how many new 
+                      passes (improvements) were seen
 
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
@@ -136,18 +138,40 @@ Run the tests in operators, combinations folders of the default framework (i.e. 
 Use framework to onnx to torch MLIR path (--mode onnx) and run upto inference (default) using llvm-cpu backend (default),
 use four processor cores (default --jobs 4) on your machine, generate report file after finishing test run
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --report
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' 
+-i 'path_to_your_iree_build_dir' --report
 ```
-You can see logs of test run inside test-run/'test sub-directory'. The test-run/statusreport.md and test-run/timereport.md
-will show a nice table like below to give you detailed status of pass/fail of each stage. 
-```
-Test run status report
+You can see logs of test run inside test-run/'test sub-directory'. Start with commands.log file. 
 
-| test name                   | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| :-------------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
-| pytorch/models/opt-1.3b     | passed    | passed      | passed     | passed       | failed    |
-| pytorch/models/llama2-7b-hf | passed    | passed      | passed     | passed       | failed    |
-| pytorch/models/resnet50     | passed    | passed      | passed     | passed       | passed    |
+The test-run/statusreport.md, test-run/timereport.md, and test-run/summaryreport.md will show nice tables 
+like below to give you detailed status of pass/fail of each stage, time taken by each stage and total counts 
+of passes for each phase. Furthermore, you can compare these reports using tools/reportutil.py to get either 
+a merged view or diff of one or more runs.
+```
+Status report for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
+
+| tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
+| pytorch/operators/conv2d | passed    | passed      | passed     | passed       | passed    |
+| pytorch/operators/linear | passed    | passed      | passed     | passed       | passed    |
+| pytorch/combinations/mlp | passed    | passed      | passed     | passed       | passed    |
+
+
+Time (in seconds) report for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
+
+| tests                    | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------------------- | --------: | ----------: | ---------: | -----------: | --------: |
+| pytorch/operators/conv2d |   3.15231 |    0.425977 |  0.0067625 |     0.570327 | 0.0300162 |
+| pytorch/operators/linear |   3.11147 |    0.422572 | 0.00860119 |     0.825361 | 0.0320294 |
+| pytorch/combinations/mlp |   3.16689 |    0.438611 | 0.00681615 |      1.04092 | 0.0127583 |
+
+Summary (time in seconds) for run: fp32 using mode:onnx todtype:default backend:llvm-cpu
+
+| items        |   tests | model-run | onnx-import | torch-mlir | iree-compile | inference |
+| :----------- | ------: | --------: | ----------: | ---------: | -----------: | --------: |
+| total-count  |       3 |         3 |           3 |          3 |            3 |         3 |
+| average-time | 4.41714 |   3.14356 |    0.429053 | 0.00739328 |     0.812203 | 0.0249346 |
+| median-time  | 4.44048 |   3.15231 |    0.425977 | 0.00681615 |     0.825361 | 0.0300162 |
 ```
 
 The test-run/passed.txt has list of all tests that passed and test-run/failed.txt has list of all 
@@ -169,7 +193,8 @@ later. As long as you have not destroyed the test-run dir, you can run following
 ```
 python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --frameworks pytorch onnx --runupto torch-mlir 
 
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --runfrom torch-mlir --runupto inference 
+python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' 
+--runfrom torch-mlir --runupto inference 
 
 ```
 Example 3:
@@ -201,18 +226,49 @@ An example merged report:
 ```
 
 Example 6:
-Diff reports from two different run directories named as 'fp32" and "bf16" and show whether each test run matched or differed
+Diff reports from two different run directories named as 'fp32" and "bf16" and show whether each test run matched or 
+differed
 ```
-python tools/reportutil.py --do diff fp32 bf16 
+python tools/reportutil.py --do diff fp32 bf16 -m status -v
+
+The diff report for status of runs: fp32, bf16
+| test-name                | model-run | onnx-import | torch-mlir | iree-compile | inference         |
+| :----------------------- | :-------- | :---------- | :--------- | :----------- | :---------------- |
+| pytorch/operators/linear | same      | same        | same       | same         | [passed,mismatch] |
+| pytorch/combinations/mlp | same      | same        | same       | same         | same              |
+| onnx/operators/gemm      | same      | same        | same       | same         | same              |
+
+python tools/reportutil.py --do diff fp32 bf16 -m time
+
+The diff report for time (in seconds) of runs: fp32, bf16
+| test-name                | model-run | onnx-import |  torch-mlir | iree-compile |  inference |
+| :----------------------- | --------: | ----------: | ----------: | -----------: | ---------: |
+| pytorch/operators/linear |  0.227186 |  -0.0256374 | 0.000367403 |    0.0863338 |  0.0362182 |
+| pytorch/combinations/mlp |  0.245063 |   -0.041338 | 0.000627995 |      0.15707 | -0.0194921 |
+| onnx/operators/gemm      | -0.111096 |   0.0017724 |  0.00060463 |            0 |          0 |
+
+python tools/reportutil.py -d diff fp32 bf16 -m summary
+of
+The diff report for summary (time in seconds) of runs: fp32, bf16
+| items        |    tests | model-run | onnx-import | torch-mlir | iree-compile |  inference |
+| :----------- | -------: | --------: | ----------: | ---------: | -----------: | ---------: |
+| total-count  |        0 |         0 |           0 |          0 |            0 |         -1 |
+| average-time | 0.241627 |  0.113173 |    0.026411 | 0.00141684 |    0.0643837 |  0.0362426 |
+| median-time  | 0.209797 |  0.109462 |   0.0351717 | 0.00205493 |    0.0539219 | 0.00918627 |
+
+python tools/reportutil.py -d diff fp32 bf16 fp32 -m summary -v -c 4,5
+
+The diff report for summary (time in seconds) of runs: fp32, bf16, fp32
+
+| items        | iree-compile     | inference        |
+| :----------- | :--------------- | :--------------- |
+| total-count  | same             | [3,2,3]          |
+| average-time | [0.81,0.88,0.81] | [0.02,0.06,0.02] |
+| median-time  | [0.83,0.88,0.83] | [0.03,0.04,0.03] |
+
+if more than two runs are diffed, then when values differ the comma separated differing values are shown
 ```
-An example diff report:
-```
-| test-name                      | model-run | onnx-import | torch-mlir | iree-compile | inference |
-| :----------------------------- | :-------- | :---------- | :--------- | :----------- | :-------- |
-| onnx/models/resnet50_vaiq_int8 | differ    | differ      | differ     | differ       | differ    |
-| pytorch/models/opt-125M        | same      | same        | same       | same         | differ    |
-| pytorch/models/dlrm            | differ    | differ      | same       | same         | same      |
-```
+The -1 under inference indicates, one test regressed in inference
 
 ### Adding new tests
 
@@ -237,7 +293,8 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    ```
    python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct --runupto torch-mlir --torchtolinalg
    ```
-   Note that I did not specify -i for IREE build as I am running only upto torch-mlir. Also, I have added --torchtolinalg to make sure I test upto linalg lowerging as I am not running iree-compile
+   Note that I did not specify -i for IREE build as I am running only upto torch-mlir. Also, I have added 
+   --torchtolinalg to make sure I test upto linalg lowerging as I am not running iree-compile
 
    Rerun above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
 
@@ -278,7 +335,8 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    Then test it as: 
 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests onnx/operators/cumsum_small --mode direct --runupto inference --torchtolinalg
+   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' 
+   --tests onnx/operators/cumsum_small --mode direct --runupto inference --torchtolinalg
    ```
 
    Then follow steps similar to the one described above for pytorch framework to test more and add 
@@ -286,12 +344,14 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
 
    ### Testing for different dtypes
    The model (test) writer should decide on a specific data type (dtype) to use. Name the test with a suffix 
-   of dtype to indicate its dtype if not fp32. As an exmaple a 8-bit VAI quantized model (test) for resnet50 should preferably be named as restnet50_vaiq_int8 vs a fp32 model (test) as simply resnet50.
+   of dtype to indicate its dtype if not fp32. As an exmaple a 8-bit VAI quantized model (test) for resnet50 
+   should preferably be named as restnet50_vaiq_int8 vs a fp32 model (test) as simply resnet50.
 
    If a framework has support for casting a model and tensor to a particular type then using switch --todtype you can
    run the same model with a different dtype. As an example, Pytorch has model.to(dtype) and tensor.to(dtype) for floating point types only, so for any of pytorch tests you can run test by passing --todtype 'an_allowed_value' . 
    
-   Model, parameters and inputs are cast to new dtype. As long as framework run of model and IREE compiled run of model match we are able to test torch-mlir and IREE, even if the values are not exactly the same as the original values, this way of testing can help us detect many low hanging bugs. 
+   Model, parameters and inputs are cast to new dtype. As long as framework run of model and IREE compiled run of 
+   model match we are able to test torch-mlir and IREE, even if the values are not exactly the same as the original values, this way of testing can help us detect many low hanging bugs. 
    
    The exmaple run below casts the model and input tensor to bf16 for test pytorch/combinations/mlp (which is originally written as fp32 model):
 
