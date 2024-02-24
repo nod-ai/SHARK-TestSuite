@@ -888,11 +888,11 @@ def getSummaryRows(listofstatusrows, listoftimerows, tableheader):
     timevaluerows = [[float(str) for str in row[1:]] for row in listoftimerows]
     # Add average time
     times = [statistics.mean(tuple) for tuple in zip(*timevaluerows)]
-    avgtimerows = ["average-time"] + [sum(times)] + [str(i) for i in times]
+    avgtimerows = ["average-time"] + [sum(times)] + [f"{i:.{3}f}" for i in times]
     summaryrows += [avgtimerows]
     times = [statistics.median(tuple) for tuple in zip(*timevaluerows)]
     # Add median time
-    medtimerows = ["median-time"] + [sum(times)] + [str(i) for i in times]
+    medtimerows = ["median-time"] + [sum(times)] + [f"{i:.{3}f}" for i in times]
     summaryrows += [medtimerows]
     return summaryrows
 
@@ -924,7 +924,7 @@ def generateReport(run_dir, testsList, args):
         # Now build the rows
         for k, v in testdict.items():
             statustablerow += [v[0]]
-            timetablerow += [str(v[1])]
+            timetablerow += [f"{v[1]:.{3}f}"]
 
         testfailed = [str for str in ["failed", "mismatch"] if str in statustablerow]
         if testfailed:
