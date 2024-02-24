@@ -128,7 +128,8 @@ E2ESHARK_CHECK["postprocessed_output"] = postProcess(E2ESHARK_CHECK)
 # TBD, move to using E2ESHARK_CHECK pickle save
 torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
 torch.save(E2ESHARK_CHECK["output"], outputsavefilename)
-
+# out_sizes = [i.size() for i in E2ESHARK_CHECK["output"]]
+# print(f"output sizes: {out_sizes}")
 # Save the E2ESHARK_CHECK
 with open("E2ESHARK_CHECK.pkl", "wb") as tchkf:
     pickle.dump(E2ESHARK_CHECK, tchkf)

@@ -181,7 +181,7 @@ def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
     tensor_num_bytes = (num_elem * dtype.itemsize).item()
     barray = bytearray(binarydata[0:tensor_num_bytes])
     # for byte in barray:
-    #    print(f"{byte:02X}", end="")
+    #     print(f"{byte:02X}", end="")
     rettensor = unpackBytearray(barray, num_elem, dtype)
     reshapedtensor = rettensor.reshape(list(shape))
     f.close()
@@ -213,15 +213,6 @@ def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
         bytearr = packTensor(modelinput)
         f.write(bytearr)
         f.close()
-
-
-def dumpInferenceInputBinFile(modelinput, modelinputbinfilename):
-    outputshape = modelinput.size()
-    torchdtype = modelinput.dtype
-    rettensor = loadRawBinaryAsTorchSensor(
-        modelinputbinfilename, outputshape, torchdtype
-    )
-    print(f"{rettensor}")
 
 
 def runTorchMLIRGeneration(
@@ -444,7 +435,6 @@ def runInference(
                 if args.verbose:
                     print(f"Creating: {modelinputbinfilename}")
                 writeInferenceInputBinFile(modelinput, modelinputbinfilename)
-                # dumpInferenceInputBinFile(modelinput, modelinputbinfilename)
                 inputshapestring = getShapeString(modelinput)
                 inputarg += (
                     ' --input="'
@@ -459,7 +449,7 @@ def runInference(
     outputarg = ""
     # expecting goldoutputlist to be a List[Tensors]
     # each tensor corresponding to a vmfb output
-    for i in range(len(goldoutputlist)):
+    for i in range(0, len(goldoutputlist)):
         infoutputfilename = getinfoutfilename(i)
         outputarg += " --output=@" + infoutputfilename + " "
     scriptcommand = (
@@ -484,14 +474,10 @@ def runInference(
 
     # Load the E2ESHARK_CHECK.pkl file saved by model run
     testCheckedDict = loadTestCheckedDictionary()
-    if args.verbose:
-        print(f"The E2ESHARK_CHECK.pkl dictionary is as below:")
-        for key, value in testCheckedDict.items():
-            print(f" {key} {value}")
     # get gold postprocessed output list
     goldpostoutputlist = testCheckedDict["postprocessed_output"]
 
-    for iout_index, goldoutput in enumerate(goldoutputlist):
+    for i, goldoutput in range(0, len(goldoutputlist)):
         outputshape = goldoutput.size()
         torchdtype = goldoutput.dtype
         infoutputfilename = getinfoutfilename(i)
@@ -515,7 +501,7 @@ def runInference(
 
         if not inferencematched:
             if args.postprocess and testCheckedDict.get("postprocess"):
-                goldpostoutput = goldpostoutputlist[iout_index]
+                goldpostoutput = goldpostoutputlist[i]
                 # apply post processing on inference output
                 infpostoutput = infoutput
                 for func, argextra, isRetTuple, tupleIndex in testCheckedDict[
@@ -919,7 +905,7 @@ def generateReport(run_dir, testsList, args):
     faillist = []
     for test in testsList:
         timelog = run_dir + "/" + test + "/" + "time.pkl"
-        if os.path.exists(timelog):
+        if os.path.exists(timelog) and os.path.getsize(timelog) > 0:
             with open(timelog, "rb") as logf:
                 testdict = pickle.load(logf)
             reportdict[test] = testdict
@@ -1242,7 +1228,7 @@ def main():
         print("Since --tests or --testsfile was specified, --groups ignored")
         if args.tests:
             testsList = args.tests
-            testlist = [item.strip().strip(os.sep) for item in testlist]
+            testsList = [item.strip().strip(os.sep) for item in testsList]
         if args.testsfile:
             testsList += getTestsListFromFile(args.testsfile)
 
