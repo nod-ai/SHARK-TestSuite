@@ -50,13 +50,17 @@ def selectColumns(row, column_indices):
 
 
 def createMergedHeader(args, runnames, header):
+    if args.reportformat == "pipe" or args.reportformat == "html":
+        joiner = "\n"
+    else:
+        joiner = "."
     if args.mode == "summary":
         mergedheader = ["items"]
     else:
         mergedheader = ["tests"]
     for i in range(len(header)):
         for run in runnames:
-            columnname = header[i] + "-" + run
+            columnname = header[i] + joiner + run
             mergedheader += [columnname]
     return mergedheader
 
@@ -134,7 +138,7 @@ def getDiff(args, tuple, diff):
                 elif isinstance(tuple[0], int):
                     tuple = [str(i) for i in tuple]
                 else:
-                    tuple = [f"{j:.{2}f}" for j in [float(i) for i in tuple]]
+                    tuple = [f"{j:.{3}f}" for j in [float(i) for i in tuple]]
 
             diffidentifier = "[" + ",".join(tuple) + "]"
         diff.extend([diffidentifier])
