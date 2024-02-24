@@ -477,7 +477,8 @@ def runInference(
     # get gold postprocessed output list
     goldpostoutputlist = testCheckedDict["postprocessed_output"]
 
-    for i, goldoutput in enumerate(goldoutputlist):
+    for i in range(0, len(goldoutputlist)):
+        goldoutput = goldoutputlist[i]
         outputshape = goldoutput.size()
         torchdtype = goldoutput.dtype
         infoutputfilename = getinfoutfilename(i)
