@@ -43,22 +43,31 @@ def getOutputTensorList(test_out):
     return test_op_list
 
 
+# functionPipeLine = (function, [args other than input], isReturnTuple, indexOfTupleForTupleReturn)
+def applyPostProcessPipeline(item, functionPipeLine):
+    # Run post processing pipeline
+    for func, argextra, isRetTuple, tupleIndex in functionPipeLine:
+        if len(argextra) > 0:
+            item = func(item, *argextra)
+        else:
+            item = func(item)
+        if isRetTuple:
+            item = item[tupleIndex]
+    return item
+
+
 # Apply post processing functions on output
 def postProcess(e2esharkDict):
     test_output = e2esharkDict["output"]
+    functionPipeLine = e2esharkDict["postprocess"]
+    print(f"{functionPipeLine}")
     postprocess_output = []
     # Call chain of post processing -- run.pl will do same on backend inference output
     if e2esharkDict.get("postprocess"):
         for item in test_output:
-            # Run post processing pipeline
-            for func, argextra, isRetTuple, tupleIndex in e2esharkDict["postprocess"]:
-                if len(argextra) > 0:
-                    item = func(item, *argextra)
-                else:
-                    item = func(item)
-                if isRetTuple:
-                    item = item[tupleIndex]
-            postprocess_output += [item]
+            inp = item.clone()
+            processed_item = applyPostProcessPipeline(inp, functionPipeLine)
+            postprocess_output += [processed_item]
     else:
         postprocess_output = test_output
     return postprocess_output

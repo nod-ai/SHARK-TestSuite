@@ -10,6 +10,11 @@ import argparse
 import numpy as np
 import torch, io
 import struct, pickle, tabulate, statistics
+from pathlib import Path
+
+# Need to allow invocation of run.py from anywhere
+sys.path.append(Path(__file__).parent)
+from tools.stubs.commonutils import applyPostProcessPipeline
 
 # Put full path to your Torch MLIR ( https://github.com/llvm/torch-mlir ) build
 # This can be overwritten by command line
@@ -73,13 +78,13 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
     ofile.close()
 
 
-def loadTestCheckedDictionary():
-    testCheckedDict = None
+def loadE2eSharkCheckDictionary():
+    e2esharkDict = None
     pklfilename = "E2ESHARK_CHECK.pkl"
     if os.path.exists(pklfilename):
         with open(pklfilename, "rb") as pkf:
-            testCheckedDict = pickle.load(pkf)
-    return testCheckedDict
+            e2esharkDict = pickle.load(pkf)
+    return e2esharkDict
 
 
 def logAndReturn(commandslog, timelog, resultdict, retval):
@@ -247,7 +252,7 @@ def runTorchMLIRGeneration(
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
         torchonnxfilename = modelname + "." + args.todtype + ".torch-onnx.mlir"
-        logfilename = "torch-onnx.log"
+        logfilename = curphase + ".log"
         scriptcommand = (
             f"PYTHONPATH={torch_mlir_pythonpath} python -m torch_mlir.tools.import_onnx "
             + onnxfilename
@@ -269,7 +274,7 @@ def runTorchMLIRGeneration(
         # Lower torch ONNX to torch MLIR
         # start phases[2]
         curphase = phases[2]
-        logfilename = "onnxtotorch.log"
+        logfilename = curphase + ".log"
         commandstring = "/bin/torch-mlir-opt"
         if args.torchtolinalg:
             commandstring += " -pass-pipeline='builtin.module(func.func(convert-torch-onnx-to-torch),"
@@ -325,7 +330,7 @@ def runCodeGeneration(
         print(f"The torch MLIR {torchmlirfilename} does not exist or is empty.")
         print(f"Test {testName} failed [{curphase}]")
         return 1
-    logfilename = "iree-compile.log"
+    logfilename = curphase + ".log"
     commandname = (
         "/tools/iree-compile --iree-input-demote-i64-to-i32 --iree-hal-target-backends="
         + args.backend
@@ -414,7 +419,7 @@ def runInference(
         print("Test", testName, "failed [" + curphase + "]")
         return 1
     # read the gold output produced by model
-    logfilename = "inference.log"
+    logfilename = curphase + ".log"
     getinfoutfilename = lambda i: "inference_output" + "." + str(i) + ".bin"
     # Each input or output loaded here is a python list of
     # torch tensor
@@ -473,9 +478,9 @@ def runInference(
     end = time.time()
 
     # Load the E2ESHARK_CHECK.pkl file saved by model run
-    testCheckedDict = loadTestCheckedDictionary()
+    e2esharkDict = loadE2eSharkCheckDictionary()
     # get gold postprocessed output list
-    goldpostoutputlist = testCheckedDict["postprocessed_output"]
+    goldpostoutputlist = e2esharkDict["postprocessed_output"]
 
     for i in range(0, len(goldoutputlist)):
         goldoutput = goldoutputlist[i]
@@ -501,19 +506,10 @@ def runInference(
         inferencematched = compareOutputs(args, goldoutput, infoutput, torchdtype)
 
         if not inferencematched:
-            if args.postprocess and testCheckedDict.get("postprocess"):
+            if args.postprocess and e2esharkDict.get("postprocess"):
+                functionPipeLine = e2esharkDict["postprocess"]
                 goldpostoutput = goldpostoutputlist[i]
-                # apply post processing on inference output
-                infpostoutput = infoutput
-                for func, argextra, isRetTuple, tupleIndex in testCheckedDict[
-                    "postprocess"
-                ]:
-                    if len(argextra) > 0:
-                        infpostoutput = func(infpostoutput, *argextra)
-                    else:
-                        infpostoutput = func(infpostoutput)
-                    if isRetTuple:
-                        infpostoutput = infpostoutput[tupleIndex]
+                infpostoutput = applyPostProcessPipeline(infoutput, functionPipeLine)
                 # now compare the two
                 if args.verbose:
                     print(f"gold post processed: {goldpostoutput}")
@@ -665,7 +661,8 @@ def runTestUsingClassicalFlow(args_tuple):
         + modelname
     )
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
-    logfilename = modelname + ".log"
+    curphase = phases[0]
+    logfilename = curphase + ".log"
     scriptcommand = (
         "python " + runmodelpy + " " + testargs + " 1> " + logfilename + " 2>&1"
     )
