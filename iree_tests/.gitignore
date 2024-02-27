@@ -1,0 +1,3 @@
+*.vmfb
+# TODO(scotttodd): compile into a build dir instead of the source dir
+config_*.txt
