@@ -7,21 +7,11 @@
 # This file constitutes end  part of runmodel.py
 # this is appended to the model.py in test dir
 
-import sys, argparse
-import torch_mlir
-import numpy
-import io, pickle
+import argparse
+import pickle
 
-# Fx importer related
-from typing import Optional
-import torch.export
-from torch_mlir.extras.fx_importer import FxImporter
-from torch_mlir import ir
-from torch_mlir.dialects import torch as torch_d
-from torch_mlir import fx
-
-# old torch_mlir.compile path
-from torch_mlir import torchscript
+from turbine_models.model_builder import HFTransformerBuilder
+import shark_turbine.aot as aot
 from commonutils import getOutputTensorList, E2ESHARK_CHECK_DEF, postProcess
 
 msg = "The script to run a model test"
@@ -35,24 +25,17 @@ parser.add_argument(
     help="If not default, casts model and input to given data type if framework supports model.to(dtype) and tensor.to(dtype)",
 )
 parser.add_argument(
-    "-m",
-    "--mode",
-    choices=["direct", "onnx", "ort"],
-    default="direct",
-    help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
-)
-parser.add_argument(
-    "-p",
-    "--torchmlirimport",
-    choices=["compile", "fximport"],
-    default="fximport",
-    help="Use torch_mlir.torchscript.compile, or Fx importer",
-)
-parser.add_argument(
     "-o",
     "--outfileprefix",
     default="model",
     help="Prefix of output files written by this model",
+)
+parser.add_argument(
+    "-m",
+    "--mode",
+    choices=["direct", "onnx", "ort", "turbine"],
+    default="direct",
+    help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
 )
 args = parser.parse_args()
 runmode = args.mode
@@ -80,32 +63,23 @@ if args.todtype != "default":
         E2ESHARK_CHECK["input"] = E2ESHARK_CHECK["input"].to(dtype)
     E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
 
-if runmode == "onnx" or runmode == "ort":
-    onnx_name = outfileprefix + ".onnx"
-    onnx_program = torch.onnx.export(model, E2ESHARK_CHECK["input"], onnx_name)
-elif runmode == "direct":
-    torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
-    torch_mlir_model = None
-    # override mechanism to get torch MLIR as per model
-    if (
-        args.torchmlirimport == "compile"
-        or E2ESHARK_CHECK["torchmlirimport"] == "compile"
-    ):
-        torch_mlir_model = torchscript.compile(
-            model,
-            (E2ESHARK_CHECK["input"]),
-            output_type="torch",
-            use_tracing=True,
-            verbose=False,
-        )
+# only possible mode, so check not necessary
+if runmode == "turbine":
+    # create hugging face transformer model
+    turbine_model = HFTransformerBuilder(
+        example_input=E2ESHARK_CHECK["input"],
+        upload_ir=False,
+        model=model,
+        run_e2e=False,
+    )
+    if isinstance(E2ESHARK_CHECK["input"], list):
+        module = aot.export(model, *E2ESHARK_CHECK["input"])
     else:
-        # check for seq2seq model
-        if not isinstance(E2ESHARK_CHECK["input"], list):
-            torch_mlir_model = fx.export_and_import(model, E2ESHARK_CHECK["input"])
-        else:
-            torch_mlir_model = fx.export_and_import(model, *E2ESHARK_CHECK["input"])
+        module = aot.export(model, E2ESHARK_CHECK["input"])
+    module_str = str(module.mlir_module)
+    torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
     with open(torch_mlir_name, "w+") as f:
-        f.write(torch_mlir_model.operation.get_asm())
+         f.write(module_str)
 
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"
@@ -132,8 +106,7 @@ E2ESHARK_CHECK["postprocessed_output"] = postProcess(E2ESHARK_CHECK)
 # TBD, move to using E2ESHARK_CHECK pickle save
 torch.save(E2ESHARK_CHECK["input"], inputsavefilename)
 torch.save(E2ESHARK_CHECK["output"], outputsavefilename)
-# out_sizes = [i.size() for i in E2ESHARK_CHECK["output"]]
-# print(f"output sizes: {out_sizes}")
+
 # Save the E2ESHARK_CHECK
 with open("E2ESHARK_CHECK.pkl", "wb") as tchkf:
     pickle.dump(E2ESHARK_CHECK, tchkf)
