@@ -43,7 +43,7 @@ def getOutputTensorList(test_out):
     return test_op_list
 
 
-# listOfFunctionArgRetTuple = (function, [args other than input], isReturnTuple, indexOfTupleForTupleReturn)
+# functionPipeLine = (function, [args other than input], isReturnTuple, indexOfTupleForTupleReturn)
 def applyPostProcessPipeline(item, functionPipeLine):
     # Run post processing pipeline
     for func, argextra, isRetTuple, tupleIndex in functionPipeLine:

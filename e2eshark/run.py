@@ -78,7 +78,7 @@ def concatenateFiles(inpfile1, inpfile2, outfile):
     ofile.close()
 
 
-def loadE2ESHARK_CHECK_DICT():
+def loadE2eSharkCheckDictionary():
     e2esharkDict = None
     pklfilename = "E2ESHARK_CHECK.pkl"
     if os.path.exists(pklfilename):
@@ -478,7 +478,7 @@ def runInference(
     end = time.time()
 
     # Load the E2ESHARK_CHECK.pkl file saved by model run
-    e2esharkDict = loadE2ESHARK_CHECK_DICT()
+    e2esharkDict = loadE2eSharkCheckDictionary()
     # get gold postprocessed output list
     goldpostoutputlist = e2esharkDict["postprocessed_output"]
 
