@@ -31,7 +31,7 @@ IMPORT_FAILURES_FILE = REPO_ROOT / "iree_tests/onnx/node/import_failures.txt"
 def find_onnx_tests(root_dir_path):
     test_dir_paths = [p for p in root_dir_path.iterdir() if p.is_dir()]
     print(f"Found {len(test_dir_paths)} tests")
-    return test_dir_paths
+    return sorted(test_dir_paths)
 
 
 def convert_io_proto(proto_filename, type_proto):
