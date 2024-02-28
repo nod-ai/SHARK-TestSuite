@@ -12,6 +12,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
+# model origin: https://huggingface.co/meta-llama/Llama-2-7b-hf
 test_modelname = "meta-llama/Llama-2-7b-hf"
 tokenizer = LlamaTokenizer.from_pretrained(test_modelname)
 model = LlamaForCausalLM.from_pretrained(

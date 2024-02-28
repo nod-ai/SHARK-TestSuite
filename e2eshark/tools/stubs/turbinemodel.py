@@ -30,15 +30,7 @@ parser.add_argument(
     default="model",
     help="Prefix of output files written by this model",
 )
-parser.add_argument(
-    "-m",
-    "--mode",
-    choices=["direct", "onnx", "ort", "turbine"],
-    default="direct",
-    help="Generate torch MLIR, ONNX or ONNX plus ONNX RT stub",
-)
 args = parser.parse_args()
-runmode = args.mode
 outfileprefix = args.outfileprefix + "." + args.todtype
 
 
@@ -63,23 +55,21 @@ if args.todtype != "default":
         E2ESHARK_CHECK["input"] = E2ESHARK_CHECK["input"].to(dtype)
     E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
 
-# only possible mode, so check not necessary
-if runmode == "turbine":
-    # create hugging face transformer model
-    turbine_model = HFTransformerBuilder(
-        example_input=E2ESHARK_CHECK["input"],
-        upload_ir=False,
-        model=model,
-        run_e2e=False,
-    )
-    if isinstance(E2ESHARK_CHECK["input"], list):
-        module = aot.export(model, *E2ESHARK_CHECK["input"])
-    else:
-        module = aot.export(model, E2ESHARK_CHECK["input"])
-    module_str = str(module.mlir_module)
-    torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
-    with open(torch_mlir_name, "w+") as f:
-         f.write(module_str)
+# create hugging face transformer model
+turbine_model = HFTransformerBuilder(
+    example_input=E2ESHARK_CHECK["input"],
+    upload_ir=False,
+    model=model,
+    run_e2e=False,
+)
+if isinstance(E2ESHARK_CHECK["input"], list):
+    module = aot.export(model, *E2ESHARK_CHECK["input"])
+else:
+    module = aot.export(model, E2ESHARK_CHECK["input"])
+module_str = str(module.mlir_module)
+torch_mlir_name = outfileprefix + ".pytorch.torch.mlir"
+with open(torch_mlir_name, "w+") as f:
+        f.write(module_str)
 
 inputsavefilename = outfileprefix + ".input.pt"
 outputsavefilename = outfileprefix + ".goldoutput.pt"

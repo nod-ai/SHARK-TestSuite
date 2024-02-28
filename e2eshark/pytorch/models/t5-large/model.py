@@ -1,3 +1,9 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import sys, argparse
 import torch
 import torch.nn as nn
@@ -12,7 +18,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-
+# model origin: https://huggingface.co/t5-large
 test_modelname = "t5-large"
 tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 tokenization_kwargs = {

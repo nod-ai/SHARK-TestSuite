@@ -331,13 +331,8 @@ def runCodeGeneration(
         print(f"Test {testName} failed [{curphase}]")
         return 1
     logfilename = curphase + ".log"
-    # use same compile command we do in turbine
     commandname = (
-        "/tools/iree-compile --iree-input-type=torch --mlir-print-debuginfo "
-        + "--mlir-print-op-on-diagnostic=false --iree-llvmcpu-target-cpu-features=host "
-        + "--iree-llvmcpu-target-triple=x86_64-linux-gnu --iree-stream-resource-index-bits=64 "
-        + "--iree-vm-target-index-bits=64 --iree-flow-inline-constants-max-byte-length=1 "
-        + "--iree-input-demote-i64-to-i32 --iree-llvmcpu-enable-ukernels=all --iree-hal-target-backends="
+        "/tools/iree-compile --iree-input-demote-i64-to-i32 --iree-hal-target-backends="
         + args.backend
         + " "
     )
@@ -635,14 +630,24 @@ def runTestUsingClassicalFlow(args_tuple):
     else:
         print("Framework ", frameworkname, " not supported")
         return 1
-    testargs += (
-        " --todtype "
-        + args.todtype
-        + " --mode "
-        + mode
-        + " --outfileprefix "
-        + modelname
-    )
+    
+    if mode == "turbine":
+        testargs += (
+            " --todtype "
+            + args.todtype
+            + " --outfileprefix "
+            + modelname
+        )
+    else:
+        testargs += (
+            " --todtype "
+            + args.todtype
+            + " --mode "
+            + mode
+            + " --outfileprefix "
+            + modelname
+        )
+    
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
     curphase = phases[0]
     logfilename = curphase + ".log"

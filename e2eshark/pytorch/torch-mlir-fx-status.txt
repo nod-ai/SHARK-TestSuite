@@ -1,0 +1,32 @@
+
+Most of these models are failing at inference due to extra tensor args at the import stage
+for torch-mlir fx export and import. Also problems with lowering of scaled attention op.
+
+Test pytorch/models/opt-125M passed
+Test pytorch/models/opt-1.3b passed
+Test pytorch/models/opt-350m passed
+Test pytorch/models/bart-large failed [iree-compile]
+Test pytorch/models/beit-base-patch16-224-pt22k-ft22k failed [inference]
+Test pytorch/models/bert-large-uncased failed [inference]
+Test pytorch/models/bge-base-en-v1.5 failed [inference]
+Test pytorch/models/resnet50 failed [inference]
+Test pytorch/models/dlrm failed [iree-compile]
+Test pytorch/models/bart-large failed [iree-compile]
+Test pytorch/models/beit-base-patch16-224-pt22k-ft22k failed [inference]
+Test pytorch/models/bge-base-en-v1.5 failed [inference]
+Test pytorch/models/deit-small-distilled-patch16-224 passed
+Test pytorch/models/miniLM-L12-H384-uncased failed [inference]
+Test pytorch/models/bert-large-uncased failed [inference]
+Test pytorch/models/mit-b0 failed [mismatch]
+Test pytorch/models/mobilebert-uncased failed [inference]
+Test pytorch/models/phi-1_5 failed [inference]
+Test pytorch/models/gpt2-xl failed [inference]
+Test pytorch/models/t5-large failed [mismatch]
+Test pytorch/models/vit-base-patch16-224 passed
+Test pytorch/models/whisper-base failed [iree-compile]
+Test pytorch/models/whisper-medium failed [iree-compile]
+Test pytorch/models/whisper-small failed [iree-compile]
+Test pytorch/models/stablelm-3b-4e1t failed [inference]
+Test pytorch/models/t5-base failed [mismatch]
+Test pytorch/models/phi-2 failed [inference]
+Test pytorch/models/vicuna-13b-v1.3 failed [model-run]

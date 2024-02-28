@@ -12,7 +12,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-
+# model origin: https://huggingface.co/facebook/opt-1.3b
 test_modelname = "facebook/opt-1.3b"
 tokenizer = AutoTokenizer.from_pretrained(test_modelname)
 model = OPTForCausalLM.from_pretrained(

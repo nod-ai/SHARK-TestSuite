@@ -1,3 +1,9 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import sys, argparse
 import torch
 import torch.nn as nn
@@ -14,9 +20,10 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
+# model origin: https://huggingface.co/nvidia/mit-b0
 test_modelname = "nvidia/mit-b0"
-url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-image = Image.open(requests.get(url, stream=True).raw)
+test_image_url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
+image = Image.open(requests.get(test_image_url, stream=True).raw)
 
 processor = SegformerImageProcessor.from_pretrained(test_modelname)
 model = SegformerForImageClassification.from_pretrained(test_modelname)
