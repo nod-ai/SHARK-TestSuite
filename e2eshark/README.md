@@ -123,6 +123,29 @@ pip install -r 'your local torch MLIR repo'/torchvision-requirements.txt
 pip install 'your local torch MLIR repo'/torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
 pip install -r ./requirements.txt
 ```
+
+## Turbine Mode
+
+If you are also interested in running through SHARK-Turbine follow these instructions as well:
+
+```
+git clone https://github.com/nod-ai/SHARK-Turbine
+```
+
+Then, go into SHARK-Turbine/core/requirements.txt and remove these two lines:
+```
+-r pytorch-cpu-requirements.txt
+-r torchvision-requirements.txt
+```
+
+Now, go back to the TestSuite Repo, and make sure you are using same venv from all previous steps.
+
+```
+pip install --upgrade -r 'your local SHARK Turbine repo'/core/requirements.txt
+pip install -e 'your local SHARK Turbine repo'/core[testing]
+pip install -e 'your local SHARK Turbine repo'/models
+```
+
 Once setup, in any new shell you can activate the same env everytime you want to use it 
 without needing to re-install requirements.txt's. 
 Example:
