@@ -1,8 +1,14 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import sys, argparse
 import torch
 import torch.nn as nn
 import torch_mlir
-from transformers import OPTForCausalLM, AutoTokenizer
+from transformers import MobileBertModel, AutoTokenizer
 
 # import from e2eshark/tools to allow running in current dir, for run through
 # run.pl, commutils is symbolically linked to allow any rundir to work
@@ -12,32 +18,22 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-# model origin: https://huggingface.co/facebook/opt-1.3b
-test_modelname = "facebook/opt-1.3b"
+# model origin: https://huggingface.co/google/mobilebert-uncased
+test_modelname = "google/mobilebert-uncased"
 tokenizer = AutoTokenizer.from_pretrained(test_modelname)
-model = OPTForCausalLM.from_pretrained(
+model = MobileBertModel.from_pretrained(
     test_modelname,
     num_labels=2,
     output_attentions=False,
     output_hidden_states=False,
     torchscript=True,
 )
+model.config.pad_token_id = None
 model.to("cpu")
 model.eval()
-prompt = "What is nature of our existence?"
-encoding = tokenizer(prompt, return_tensors="pt")
-E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()
+E2ESHARK_CHECK["input"] = torch.randint(2, (1, 128))
 E2ESHARK_CHECK["output"] = model(E2ESHARK_CHECK["input"])
-model_response = model.generate(
-    E2ESHARK_CHECK["input"],
-    do_sample=True,
-    top_k=50,
-    max_length=100,
-    top_p=0.95,
-    temperature=1.0,
-)
-print("Prompt:", prompt)
-print("Response:", tokenizer.decode(model_response[0]))
+
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
 # For geneartive AI models, input is int and should be kept that way for

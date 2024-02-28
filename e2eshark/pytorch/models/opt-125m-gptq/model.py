@@ -12,7 +12,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-
+# model origin: https://huggingface.co/jlsilva/facebook-opt-125m-gptq4bit
 test_modelname = "facebook/opt-125m"
 quantizedmodelname = "jlsilva/facebook-opt-125m-gptq4bit"
 kwargs = {
