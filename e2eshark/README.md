@@ -135,7 +135,7 @@ git clone https://github.com/nod-ai/SHARK-Turbine
 Now, go back to the TestSuite Repo, and make sure you are using same venv from all previous steps.
 
 ```
-pip install -f https://openxla.github.io/iree/pip-release-links.html --upgrade -r ../../SHARK-Turbine-fork/core/iree-requirements.txt
+pip install -f https://openxla.github.io/iree/pip-release-links.html --upgrade -r 'your local SHARK Turbine repo'/core/iree-requirements.txt
 pip install -e 'your local SHARK Turbine repo'/core[testing]
 pip install -e 'your local SHARK Turbine repo'/models
 ```
