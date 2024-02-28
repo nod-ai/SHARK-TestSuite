@@ -1,8 +1,14 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 import sys, argparse
 import torch
 import torch.nn as nn
-import transformers
-from transformers import LlamaForCausalLM, LlamaTokenizer
+import torch_mlir
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # import from e2eshark/tools to allow running in current dir, for run through
 # run.pl, commutils is symbolically linked to allow any rundir to work
@@ -12,18 +18,18 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-# model origin: https://huggingface.co/meta-llama/Llama-2-7b-hf
-test_modelname = "meta-llama/Llama-2-7b-hf"
-tokenizer = LlamaTokenizer.from_pretrained(test_modelname)
-model = LlamaForCausalLM.from_pretrained(
+# model origin: https://huggingface.co/stabilityai/stablelm-3b-4e1t
+test_modelname = "stabilityai/stablelm-3b-4e1t"
+tokenizer = AutoTokenizer.from_pretrained(test_modelname)
+model = AutoModelForCausalLM.from_pretrained(
     test_modelname,
-    low_cpu_mem_usage=True,
-    attn_implementation="eager",
+    num_labels=2,
+    output_attentions=False,
+    output_hidden_states=False,
     torchscript=True,
 )
 model.to("cpu")
 model.eval()
-model.output_hidden_states = False
 prompt = "What is nature of our existence?"
 encoding = tokenizer(prompt, return_tensors="pt")
 E2ESHARK_CHECK["input"] = encoding["input_ids"].cpu()

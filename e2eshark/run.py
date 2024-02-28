@@ -542,32 +542,6 @@ def runInference(
     resultdict[curphase] = ["passed", end - start]
 
 
-def runTestUsingSharkTurbine(args_tuple):
-    (
-        frameworkname,
-        testName,
-        args,
-        toolsDirAbsPath,
-        modelname,
-        utilspy,
-        testRunDir,
-        testAbsPath,
-        modelpy,
-        runmodelpy,
-        commandslog,
-        timelog,
-        resultdict,
-        phases,
-        vmfbfilename,
-        modelinputptfilename,
-        goldoutputptfilename,
-    ) = args_tuple
-    # TBD
-    print("Running test using turbine is not implemented yet")
-    sys.exit(1)
-    return 0
-
-
 def runTestUsingVAIML(args_tuple):
     (
         frameworkname,
@@ -630,15 +604,19 @@ def runTestUsingClassicalFlow(args_tuple):
     if not os.path.exists(symUtilspy):
         os.symlink(utilspy, symUtilspy)
 
-    # If not using shark turbine, then run individual phases
+    # If turbine, special aot export into mlir module, but rest of flow is same
     if frameworkname == "pytorch":
-        stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
-        onnxfilename = modelname + "." + args.todtype + ".onnx"
-        torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
-        testargs += " --torchmlirimport " + args.torchmlirimport
+        if mode == "turbine":
+            stubrunmodelpy = toolsDirAbsPath + "/stubs/turbinemodel.py"
+            torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
+        else:
+            stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
+            onnxfilename = modelname + "." + args.todtype + ".onnx"
+            torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
+            testargs += " --torchmlirimport " + args.torchmlirimport
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
-        if mode == "direct":
+        if mode == "direct" or mode == "turbine":
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
         torchmlirfilename = modelname + "." + args.todtype + ".onnx.torch.mlir"
@@ -652,14 +630,24 @@ def runTestUsingClassicalFlow(args_tuple):
     else:
         print("Framework ", frameworkname, " not supported")
         return 1
-    testargs += (
-        " --todtype "
-        + args.todtype
-        + " --mode "
-        + mode
-        + " --outfileprefix "
-        + modelname
-    )
+    
+    if mode == "turbine":
+        testargs += (
+            " --todtype "
+            + args.todtype
+            + " --outfileprefix "
+            + modelname
+        )
+    else:
+        testargs += (
+            " --todtype "
+            + args.todtype
+            + " --mode "
+            + mode
+            + " --outfileprefix "
+            + modelname
+        )
+    
     concatenateFiles(modelpy, stubrunmodelpy, runmodelpy)
     curphase = phases[0]
     logfilename = curphase + ".log"
@@ -772,7 +760,6 @@ def runTest(aTuple):
     commandslog = open("commands.log", "w")
     timelog = open("time.pkl", "wb")
     vmfbfilename = modelname + "." + args.todtype + ".vmfb"
-    # Shark turbine runs an integrated e2e flow
     retStatus = 0
     args_tuple = (
         frameworkname,
@@ -793,9 +780,7 @@ def runTest(aTuple):
         modelinputptfilename,
         goldoutputptfilename,
     )
-    if args.mode == "turbine":
-        retStatus = runTestUsingSharkTurbine(args_tuple)
-    elif args.mode == "vaiml":
+    if args.mode == "vaiml":
         runTestUsingVAIML(args_tuple)
     else:
         retStatus = runTestUsingClassicalFlow(args_tuple)
@@ -1116,7 +1101,7 @@ def main():
         "--mode",
         choices=["direct", "turbine", "onnx", "ort", "vaiml"],
         default="onnx",
-        help="direct=Fx/TS->torch-mlir, turbine=integrated-e2e, onnx=exportonnx-to-torch-mlir, ort=exportonnx-to-ortep",
+        help="direct=Fx/TS->torch-mlir, turbine=aot-export->torch-mlir, onnx=exportonnx-to-torch-mlir, ort=exportonnx-to-ortep",
     )
     parser.add_argument(
         "--norun",

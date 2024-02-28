@@ -16,7 +16,7 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-
+# model origin: https://huggingface.co/TheBloke/Llama-2-7B-GPTQ
 test_modelname = "TheBloke/Llama-2-7B-GPTQ"
 kwargs = {
     "torch_dtype": torch.float32,
