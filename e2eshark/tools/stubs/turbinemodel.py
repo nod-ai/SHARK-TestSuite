@@ -60,7 +60,7 @@ turbine_model = HFTransformerBuilder(
     example_input=E2ESHARK_CHECK["input"],
     upload_ir=False,
     model=model,
-    run_e2e=False,
+    compile_to_vmfb=False,
 )
 if isinstance(E2ESHARK_CHECK["input"], list):
     module = aot.export(model, *E2ESHARK_CHECK["input"])
