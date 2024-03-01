@@ -1166,7 +1166,7 @@ def main():
     cache_path = os.path.abspath(cache_dir)
 
     if not os.path.exists(cache_path):
-        print("Cache directory", cache_path, "does not exist.")
+        print(f"Cache directory {cache_path} does not exist.")
         sys.exit(1)
     # get the amount of GB available
     _, _, free = shutil.disk_usage(cache_path)
