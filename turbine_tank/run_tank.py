@@ -55,15 +55,6 @@ if __name__ == "__main__":
         unittest.TextTestRunner(verbosity=2).run(sd_suite)
 
         # cleanup
-        # os.remove("Llama_2_7b_chat_hf_function_calling_v2_f32_unquantized.safetensors")
-        # os.remove("Llama_2_7b_chat_hf_function_calling_v2.mlir")
-        # os.remove("Llama_2_7b_chat_hf_function_calling_v2.vmfb")
-        # os.remove("streaming_llama.vmfb")
-        # os.remove("stable_diffusion_v1_4_clip.mlir")
-        # os.remove("stable_diffusion_v1_4_unet.mlir")
-        # os.remove("stable_diffusion_v1_4_vae.mlir")
-        # os.remove("stable_diffusion_v1_4_scheduler.safetensors")
-        # os.remove("stable_diffusion_v1_4_vae.safetensors")
         os.chdir(curr_dir)
         shutil.rmtree(temp_dir)
 
