@@ -6,7 +6,9 @@
 
 import argparse
 import unittest
-import tank_util
+import model_util
+import os
+import shutil
 
 import turbine_models.tests.sd_test as sd_test
 import os
@@ -33,9 +35,13 @@ if __name__ == "__main__":
         turbine_tank.downloadModelArtifacts(
             "Trelis/Llama-2-7b-chat-hf-function-calling-v2"
         )
-        for model_name, _ in tank_util.model_list:
+        for model_name, _ in model_util.model_list:
             turbine_tank.downloadModelArtifacts(model_name)
     else:
+        curr_dir = os.getcwd()
+        temp_dir = os.path.join(curr_dir, "temp")
+        os.mkdir(temp_dir)
+        os.chdir(temp_dir)
         import turbine_models.tests.stateless_llama_test as stateless_llama_test
 
         # environment variable used to let the llama/sd tests know we are running from tank and want to upload
@@ -49,15 +55,17 @@ if __name__ == "__main__":
         unittest.TextTestRunner(verbosity=2).run(sd_suite)
 
         # cleanup
-        os.remove("Llama_2_7b_chat_hf_function_calling_v2_f32_unquantized.safetensors")
-        os.remove("Llama_2_7b_chat_hf_function_calling_v2.mlir")
-        os.remove("Llama_2_7b_chat_hf_function_calling_v2.vmfb")
-        os.remove("streaming_llama.vmfb")
-        os.remove("stable_diffusion_v1_4_clip.mlir")
-        os.remove("stable_diffusion_v1_4_unet.mlir")
-        os.remove("stable_diffusion_v1_4_vae.mlir")
-        os.remove("stable_diffusion_v1_4_scheduler.safetensors")
-        os.remove("stable_diffusion_v1_4_vae.safetensors")
+        # os.remove("Llama_2_7b_chat_hf_function_calling_v2_f32_unquantized.safetensors")
+        # os.remove("Llama_2_7b_chat_hf_function_calling_v2.mlir")
+        # os.remove("Llama_2_7b_chat_hf_function_calling_v2.vmfb")
+        # os.remove("streaming_llama.vmfb")
+        # os.remove("stable_diffusion_v1_4_clip.mlir")
+        # os.remove("stable_diffusion_v1_4_unet.mlir")
+        # os.remove("stable_diffusion_v1_4_vae.mlir")
+        # os.remove("stable_diffusion_v1_4_scheduler.safetensors")
+        # os.remove("stable_diffusion_v1_4_vae.safetensors")
+        os.chdir(curr_dir)
+        shutil.rmtree(temp_dir)
 
         # runs tank_test.py (only pytest file in this directory, runs 30 models e2e)
         pytest.main(["-v", os.path.dirname(os.path.abspath(__file__))])

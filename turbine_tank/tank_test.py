@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import pytest
-import tank_util
+import model_util
+import flows_util
 from turbine_models.model_builder import HFTransformerBuilder
 
 
@@ -100,19 +101,19 @@ def test_all_models(model_name, model_type, expected_err, compile_to_vmfb):
 
     # Based on the model type, get the appropriate hugging face model, inputs, and output
     if model_type == "vision":
-        torch_model, input, out = tank_util.get_vision_model(model_name, import_args)
+        torch_model, input, out = model_util.get_vision_model(model_name, import_args)
     elif model_type == "hf":
-        torch_model, input, out = tank_util.get_hf_model(model_name, import_args)
+        torch_model, input, out = model_util.get_hf_model(model_name, import_args)
     elif model_type == "hf_seq2seq":
-        torch_model, input, out = tank_util.get_hf_seq2seq_model(
+        torch_model, input, out = model_util.get_hf_seq2seq_model(
             model_name, import_args
         )
     elif model_type == "hf_causallm":
-        torch_model, input, out = tank_util.get_hf_causallm_model(
+        torch_model, input, out = model_util.get_hf_causallm_model(
             model_name, import_args
         )
     elif model_type == "hf_img_cls":
-        torch_model, input, out = tank_util.get_hf_img_cls_model(
+        torch_model, input, out = model_util.get_hf_img_cls_model(
             model_name, import_args
         )
 
@@ -127,8 +128,8 @@ def test_all_models(model_name, model_type, expected_err, compile_to_vmfb):
     )
 
     # runs using external params
-    tank_util.param_flow(
+    flows_util.param_flow(
         model, model_name, model_type, input, out, compile_to_vmfb, expected_err
     )
     # inline weights
-    tank_util.classic_flow(model, model_name, input, out, compile_to_vmfb, expected_err)
+    flows_util.classic_flow(model, model_name, input, out, compile_to_vmfb, expected_err)
