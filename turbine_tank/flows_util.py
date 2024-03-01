@@ -97,3 +97,4 @@ def param_flow(model, model_name, model_type, input, out, run_e2e, expected_err)
 
     # accuracy
     assert err < expected_err
+    

@@ -21,7 +21,7 @@ parser.add_argument(
     "--download_ir",
     action=argparse.BooleanOptionalAction,
     default=False,
-    help="download IR from turbine tank",
+    help="download IR from turbine tank to local cache",
 )
 
 if __name__ == "__main__":
