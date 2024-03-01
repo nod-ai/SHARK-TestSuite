@@ -65,16 +65,23 @@
  cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
  as per your choice. The default name for the run directory is 'test-run'.
 
- Note that, you will be required to pass --hfhome argument to the run.py to point to a directory where 
- model weights etc. from Hugging Face will be downloaded. The downloaded data can be large so set it to
- other than your home, preferably with 100 GB or more free space.
+ Note that, you will be required to pass --cachedir argument to the run.py to point to a directory where 
+ model weights etc. from external model serving repositories such as from Torch Vision, Hugging Face etc.
+ will be downloaded. The downloaded data can be large, so set it to other than your home, 
+ preferably with 100 GB or more free space.
 
 ## Setting up
 
-You will need to have a local build of torch MLIR and IREE. It should work with an installation of IREE too
-as it just neeeds torch-mlir-opt, iree-compile and iree-run-module binaries. the option passed to --torchmlirbuild (-c)
-should point to a directory where bin/torch-mlir-opt can be found and the option passed to --ireebuild (-i) should 
-point to a directory where tools/iree-compile and tools/iree-run-module can be found.
+You will need to have a local build of torch MLIR and pass using --torchmlirbuild (-c) option. 
+By default, a nightly build of IREE is installed when you run 'pip install -r ./requirements.txt'
+and that will be used to run tests. But, if you made changed in IREE or you want to pull 
+the latest fix in IREE, then create a local build and pass that using --ireebuild (-i). 
+
+The arg value passed to --torchmlirbuild (-c) should point to a directory where 
+bin/torch-mlir-opt can be found and the option passed to --ireebuild (-i) should point to 
+a directory where tools/iree-compile and tools/iree-run-module can be found.
+
+In all the exmaples in this README doc the -i option to pass an IREE build location is optional.
 
 To get a local build of torch MLIR, follow:
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md
@@ -155,7 +162,7 @@ Run the tests in operators, combinations folders of the default framework (i.e. 
 Use framework to onnx to torch MLIR path (--mode onnx) and run upto inference (default) using llvm-cpu backend (default),
 use four processor cores (default --jobs 4) on your machine, generate report file after finishing test run
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' 
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' 
 -i 'path_to_your_iree_build_dir' --report
 ```
 You can see logs of test run inside test-run/'test sub-directory'. Start with commands.log file. 
@@ -195,11 +202,11 @@ The test-run/passed.txt has list of all tests that passed and test-run/failed.tx
 the tests that failed. After you make changes in your source code to fix torch MLIR or IREE, you can 
 re-run just the failing tests by simply passing test-run/failed.txt as an input like below:
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --testsfile test-run/failed.txt
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --testsfile test-run/failed.txt
 ```
 If you want to just generate report and skip run of tests then, you can pass --norun to skip running tests as below:
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --testsfile test-run/failed.txt --norun --report
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --testsfile test-run/failed.txt --norun --report
 ```
 
 Example 2:
@@ -208,16 +215,16 @@ Say if you tested upto torch-mlir and do not want to test further and come back 
 later. As long as you have not destroyed the test-run dir, you can run following two at different times 
 (first should have generted the torch MLIR for second one to resume successfully):
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --frameworks pytorch onnx --runupto torch-mlir 
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' --frameworks pytorch onnx --runupto torch-mlir 
 
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' 
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' -i 'path_to_your_iree_build_dir' 
 --runfrom torch-mlir --runupto inference 
 
 ```
 Example 3:
 Run given test pytorch/models/opt-125M upto inference (default for --runupto) on target AMD AIE backend
 ```
-python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c 'path_to_your_torch_mlir_build_dir' --frameworks onnx -i 'path_to_your_iree_build_dir' --tests pytorch/models/opt-125M --backend amd-aie
+python ./run.py --cachedir 'YOUR_PATH'/cache -c 'path_to_your_torch_mlir_build_dir' --frameworks onnx -i 'path_to_your_iree_build_dir' --tests pytorch/models/opt-125M --backend amd-aie
 ```
 
 Example 4:
@@ -308,7 +315,7 @@ Now take following steps:
 
 Once your model.py is ready, you can go to root of the e2eshark test directory and run test as below 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct --runupto torch-mlir --torchtolinalg
+   python ./run.py --cachedir 'YOUR_PATH'/cache -c "your torch mlir build dir" --tests pytorch/operators/maxpool_2d_large --mode direct --runupto torch-mlir --torchtolinalg
    ```
    Note that I did not specify -i for IREE build as I am running only upto torch-mlir. Also, I have added 
    --torchtolinalg to make sure I test upto linalg lowerging as I am not running iree-compile
@@ -318,7 +325,7 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    If you want to test upto inference, then provide your iree build in addition as -i option and run as
 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/operators/maxpool_2d_large --mode direct
+   python ./run.py --cachedir 'YOUR_PATH'/cache -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/operators/maxpool_2d_large --mode direct
    ```
 
    As before, run above with --mode onnx if you want ONNX to get generated from pytorch and tested in addition.
@@ -352,7 +359,7 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    Then test it as: 
 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' 
+   python ./run.py --cachedir 'YOUR_PATH'/cache -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' 
    --tests onnx/operators/cumsum_small --mode direct --runupto inference --torchtolinalg
    ```
 
@@ -373,5 +380,5 @@ Once your model.py is ready, you can go to root of the e2eshark test directory a
    The exmaple run below casts the model and input tensor to bf16 for test pytorch/combinations/mlp (which is originally written as fp32 model):
 
    ```
-   python ./run.py --hfhome 'YOUR_PATH'/HF_HOME -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/combinations/mlp --mode onnx --runupto inference --torchtolinalg --todtype bf16
+   python ./run.py --cachedir 'YOUR_PATH'/cache -c "your torch mlir build dir" -i 'path_to_your_iree_build_dir' --tests pytorch/combinations/mlp --mode onnx --runupto inference --torchtolinalg --todtype bf16
    ```
