@@ -22,12 +22,13 @@ class op_gridsampler(nn.Module):
         super().__init__()
 
     def forward(self, x, g):
-        z = nn.functional.grid_sample(x, g, mode="bilinear", padding_mode="zeros", align_corners=False)
+        z = nn.functional.grid_sample(x, g, mode="bilinear", padding_mode="zeros", align_corners=True)
         return z
 
 model = op_gridsampler()
-X = torch.randn(4, 10, 12, 5)
-Y = torch.randn(4, 13, 17, 2)
+
+X = torch.rand(4, 7, 8, 11)
+Y = torch.rand(4, 9, 13, 2)*2-1
 Z = model(X, Y)
 
 E2ESHARK_CHECK["input"] = [X, Y]
