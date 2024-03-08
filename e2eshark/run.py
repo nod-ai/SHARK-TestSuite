@@ -84,7 +84,7 @@ def loadE2eSharkCheckDictionary():
     return e2esharkDict
 
 def uploadToBlobStorage(file_path, file_name, testName, uploadDict):
-    connection_string = "DefaultEndpointsProtocol=https;AccountName=e2esharkuserartifacts;AccountKey=/Bm7PcsKeZOqN5S03R6xJIBgvFMQK06ZddzLMzsFbX+bQ0+RuNseJiaZQVfLpT2V0B61ce+1BUm2+AStFsSVBA==;EndpointSuffix=core.windows.net"
+    connection_string = os.getenv("AZURE_CONNECTION_STRING")
     container_name = "e2esharkuserartifacts"
 
     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
