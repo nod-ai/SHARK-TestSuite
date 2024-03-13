@@ -13,6 +13,84 @@ import pytest
 import subprocess
 
 
+# --------------------------------------------------------------------------- #
+# pytest hooks
+# https://docs.pytest.org/en/stable/reference/reference.html#initialization-hooks
+# https://docs.pytest.org/en/stable/reference/reference.html#collection-hooks
+
+
+def pytest_addoption(parser):
+    # List of configuration files following this schema:
+    #   {
+    #     "config_name": str,
+    #     "iree_compile_flags": list of str,
+    #     "iree_run_module_flags": list of str,
+    #     "skip_compile_tests": list of str,
+    #     "skip_run_tests": list of str,
+    #     "expected_compile_failures": list of str,
+    #     "expected_run_failures": list of str
+    #   }
+    #
+    # For example, to test on CPU with the `llvm-cpu` backend and `local-task` device:
+    #   {
+    #     "config_name": "cpu_llvm_task",
+    #     "iree_compile_flags": ["--iree-hal-target-backends=llvm-cpu"],
+    #     "iree_run_module_flags": ["--device=local-task"],
+    #     "skip_compile_tests": [],
+    #     "skip_run_tests": [],
+    #     "expected_compile_failures": ["test_abs"],
+    #     "expected_run_failures": ["test_add"],
+    #   }
+    #
+    # The list of files can be specified in (by order of preference):
+    #   1. The `--config-files` argument
+    #       e.g. `pytest ... --config-files foo.json bar.json`
+    #   2. The `IREE_TEST_CONFIG_FILES` environment variable
+    #       e.g. `set IREE_TEST_CONFIG_FILES=foo.json;bar.json`
+    #   3. A default config file used for testing the test suite itself
+    default_config_files = [
+        f for f in os.getenv("IREE_TEST_CONFIG_FILES", "").split(";") if f
+    ]
+    if not default_config_files:
+        this_dir = Path(__file__).parent
+        repo_root = this_dir.parent
+        default_config_files = [
+            repo_root / "iree_tests/configs/config_cpu_llvm_sync.json",
+            # repo_root / "iree_tests/configs/config_gpu_vulkan.json",
+        ]
+    parser.addoption(
+        "--config-files",
+        action="store",
+        nargs="*",
+        default=default_config_files,
+        help="List of config JSON files used to build test cases",
+    )
+
+
+def pytest_sessionstart(session):
+    session.config.iree_test_configs = []
+    for config_file in session.config.getoption("config_files"):
+        with open(config_file) as f:
+            session.config.iree_test_configs.append(pyjson5.load(f))
+
+
+def pytest_collect_file(parent, file_path):
+    if file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc"):
+        return MlirFile.from_parent(parent, path=file_path)
+
+
+# TODO(scotttodd): other hooks hook may help with updating XFAIL sets
+#
+#   * load config file(s) and lists of tests requested
+#     `pytest_collection_finish`
+#   * after each test finishes, record result
+#     `pytest_runtest_logfinish`
+#   * after all tests finish, join results back into a config file
+#     `pytest_sessionfinish`
+#   * let the user accept the new config file in place of their original
+
+# --------------------------------------------------------------------------- #
+
 @dataclass(frozen=True)
 class IreeCompileAndRunTestSpec:
     """Specification for an IREE "compile and run" test."""
@@ -54,11 +132,6 @@ class IreeCompileAndRunTestSpec:
 
     # True to skip the test entirely (but still define it).
     skip_test: bool
-
-
-def pytest_collect_file(parent, file_path):
-    if file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc"):
-        return MlirFile.from_parent(parent, path=file_path)
 
 
 class MlirFile(pytest.File):
@@ -134,8 +207,7 @@ class MlirFile(pytest.File):
             print(f"No test cases for '{test_name}'")
             return []
 
-        global _iree_test_configs
-        for config in _iree_test_configs:
+        for config in self.config.iree_test_configs:
             if test_name in config["skip_compile_tests"]:
                 continue
 
@@ -283,54 +355,3 @@ class IreeRunException(Exception):
             f"Run with:\n"
             f"  cd {cwd} && {' '.join(process.args)}\n\n"
         )
-
-
-# TODO(scotttodd): move this setup code into a (scoped) function?
-#   Is there some way to share state across pytest functions?
-
-# Load a list of configuration files following this schema:
-#   {
-#     "config_name": str,
-#     "iree_compile_flags": list of str,
-#     "iree_run_module_flags": list of str,
-#     "skip_compile_tests": list of str,
-#     "skip_run_tests": list of str,
-#     "expected_compile_failures": list of str,
-#     "expected_run_failures": list of str
-#   }
-#
-# For example, to test the on CPU with the `llvm-cpu`` backend on the `local-task` device:
-#   {
-#     "config_name": "cpu",
-#     "iree_compile_flags": ["--iree-hal-target-backends=llvm-cpu"],
-#     "iree_run_module_flags": ["--device=local-task"],
-#     "skip_compile_tests": [],
-#     "skip_run_tests": [],
-#     "expected_compile_failures": ["test_abs"],
-#     "expected_run_failures": ["test_add"],
-#   }
-#
-# TODO(scotttodd): expand schema with more flexible include_tests/exclude_tests fields.
-#   * One use case is wanting to run only a small, controlled subset of tests, without needing to
-#     manually exclude any new tests that might be added in the future.
-#
-# First check for the `IREE_TEST_CONFIG_FILES` environment variable. If defined,
-# this should point to a semicolon-delimited list of config file paths, e.g.
-# `export IREE_TEST_CONFIG_FILES=/iree/config_cpu.json;/iree/config_gpu.json`.
-_iree_test_configs = []
-_iree_test_config_files = [
-    config for config in os.getenv("IREE_TEST_CONFIG_FILES", "").split(";") if config
-]
-
-# If no config files were specified via the environment variable, default to in-tree config files.
-if not _iree_test_config_files:
-    THIS_DIR = Path(__file__).parent
-    REPO_ROOT = THIS_DIR.parent
-    _iree_test_config_files = [
-        REPO_ROOT / "iree_tests/configs/config_cpu_llvm_sync.json",
-        # REPO_ROOT / "iree_tests/configs/config_gpu_vulkan.json",
-    ]
-
-for config_file in _iree_test_config_files:
-    with open(config_file) as f:
-        _iree_test_configs.append(pyjson5.load(f))

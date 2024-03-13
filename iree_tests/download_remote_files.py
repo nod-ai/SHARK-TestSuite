@@ -6,6 +6,7 @@
 
 from azure.storage.blob import ContainerClient
 from pathlib import Path
+import argparse
 import pyjson5
 
 THIS_DIR = Path(__file__).parent
@@ -45,7 +46,15 @@ def download_for_test_case(test_dir: Path, test_case_json: dict):
 
 
 if __name__ == "__main__":
-    for test_cases_path in Path(THIS_DIR).rglob("test_cases.json"):
+    parser = argparse.ArgumentParser(description="Remote file downloader.")
+    parser.add_argument(
+        "--root-dir",
+        default="",
+        help="Root directory to search for files to download from (e.g. 'pytorch/models/resnet50')",
+    )
+    args = parser.parse_args()
+
+    for test_cases_path in (THIS_DIR / args.root_dir).rglob("test_cases.json"):
         print(f"Processing {test_cases_path.relative_to(THIS_DIR)}")
 
         test_dir = test_cases_path.parent

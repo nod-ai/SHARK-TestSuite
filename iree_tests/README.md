@@ -91,6 +91,9 @@ $ pytest iree_tests -n auto
 Run tests using custom config files:
 
 ```bash
+$ pytest iree_tests --config-files ./configs/config_gpu_vulkan.json
+
+# OR set an environment variable
 $ export IREE_TEST_CONFIG_FILES=/iree/config_cpu_llvm_sync.json;/iree/config_gpu_vulkan.json
 $ pytest iree_tests
 ```
@@ -124,7 +127,23 @@ collected 1047 items
 ======================== 1047 tests collected in 4.34s ========================
 ```
 
-Run a subset of tests (see
+Run tests from a specific subdirectory:
+
+```bash
+$ pytest iree_tests/simple
+
+======================================= test session starts ======================================= platform win32 -- Python 3.11.2, pytest-8.0.2, pluggy-1.4.0
+rootdir: D:\dev\projects\SHARK-TestSuite\iree_tests
+configfile: pytest.ini
+plugins: retry-1.6.2, timeout-2.2.0, xdist-3.5.0
+collected 2 items
+
+simple\abs\simple_abs.mlir .                                                                 [ 50%] simple\abs_bc\simple_abs.mlirbc .                                                            [100%]
+
+======================================== 2 passed in 2.48s ========================================
+```
+
+Run a filtered subset of tests (see
 [Specifying which tests to run](https://docs.pytest.org/en/8.0.x/how-to/usage.html#specifying-which-tests-to-run)):
 
 ```bash
@@ -294,4 +313,23 @@ To simply strip weights:
 
 ```bash
 iree-ir-tool strip-data model.mlir -o model_stripped.mlir
+```
+
+### Working with parameter files
+
+To convert from .safetensors to .irpa (real weights):
+
+```bash
+iree-convert-parameters \
+  --parameters=path/to/file.safetensors \
+  --output=path/to/output.irpa
+```
+
+To strip constants and replace them with splats:
+
+```bash
+iree-convert-parameters \
+  --parameters=path/to/parameters.[safetensors,irpa] \
+  --strip \
+  --output=path/to/output.irpa
 ```
