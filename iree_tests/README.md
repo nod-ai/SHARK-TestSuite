@@ -132,13 +132,15 @@ Run tests from a specific subdirectory:
 ```bash
 $ pytest iree_tests/simple
 
-======================================= test session starts ======================================= platform win32 -- Python 3.11.2, pytest-8.0.2, pluggy-1.4.0
+======================================= test session starts =======================================
+platform win32 -- Python 3.11.2, pytest-8.0.2, pluggy-1.4.0
 rootdir: D:\dev\projects\SHARK-TestSuite\iree_tests
 configfile: pytest.ini
 plugins: retry-1.6.2, timeout-2.2.0, xdist-3.5.0
 collected 2 items
 
-simple\abs\simple_abs.mlir .                                                                 [ 50%] simple\abs_bc\simple_abs.mlirbc .                                                            [100%]
+simple\abs\simple_abs.mlir .                                                                 [ 50%]
+simple\abs_bc\simple_abs.mlirbc .                                                            [100%]
 
 ======================================== 2 passed in 2.48s ========================================
 ```

@@ -219,6 +219,7 @@ class MlirFile(pytest.File):
             config_name = config["config_name"]
 
             # TODO(scotttodd): don't compile once per test case?
+            #   try pytest-dependency or pytest-depends
             for test_case in test_cases:
                 test_name = config_name + "_" + test_case.name
                 spec = IreeCompileAndRunTestSpec(
