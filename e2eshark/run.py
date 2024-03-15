@@ -461,14 +461,7 @@ def runCodeGeneration(
 # returns (atol, rtol)
 # Pytorch torch.testing:
 def getTolerances(args):
-    if args.atol and args.rtol:
-        return (float(args.atol), float(args.rtol))
-    elif args.atol:
-        return (float(args.atol), 1e-03)
-    elif args.rtol:
-        return (1e-03, float(args.rtol))
-    else:
-        return (1e-04, 1e-04)
+    return (args.atol, args.rtol)
 
 def compareOutputs(args, goldoutput, infoutput, dtype):
     # if shapes do not match, we have a problem as comparison routines may crash
@@ -1346,11 +1339,13 @@ def main():
         "--rtol",
         help="Set rtol tolerance parameter",
         type=float,
+        default=1e-04,
     )
     parser.add_argument(
         "--atol",
         help="Set atol tolerance parameter",
         type=float,
+        default=1e-04,
     )
 
     args = parser.parse_args()
