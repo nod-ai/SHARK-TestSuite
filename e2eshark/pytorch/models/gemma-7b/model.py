@@ -2,7 +2,7 @@ import sys, argparse
 import torch
 import torch.nn as nn
 import transformers
-from transformers import LlamaForCausalLM, LlamaTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
 
 # import from e2eshark/tools to allow running in current dir, for run through
@@ -13,15 +13,15 @@ from commonutils import E2ESHARK_CHECK_DEF
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
 
-# model origin: https://huggingface.co/meta-llama/Llama-2-7b-hf
-test_modelname = "meta-llama/Llama-2-7b-hf"
+# model origin: https://huggingface.co/google/gemma-7b
+test_modelname = "google/gemma-7b"
 token = os.getenv("HF_TOKEN", "")
 if token == "":
     print(f"Huggingface token is required for this model ({test_modelname})." +
           "\nPlease set HF_TOKEN environment variable to a valid Huggingface token value and rerun the test." +
           "\nExample: HF_TOKEN=your_token python run.py")
-tokenizer = LlamaTokenizer.from_pretrained(test_modelname, token=token)
-model = LlamaForCausalLM.from_pretrained(
+tokenizer = AutoTokenizer.from_pretrained(test_modelname, token=token)
+model = AutoModelForCausalLM.from_pretrained(
     test_modelname,
     low_cpu_mem_usage=True,
     attn_implementation="eager",
