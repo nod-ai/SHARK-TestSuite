@@ -363,6 +363,8 @@ def runTorchMLIRGeneration(
                 "torch-lower-to-backend-contract,func.func(cse,canonicalize),"
             )
             commandstring += "torch-backend-to-linalg-on-tensors-backend-pipeline)' "
+        elif args.torchtotosa:
+            commandstring += " -convert-torch-onnx-to-torch -convert-torch-to-tosa "
         else:
             commandstring += " -convert-torch-onnx-to-torch "
 
@@ -1279,6 +1281,12 @@ def main():
         default=False,
         help="Have torch-mlir-opt to produce linalg instead of torch mlir and pass that to iree-compile",
     )
+    parser.add_argument(
+        "--torchtotosa",
+        action="store_true",
+        default=False,
+        help="Have torch-mlir-opt to produce tosa",
+    )    
     parser.add_argument(
         "-m",
         "--mode",
