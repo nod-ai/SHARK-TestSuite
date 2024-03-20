@@ -27,7 +27,7 @@ Y = make_tensor_value_info("Y", TensorProto.FLOAT, [3, 4, 5])
 
 # Create a 'LSM' node (NodeProto)
 LSM_node = make_node(
-    "LogSoftmax", ["X"], ["Y"]  # op_type  # inputs  # outputs  # node name
+    "LogSoftmax", ["X"], ["Y"], axis=0  # op_type  # inputs  # outputs  # node name
 )
 
 
@@ -41,7 +41,7 @@ graph = make_graph(
 
 # Create the model (ModelProto)
 onnx_model = make_model(graph)
-onnx_model.opset_import[0].version = 13  # Set the opset version to ensure compatibility
+onnx_model.opset_import[0].version = 1  # Set the opset version to ensure compatibility
 
 # Save the model
 model_path = "model.onnx"
