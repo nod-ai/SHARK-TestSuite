@@ -1,0 +1,142 @@
+# Copyright 2024 Advanced Micro Devices
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: E2ESHARK Test Suite
+on:
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  torch-mlir:
+    strategy:
+      matrix:
+        version: [3.11]
+        os: [nodai-amdgpu-w7900-x86-64]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: "Checking out repository"
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+        with:
+          submodules: true
+          repository: saienduri/torch-mlir-fork
+          path: torch-mlir
+
+      - name: Install python deps (nightly)
+        run: |
+          bash build_tools/ci/install_python_deps.sh nightly
+          python3 -m pip uninstall -y PyYAML
+          python3 -m pip install PyYAML==6.0.1
+          python3 -m pip list
+        working-directory: ./torch-mlir
+
+      - name: Build
+        run: |
+          bash build_tools/e2eshark_build.sh
+        working-directory: ./torch-mlir
+  
+  turbine:
+    strategy:
+      matrix:
+        os: [nodai-amdgpu-w7900-x86-64]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          repository: nod-ai/SHARK-Turbine
+          path: turbine
+  
+  e2eshark:
+    needs: [turbine, torch-mlir]
+    strategy:
+      matrix:
+        version: [3.11]
+        os: [nodai-amdgpu-w7900-x86-64]
+    runs-on: ${{matrix.os}}
+    env:
+      E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          repository: nod-ai/SHARK-TestSuite
+          path: test-suite
+      
+      - name: "Setting up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{matrix.version}}
+
+      - name: "Setup Python venv"
+        run: python -m venv ${E2E_VENV_DIR}
+
+      - name: Build
+        run: |
+          source ${E2E_VENV_DIR}/bin/activate
+          git submodule update --init
+          pip install --upgrade pip
+          pip install -r ../torch-mlir/requirements.txt
+          pip install -r ../torch-mlir/torchvision-requirements.txt
+          pip install ../torch-mlir/torch-mlir-wheel/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
+          pip install -r ./e2eshark/requirements.txt
+        working-directory: ./test-suite
+
+      - name: Run Onnx Mode
+        run: |
+          source ${E2E_VENV_DIR}/bin/activate
+          cd e2eshark
+          free -mh
+          HF_TOKEN=${{ secrets.HF_TOKEN }} python ./run.py -r ./test-onnx -c ../../torch-mlir/build --report --cachedir ~/.cache/huggingface --mode onnx -g models --cleanup --postprocess --ci -v
+        working-directory: ./test-suite
+
+      - name: Run Turbine Mode
+        run: |
+          source ${E2E_VENV_DIR}/bin/activate
+          pip install -f https://openxla.github.io/iree/pip-release-links.html --upgrade -r ../turbine/core/iree-requirements.txt
+          pip install -e ../turbine/core[testing]
+          pip install -e ../turbine/models
+          pip uninstall -y transformers
+          pip install transformers --no-dependencies
+          cd e2eshark
+          free -mh
+          HF_TOKEN=${{ secrets.HF_TOKEN }} python ./run.py -r ./test-turbine -c ../../torch-mlir/build --report --cachedir ~/.cache/huggingface --mode turbine -g models --cleanup --postprocess --ci -v
+        working-directory: ./test-suite
+  
+  upload_artifacts:
+    needs: [e2eshark]
+    strategy:
+      matrix:
+        os: [nodai-amdgpu-w7900-x86-64]
+    runs-on: ${{matrix.os}}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          repository: saienduri/e2eshark-reports
+          ref: 'main'
+          token: ${{ secrets.E2ESHARK_GITHUB_TOKEN }}
+          path: e2eshark-reports
+      
+      - name: Push artifacts
+        run: |
+          date=$(date '+%Y-%m-%d')
+          cd ../test-suite/e2eshark/ci_reports
+          mv $date ../../../e2eshark-reports
+          cd ../../../e2eshark-reports
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git add $date
+          git commit -m "add CI reports for e2eshark"
+          git push origin main
+        working-directory: ./e2eshark-reports
