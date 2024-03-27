@@ -290,6 +290,7 @@ def runTorchMLIRGeneration(
     timelog,
     onnxfilename,
     torchmlirfilename,
+    tosamlirfilename,
     resultdict,
     uploadtestsList,
     cleanup,
@@ -365,21 +366,33 @@ def runTorchMLIRGeneration(
                 "torch-lower-to-backend-contract,func.func(cse,canonicalize),"
             )
             commandstring += "torch-backend-to-linalg-on-tensors-backend-pipeline)' "
+        elif args.torchtotosa:
+            commandstring += " -convert-torch-onnx-to-torch -convert-torch-to-tosa "
         else:
             commandstring += " -convert-torch-onnx-to-torch "
 
         # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
         # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
-        scriptcommand = (
-            SHARED_TORCH_MLIR_BUILD
-            + commandstring
-            + torchonnxfilename
-            + " > "
-            + torchmlirfilename
-            + " 2>"
-            + logfilename
-        )
-
+        if args.torchtotosa:            
+            scriptcommand = (
+                SHARED_TORCH_MLIR_BUILD
+                + commandstring
+                + torchonnxfilename
+                + " > "
+                + tosamlirfilename
+                + " 2>"
+                + logfilename
+            )
+        else:
+            scriptcommand = (
+                SHARED_TORCH_MLIR_BUILD
+                + commandstring
+                + torchonnxfilename
+                + " > "
+                + torchmlirfilename
+                + " 2>"
+                + logfilename
+            )
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed [" + curphase + "]")
@@ -743,6 +756,7 @@ def runTestUsingClassicalFlow(args_tuple):
     mode = args.mode
     testargs = ""
     torchmlirfilename = ""
+    tosamlirfilename = ""
     onnxfilename = ""
     if args.verbose:
         print(f"Running classical flow for test {testName}")
@@ -760,10 +774,12 @@ def runTestUsingClassicalFlow(args_tuple):
         if mode == "turbine":
             stubrunmodelpy = toolsDirAbsPath + "/stubs/turbinemodel.py"
             torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
+            tosamlirfilename = modelname + "." + args.todtype + ".pytorch.tosa.mlir"    
         else:
             stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
             onnxfilename = modelname + "." + args.todtype + ".onnx"
             torchmlirfilename = modelname + "." + args.todtype + ".pytorch.torch.mlir"
+            tosamlirfilename = modelname + "." + args.todtype + ".pytorch.tosa.mlir"
             testargs += " --torchmlirimport " + args.torchmlirimport
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
@@ -771,6 +787,7 @@ def runTestUsingClassicalFlow(args_tuple):
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
         torchmlirfilename = modelname + "." + args.todtype + ".onnx.torch.mlir"
+        tosamlirfilename = modelname + "." + args.todtype + ".onnx.tosa.mlir"
         onnxfilename = "model.onnx"
         if getTestKind(testName) == "models":
             onnxfilename = testAbsPath + "/model.onnx"
@@ -816,6 +833,7 @@ def runTestUsingClassicalFlow(args_tuple):
             timelog,
             onnxfilename,
             torchmlirfilename,
+            tosamlirfilename,
             resultdict,
             uploadtestsList,
             args.cleanup,
@@ -1281,6 +1299,12 @@ def main():
         default=False,
         help="Have torch-mlir-opt to produce linalg instead of torch mlir and pass that to iree-compile",
     )
+    parser.add_argument(
+        "--torchtotosa",
+        action="store_true",
+        default=False,
+        help="Have torch-mlir-opt to produce tosa",
+    )    
     parser.add_argument(
         "-m",
         "--mode",
