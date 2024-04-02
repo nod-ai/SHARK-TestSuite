@@ -321,31 +321,14 @@ class IreeCompileRunItem(pytest.Item):
         # * XPASS means that a test is newly passing and can be removed from the
         #   expected failures list.
 
-        try:
-            self.test_compile()
-        except IreeCompileException as e:
-            # Note: Fallthrough for XPASS (no exception but expected failure).
-            if not self.spec.expect_compile_success:
-                self.add_marker(
-                    pytest.mark.xfail(
-                        raises=IreeCompileException,
-                        strict=True,
-                        reason="Expected compilation to fail",
-                    )
+        if not self.spec.expect_compile_success:
+            self.add_marker(
+                pytest.mark.xfail(
+                    raises=IreeCompileException,
+                    strict=True,
+                    reason="Expected compilation to fail (remove from 'expected_compile_failures')",
                 )
-            raise e
-
-        if self.spec.skip_run:
-            if not self.spec.expect_compile_success:
-                self.add_marker(
-                    pytest.mark.xfail(
-                        raises=IreeCompileException,
-                        strict=True,
-                        reason="Expected compilation to fail (skipped run)",
-                    )
-                )
-            return
-
+            )
         if not self.spec.expect_run_success:
             self.add_marker(
                 pytest.mark.xfail(
@@ -355,21 +338,17 @@ class IreeCompileRunItem(pytest.Item):
                 )
             )
 
+        self.test_compile()
+
+        if self.spec.skip_run:
+            return
+
         try:
             self.test_run()
         except IreeRunException as e:
             if not self.spec.expect_compile_success:
                 raise IreeXFailCompileRunException from e
             raise e
-
-        if not self.spec.expect_compile_success:
-            self.add_marker(
-                pytest.mark.xfail(
-                    raises=IreeCompileException,
-                    strict=True,
-                    reason="Expected compile to fail (remove from 'expected_compile_failures')",
-                )
-            )
 
     def test_compile(self):
         proc = subprocess.run(self.compile_args, capture_output=True, cwd=self.test_cwd)
