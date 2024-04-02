@@ -324,8 +324,8 @@ class IreeCompileRunItem(pytest.Item):
         try:
             self.test_compile()
         except IreeCompileException as e:
+            # Note: Fallthrough for XPASS (no exception but expected failure).
             if not self.spec.expect_compile_success:
-                # Note: XPASS falls through to after self.test_run() below.
                 self.add_marker(
                     pytest.mark.xfail(
                         raises=IreeCompileException,
@@ -336,6 +336,14 @@ class IreeCompileRunItem(pytest.Item):
             raise e
 
         if self.spec.skip_run:
+            if not self.spec.expect_compile_success:
+                self.add_marker(
+                    pytest.mark.xfail(
+                        raises=IreeCompileException,
+                        strict=True,
+                        reason="Expected compilation to fail (skipped run)",
+                    )
+                )
             return
 
         if not self.spec.expect_run_success:
