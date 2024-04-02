@@ -330,7 +330,7 @@ class IreeCompileRunItem(pytest.Item):
                     pytest.mark.xfail(
                         raises=IreeCompileException,
                         strict=True,
-                        reason="Expected compilation to fail but it passed",
+                        reason="Expected compilation to fail",
                     )
                 )
             raise e
@@ -343,20 +343,23 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeRunException,
                     strict=True,
-                    reason="Expected run to fail but it passed",
+                    reason="Expected run to fail (remove from 'expected_run_failures')",
                 )
             )
 
-        # Note: we don't quite handle the case of expected compile failure but
-        # run failed instead here yet.
-        self.test_run()
+        try:
+            self.test_run()
+        except IreeRunException as e:
+            if not self.spec.expect_compile_success:
+                raise IreeXFailCompileRunException from e
+            raise e
 
         if not self.spec.expect_compile_success:
             self.add_marker(
                 pytest.mark.xfail(
                     raises=IreeCompileException,
                     strict=True,
-                    reason="Expected compile to fail but run passed instead",
+                    reason="Expected compile to fail (remove from 'expected_compile_failures')",
                 )
             )
 
@@ -374,6 +377,11 @@ class IreeCompileRunItem(pytest.Item):
         """Called when self.runtest() raises an exception."""
         if isinstance(excinfo.value, (IreeCompileException, IreeRunException)):
             return "\n".join(excinfo.value.args)
+        if isinstance(excinfo.value, IreeXFailCompileRunException):
+            return (
+                "Expected compile failure but run failed (move to 'expected_run_failures'):\n"
+                + "\n".join(excinfo.value.__cause__.args)
+            )
         # TODO(scotttodd): XFAIL tests spew a ton of logs here when run with `pytest -rA`. Fix?
         return super().repr_failure(excinfo)
 
@@ -430,3 +438,7 @@ class IreeRunException(Exception):
             f"Run with:\n"
             f"  cd {cwd} && {' '.join(process.args)}\n\n"
         )
+
+
+class IreeXFailCompileRunException(Exception):
+    pass
