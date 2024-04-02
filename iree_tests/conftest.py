@@ -296,17 +296,46 @@ class IreeCompileRunItem(pytest.Item):
         if self.spec.skip_test:
             pytest.skip()
 
-        if not self.spec.expect_compile_success:
-            self.add_marker(
-                pytest.mark.xfail(
-                    raises=IreeCompileException,
-                    strict=True,
-                    reason="Expected compilation to fail",
-                )
-            )
-        self.test_compile()
+        # We want to test two phases: 'compile', and 'run'.
+        # A test can be marked as expected to fail at either stage, with these
+        # possible outcomes:
 
-        if not self.spec.expect_compile_success or self.spec.skip_run:
+        # Expect 'compile' | Expect 'run' | Actual 'compile' | Actual 'run' | Result
+        # ---------------- | ------------ | ---------------- | ------------ | ------
+        #
+        # PASS             | PASS         | PASS             | PASS         | PASS
+        # PASS             | PASS         | FAIL             | N/A          | FAIL
+        # PASS             | PASS         | PASS             | FAIL         | FAIL
+        #
+        # PASS             | FAIL         | PASS             | PASS         | XPASS
+        # PASS             | FAIL         | FAIL             | N/A          | FAIL
+        # PASS             | FAIL         | PASS             | FAIL         | XFAIL
+        #
+        # FAIL             | N/A          | PASS             | PASS         | XPASS
+        # FAIL             | N/A          | FAIL             | N/A          | XFAIL
+        # FAIL             | N/A          | PASS             | FAIL         | XPASS
+
+        # * XFAIL and PASS are acceptable outcomes - they mean that the list of
+        #   expected failures in the config file matched the test run.
+        # * FAIL means that something expected to work did not. That's an error.
+        # * XPASS means that a test is newly passing and can be removed from the
+        #   expected failures list.
+
+        try:
+            self.test_compile()
+        except IreeCompileException as e:
+            if not self.spec.expect_compile_success:
+                # Note: XPASS falls through to after self.test_run() below.
+                self.add_marker(
+                    pytest.mark.xfail(
+                        raises=IreeCompileException,
+                        strict=True,
+                        reason="Expected compilation to fail but it passed",
+                    )
+                )
+            raise e
+
+        if self.spec.skip_run:
             return
 
         if not self.spec.expect_run_success:
@@ -314,10 +343,22 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeRunException,
                     strict=True,
-                    reason="Expected run to fail",
+                    reason="Expected run to fail but it passed",
                 )
             )
+
+        # Note: we don't quite handle the case of expected compile failure but
+        # run failed instead here yet.
         self.test_run()
+
+        if not self.spec.expect_compile_success:
+            self.add_marker(
+                pytest.mark.xfail(
+                    raises=IreeCompileException,
+                    strict=True,
+                    reason="Expected compile to fail but run passed instead",
+                )
+            )
 
     def test_compile(self):
         proc = subprocess.run(self.compile_args, capture_output=True, cwd=self.test_cwd)
