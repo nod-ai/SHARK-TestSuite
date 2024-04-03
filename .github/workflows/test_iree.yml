@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   linux_x86_64_onnx:
-    name: Linux (x86_64)
+    name: Linux (x86_64) Onnx
     runs-on: ubuntu-latest
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
