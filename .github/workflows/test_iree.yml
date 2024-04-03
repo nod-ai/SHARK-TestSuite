@@ -68,8 +68,11 @@ jobs:
           pytest iree_tests/onnx/node/generated -n auto -rpfE --timeout=30 --retries 2 --retry-delay 5 --durations=10
 
   linux_x86_64_w7900_gpu_models:
-    name: Linux (x86_64)
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [nodai-amdgpu-w7900-x86-64]
+    name: Linux (x86_64 w7900) Models GPU
+    runs-on: ${{matrix.os}}
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
     steps:
