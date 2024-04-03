@@ -10,8 +10,8 @@
     "iree_run_module_flags": [
       "--device=local-task"
     ],
-    "skip_compile_tests": ["opt-125M", "resnet50", "sdxl-vae-decode-tank", "sdxl-prompt-encoder-tank"],
-    "skip_run_tests": ["opt-125M", "resnet50", "sdxl-vae-decode-tank", "sdxl-prompt-encoder-tank"],
+    "skip_compile_tests": [],
+    "skip_run_tests": [],
     "expected_compile_failures": [],
     "expected_run_failures": []
   }
