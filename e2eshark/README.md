@@ -83,6 +83,15 @@ a directory where tools/iree-compile and tools/iree-run-module can be found.
 
 In all the exmaples in this README doc the -i option to pass an IREE build location is optional.
 
+**Prereuisite**: Before proceeding with build, make sure you have following installed on your machine
+
+1. **_Git_**       : [GitInstallation](https://github.com/git-guides/install-git)
+2. **_Python_**    : [PythonInstallation](https://www.python.org/downloads/)
+3. **_cmake_**     : [cmakeInstallation](https://cmake.org/download/)
+4. **_Ninja_**     : [NinjaInstallation](https://ninja-build.org/)
+5. **_GCC(>=7.4)_**: [gccInstallation](https://gcc.gnu.org/install/)
+
+
 To get a local build of torch MLIR, follow:
 https://github.com/llvm/torch-mlir/blob/main/docs/development.md
 
