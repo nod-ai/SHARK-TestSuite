@@ -8,14 +8,37 @@
 
 set -xeuo pipefail
 
-this_dir="$(cd $(dirname $0) && pwd)"
-iree_root="$(cd $this_dir/.. && pwd)"
-vae_decode_dir="$iree_root/pytorch/models/sdxl-vae-decode-tank"
-scheduled_unet_dir="$iree_root/pytorch/models/sdxl-scheduled-unet-3-tank"
-prompt_encoder_dir="$iree_root/pytorch/models/sdxl-prompt-encoder-tank"
+THIS_DIR="$(cd $(dirname $0) && pwd)"
+IREE_ROOT="$(cd ${THIS_DIR?}/.. && pwd)"
+VAE_DECODE_DIR="${IREE_ROOT?}/pytorch/models/sdxl-vae-decode-tank"
+SCHEDULED_UNET_DIR="${IREE_ROOT?}/pytorch/models/sdxl-scheduled-unet-3-tank"
+PROMPT_ENCODER_DIR="${IREE_ROOT?}/pytorch/models/sdxl-prompt-encoder-tank"
+
+echo "Echo compiling full sdxl pipeline"
+
+iree-compile sdxl_pipeline_bench_f16.mlir \
+  -iree-hal-target-backends=llvm-cpu \
+  --iree-llvmcpu-target-cpu-features=host \
+  --iree-llvmcpu-distribution-size=32 \
+  -o sdxl_full_pipeline_fp16_.vmfb
 
 echo "Running sdxl benchmark"
 
-iree-benchmark-module --device=local-task --module="$prompt_encoder_dir/model_cpu_llvm_task_real_weights.vmfb" --parameters=model="$prompt_encoder_dir/real_weights.irpa" --module="$scheduled_unet_dir/model_cpu_llvm_task_real_weights.vmfb" --parameters=model="$scheduled_unet_dir/real_weights.irpa" --module="$vae_decode_dir/model_cpu_llvm_task_real_weights.vmfb" --parameters=model="$vae_decode_dir/real_weights.irpa" --module="$this_dir/sdxl_full_pipeline_fp16_.vmfb" --function=tokens_to_image --input=1x4x128x128xf16 --input=1xf16 --input=1x64xi64 --input=1x64xi64 --input=1x64xi64 --input=1x64xi64
+iree-benchmark-module \
+  --device=local-task \
+  --module="$PROMPT_ENCODER_DIR/model_cpu_llvm_task_real_weights.vmfb" \
+  --parameters=model="${PROMPT_ENCODER_DIR}/real_weights.irpa" \
+  --module="${SCHEDULED_UNET_DIR}/model_cpu_llvm_task_real_weights.vmfb" \
+  --parameters=model="${SCHEDULED_UNET_DIR}/real_weights.irpa" \
+  --module="${VAE_DECODE_DIR}/model_cpu_llvm_task_real_weights.vmfb" \
+  --parameters=model="${VAE_DECODE_DIR}/real_weights.irpa" \
+  --module="${THIS_DIR}/sdxl_full_pipeline_fp16_.vmfb" \
+  --function=tokens_to_image \
+  --input=1x4x128x128xf16 \
+  --input=1xf16 \
+  --input=1x64xi64 \
+  --input=1x64xi64 \
+  --input=1x64xi64 \
+  --input=1x64xi64
 
 echo "Succesfully finished sdxl pipeline benchmark"
