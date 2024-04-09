@@ -83,7 +83,7 @@ a directory where tools/iree-compile and tools/iree-run-module can be found.
 
 In all the exmaples in this README doc the -i option to pass an IREE build location is optional.
 
-**Prereuisite**: Before proceeding with build, make sure you have following installed on your machine
+**Pre-requisite**: Before proceeding with build, make sure you have following installed on your machine
 
 1. **_Git_**       : [GitInstallation](https://github.com/git-guides/install-git)
 2. **_Python_**    : [PythonInstallation](https://www.python.org/downloads/)
