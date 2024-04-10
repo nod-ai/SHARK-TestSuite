@@ -84,7 +84,20 @@ def pytest_sessionstart(session):
     session.config.iree_test_configs = []
     for config_file in session.config.getoption("config_files"):
         with open(config_file) as f:
-            session.config.iree_test_configs.append(pyjson5.load(f))
+            test_config = pyjson5.load(f)
+
+            # Sanity check the config file structure before going any further.
+            def check_field(field_name):
+                if field_name not in test_config:
+                    raise ValueError(
+                        f"config file '{config_file}' is missing a '{field_name}' field"
+                    )
+
+            check_field("config_name")
+            check_field("iree_compile_flags")
+            check_field("iree_run_module_flags")
+
+            session.config.iree_test_configs.append(test_config)
 
 
 def pytest_collect_file(parent, file_path):
@@ -234,21 +247,18 @@ class MlirFile(pytest.File):
             return []
 
         for config in self.config.iree_test_configs:
-            if test_name in config["skip_compile_tests"]:
+            if test_name in config.get("skip_compile_tests", []):
                 continue
 
-            expect_compile_success = (
-                self.config.getoption("ignore_xfails")
-                or test_name not in config["expected_compile_failures"]
-            )
-            expect_run_success = (
-                self.config.getoption("ignore_xfails")
-                or test_name not in config["expected_run_failures"]
-            )
-            skip_run = (
-                self.config.getoption("skip_all_runs")
-                or test_name in config["skip_run_tests"]
-            )
+            expect_compile_success = self.config.getoption(
+                "ignore_xfails"
+            ) or test_name not in config.get("expected_compile_failures", [])
+            expect_run_success = self.config.getoption(
+                "ignore_xfails"
+            ) or test_name not in config.get("expected_run_failures", [])
+            skip_run = self.config.getoption(
+                "skip_all_runs"
+            ) or test_name in config.get("skip_run_tests", [])
             config_name = config["config_name"]
 
             # TODO(scotttodd): don't compile once per test case?
