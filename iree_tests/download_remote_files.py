@@ -4,7 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from azure.storage.blob import BlobClient
+from azure.storage.blob import BlobClient, BlobProperties
 from pathlib import Path
 import argparse
 import hashlib
@@ -15,15 +15,22 @@ import re
 THIS_DIR = Path(__file__).parent
 
 
+def human_readable_size(size, decimal_places=2):
+    for unit in ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]:
+        if size < 1024.0 or unit == "PiB":
+            break
+        size /= 1024.0
+    return f"{size:.{decimal_places}f} {unit}"
+
+
 def check_azure_remote_file_matching_local(
-    blob_client: BlobClient, local_file_path: Path
+    blob_properties: BlobProperties, local_file_path: Path
 ):
-    if not local_file_path.exists():
+    if not local_file_path.exists() or local_file_path.stat().st_size == 0:
         return False
 
     # Ask Azure for the md5 hash of the remote file.
-    properties = blob_client.get_blob_properties()
-    content_settings = properties.get("content_settings")
+    content_settings = blob_properties.get("content_settings")
     if not content_settings:
         return False
     remote_md5 = content_settings.get("content_md5")
@@ -65,12 +72,15 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
         max_chunk_get_size=1024 * 1024 * 32,  # 32 MiB
         max_single_get_size=1024 * 1024 * 32,  # 32 MiB
     ) as blob_client:
+        blob_properties = blob_client.get_blob_properties()
+
         local_file_path = test_dir / remote_file_name
-        if check_azure_remote_file_matching_local(blob_client, local_file_path):
+        if check_azure_remote_file_matching_local(blob_properties, local_file_path):
             print(f"  Skipping '{remote_file_name}' download (local MD5 hash matches)")
             return
 
-        print(f"  Downloading '{remote_file_name}' to '{relative_dir}'")
+        size_str = human_readable_size(blob_properties.size)
+        print(f"  Downloading '{remote_file_name}' ({size_str}) to '{relative_dir}'")
         with open(local_file_path, mode="wb") as local_blob:
             download_stream = blob_client.download_blob(max_concurrency=4)
             local_blob.write(download_stream.readall())
@@ -110,6 +120,9 @@ if __name__ == "__main__":
         help="Root directory to search for files to download from (e.g. 'pytorch/models/resnet50')",
     )
     args = parser.parse_args()
+
+    # TODO(scotttodd): build list of files _then_ download
+    # TODO(scotttodd): report size needed for requested files and size available on disk
 
     for test_cases_path in (THIS_DIR / args.root_dir).rglob("*.json"):
         with open(test_cases_path) as f:
