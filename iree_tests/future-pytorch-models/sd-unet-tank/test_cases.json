@@ -1,4 +1,5 @@
 {
+  "file_format": "test_cases_v0",
   "test_cases": [
     {
       "name": "splats",

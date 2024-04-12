@@ -182,6 +182,9 @@ class MlirFile(pytest.File):
 
     def check_for_remote_files(self, test_case_json):
         """Checks if all remote_files in a JSON test case exist on disk."""
+        if "remote_files" not in test_case_json:
+            return True
+
         have_all_files = True
         for remote_file_url in test_case_json["remote_files"]:
             remote_file = remote_file_url.rsplit("/", 1)[-1]
@@ -212,18 +215,19 @@ class MlirFile(pytest.File):
 
         for test_cases_path in self.path.parent.glob("*.json"):
             with open(test_cases_path) as f:
-                test_case_json = pyjson5.load(f)
-                if test_case_json.get("file_format", "") != "test_case_v0":
+                test_cases_json = pyjson5.load(f)
+                if test_cases_json.get("file_format", "") != "test_cases_v0":
                     continue
-                test_case_name = test_case_json["name"]
-                have_all_files = self.check_for_remote_files(test_case_json)
-                test_cases.append(
-                    MlirFile.TestCase(
-                        name=test_case_name,
-                        runtime_flagfile=test_case_json["runtime_flagfile"],
-                        enabled=have_lfs_files and have_all_files,
+                for test_case_json in test_cases_json["test_cases"]:
+                    test_case_name = test_case_json["name"]
+                    have_all_files = self.check_for_remote_files(test_case_json)
+                    test_cases.append(
+                        MlirFile.TestCase(
+                            name=test_case_name,
+                            runtime_flagfile=test_case_json["runtime_flagfile"],
+                            enabled=have_lfs_files and have_all_files,
+                        )
                     )
-                )
 
         return test_cases
 

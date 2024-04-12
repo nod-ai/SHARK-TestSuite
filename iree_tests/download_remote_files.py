@@ -111,13 +111,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    for test_case_path in (THIS_DIR / args.root_dir).rglob("*.json"):
-        with open(test_case_path) as f:
-            test_case_json = pyjson5.load(f)
-            if test_case_json.get("file_format", "") != "test_case_v0":
+    for test_cases_path in (THIS_DIR / args.root_dir).rglob("*.json"):
+        with open(test_cases_path) as f:
+            test_cases_json = pyjson5.load(f)
+            if test_cases_json.get("file_format", "") != "test_cases_v0":
                 continue
 
-            print(f"Processing {test_case_path.relative_to(THIS_DIR)}")
+            print(f"Processing {test_cases_path.relative_to(THIS_DIR)}")
 
-            test_dir = test_case_path.parent
-            download_for_test_case(test_dir, test_case_json)
+            test_dir = test_cases_path.parent
+            for test_case_json in test_cases_json["test_cases"]:
+                download_for_test_case(test_dir, test_case_json)
