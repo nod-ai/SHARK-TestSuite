@@ -1,0 +1,14 @@
+{
+  "file_format": "test_case_v0",
+  "name": "real_weights",
+  "runtime_flagfile": "real_weights_data_flags.txt",
+  "remote_files": [
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_input.0.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_input.1.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_input.2.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_input.3.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_output.0.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/inference_output.1.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-prompt-encoder/real_weights.irpa"
+  ]
+}

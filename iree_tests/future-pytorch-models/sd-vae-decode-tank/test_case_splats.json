@@ -1,0 +1,8 @@
+{
+  "file_format": "test_case_v0",
+  "name": "splats",
+  "runtime_flagfile": "splat_data_flags.txt",
+  "remote_files": [
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd-vae-decode-tank/sd-vae-decode-tank.mlirbc"
+  ]
+}

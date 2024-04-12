@@ -1,0 +1,10 @@
+{
+  "file_format": "test_case_v0",
+  "name": "real_weights",
+  "runtime_flagfile": "real_weights_data_flags.txt",
+  "remote_files": [
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-vae-decode/inference_input.0.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-vae-decode/inference_output.0.bin",
+    "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sdxl-vae-decode/real_weights.irpa"
+  ]
+}

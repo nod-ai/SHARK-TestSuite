@@ -57,7 +57,6 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
     account_url = result.groups()[0]
     container_name = result.groups()[1]
     blob_name = result.groups()[2]
-    # TODO(scotttodd): check MD5 local vs remote, skip if matching
 
     with BlobClient(
         account_url,
@@ -92,6 +91,9 @@ def download_for_test_case(test_dir: Path, test_case_json: dict):
     #     continuing
     #   * Group files based on source (e.g. Azure container)
     #   * Start batched/parallel downloads
+
+    if "remote_files" not in test_case_json:
+        return
 
     for remote_file in test_case_json["remote_files"]:
         if "blob.core.windows.net" in remote_file:
