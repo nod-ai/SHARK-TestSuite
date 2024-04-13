@@ -10,6 +10,8 @@ from azure.core.exceptions import ResourceNotFoundError
 from pathlib import Path
 from zipfile import ZipFile
 
+PRIVATE_CONN_STRING = os.environ.get("PRIVATE_CONN_STRING", default="")
+priv_container_name = "onnxprivatestorage"
 
 def getTestsListFromFile(testlistfile):
     testlist = []
@@ -40,16 +42,29 @@ def cleanup_e2eshark_test(testList, e2eshark_test_dir):
 
 
 def download_azure_blob(account_url, container_name, blob_name, dest_file):
-    with ContainerClient(
-            account_url,
-            container_name,
-            max_chunk_get_size=1024 * 1024 * 32,  # 32 MiB
-            max_single_get_size=1024 * 1024 * 32,  # 32 MiB
-        ) as container_client:
-            download_stream = container_client.download_blob(
-                blob_name, max_concurrency=4
-            )
+    if container_name == priv_container_name:
+        if PRIVATE_CONN_STRING == "":
+            print("Please set PRIVATE_CONN_STRING environment variable with connection string for private azure storage account")
+        with ContainerClient.from_connection_string(
+                conn_str=PRIVATE_CONN_STRING,
+                container_name=container_name,
+            ) as container_client:
+                download_stream = container_client.download_blob(
+                    blob_name
+                )
+                with open(dest_file, mode="wb") as local_blob:
+                    local_blob.write(download_stream.readall())
+    else:
+        with ContainerClient(
+                account_url,
+                container_name,
+                max_chunk_get_size=1024 * 1024 * 32,  # 32 MiB
+                max_single_get_size=1024 * 1024 * 32,  # 32 MiB
+            ) as container_client:
             with open(dest_file, mode="wb") as local_blob:
+                download_stream = container_client.download_blob(
+                        blob_name, max_concurrency=4
+                    )
                 local_blob.write(download_stream.readall())
 
 
@@ -91,14 +106,12 @@ def download_onxx_model_from_azure_storage(cache_dir, testList):
         try_private = False
         try:
             download_azure_blob(account_url, container_name, blob_name, dest_file)
-        except ResourceNotFoundError:
-            # Try downloading from private storage
-            try_private = True
         except Exception as e:
-            # for other Errors
-            print(f"Unable to download model for {model}.\nError - {type(e).__name__}")
+            try_private = True
+            print(f"Unable to download model from public for {model}.\nError - {type(e).__name__}")
 
         if try_private:
+            print("Trying download from private storage")
             try:
                 download_azure_blob(priv_account_url, priv_container_name, blob_name, dest_file)
             except Exception as e:
