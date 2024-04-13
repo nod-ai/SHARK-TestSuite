@@ -118,7 +118,7 @@ def download_onxx_model_from_azure_storage(cache_dir, testList):
                 print(f"Unable to download model for {model}.\nError - {type(e).__name__}")
 
 
-def pre_test_onnx_models_setup(testsList, cache_path, script_dir):
+def pre_test_onnx_models_azure_download(testsList, cache_path, script_dir):
     # This util helps setting up the e2eshark/onnx/models tests by ensuring
     # all the models-tests in the testsList have the required model.onnx file
     # testsList: expected to contain only onnx tests

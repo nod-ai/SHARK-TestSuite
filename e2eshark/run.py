@@ -18,7 +18,7 @@ from azure.storage.blob import BlobServiceClient
 import simplejson
 import json
 from multiprocessing import Manager
-from tools.aztestsetup import pre_test_onnx_models_setup
+from tools.aztestsetup import pre_test_onnx_models_azure_download
 from zipfile import ZipFile
 
 # Need to allow invocation of run.py from anywhere
@@ -1505,7 +1505,7 @@ def main():
             testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
             if framework == "onnx":
-                pre_test_onnx_models_setup(testsList, cache_path, script_dir)
+                pre_test_onnx_models_azure_download(testsList, cache_path, script_dir)
             if not args.norun:
                 runFrameworkTests(
                     framework,
@@ -1522,7 +1522,7 @@ def main():
             testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
             if framework == "onnx":
-                pre_test_onnx_models_setup(testsList, cache_path, script_dir)
+                pre_test_onnx_models_azure_download(testsList, cache_path, script_dir)
             if not args.norun:
                 runFrameworkTests(
                     framework,
