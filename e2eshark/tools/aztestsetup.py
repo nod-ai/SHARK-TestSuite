@@ -10,7 +10,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from pathlib import Path
 from zipfile import ZipFile
 
-PRIVATE_CONN_STRING = os.environ.get("PRIVATE_CONN_STRING", default="")
+PRIVATE_CONN_STRING = os.environ.get("AZ_PRIVATE_CONNECTION", default="")
 priv_container_name = "onnxprivatestorage"
 
 def getTestsListFromFile(testlistfile):
