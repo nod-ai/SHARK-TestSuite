@@ -91,9 +91,9 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
             local_dir_path = test_dir
             local_file_path = test_dir / remote_file_name
         else:
-            cache_location = os.path.expanduser(cache_location)
-            local_dir_path = Path(cache_location) / "iree_tests" / relative_dir
-            local_file_path = Path(cache_location) / "iree_tests" / relative_dir / remote_file_name
+            cache_location = Path(cache_location).resolve()
+            local_dir_path = cache_location / "iree_tests" / relative_dir
+            local_file_path = cache_location / "iree_tests" / relative_dir / remote_file_name
 
         local_md5 = get_local_md5(local_file_path)
 
@@ -103,6 +103,9 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
                 "- local MD5 hash matches"
             )
             os.symlink(local_file_path, test_dir / remote_file_name)
+            logger.info(
+                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}' "
+            )
             return
 
         if not local_md5:
@@ -123,6 +126,9 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
             local_blob.write(download_stream.readall())
         if str(cache_location) != str(REPO_ROOT):
             os.symlink(local_file_path, test_dir / remote_file_name)
+            logger.info(
+                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}' "
+            )
 
 
 def download_generic_remote_file(test_dir: Path, remote_file: str):
