@@ -18,6 +18,8 @@ from azure.storage.blob import BlobServiceClient
 import simplejson
 import json
 from multiprocessing import Manager
+from tools.aztestsetup import pre_test_onnx_models_azure_download
+from zipfile import ZipFile
 
 # Need to allow invocation of run.py from anywhere
 sys.path.append(Path(__file__).parent)
@@ -221,6 +223,8 @@ def unpackBytearray(barray, num_elem, dtype):
         temptensor = torch.tensor(num_array, dtype=torch.int16)
         rettensor = temptensor.view(dtype=torch.float16)
         return rettensor
+    elif dtype == torch.int32:
+        num_array = struct.unpack("l" * num_elem, barray)
     elif dtype == torch.int16:
         num_array = struct.unpack("h" * num_elem, barray)
     elif dtype == torch.int8:
@@ -1500,6 +1504,8 @@ def main():
             testsList = frameworktotests_dict[framework]
             testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
+            if framework == "onnx":
+                pre_test_onnx_models_azure_download(testsList, cache_path, script_dir)
             if not args.norun:
                 runFrameworkTests(
                     framework,
@@ -1515,6 +1521,8 @@ def main():
             testsList = getTestsList(framework, args.groups)
             testsList = [test for test in testsList if not test in skiptestslist]
             totalTestList += testsList
+            if framework == "onnx":
+                pre_test_onnx_models_azure_download(testsList, cache_path, script_dir)
             if not args.norun:
                 runFrameworkTests(
                     framework,
