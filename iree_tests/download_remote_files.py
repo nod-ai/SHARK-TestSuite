@@ -91,7 +91,7 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
             local_dir_path = test_dir
             local_file_path = test_dir / remote_file_name
         else:
-            cache_location = Path(cache_location).resolve()
+            cache_location = Path(os.path.expanduser(cache_location)).resolve()
             local_dir_path = cache_location / "iree_tests" / relative_dir
             local_file_path = cache_location / "iree_tests" / relative_dir / remote_file_name
 
