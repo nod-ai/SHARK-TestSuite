@@ -104,7 +104,7 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
             )
             os.symlink(local_file_path, test_dir / remote_file_name)
             logger.info(
-                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}' "
+                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}'"
             )
             return
 
@@ -127,7 +127,7 @@ def download_azure_remote_file(test_dir: Path, remote_file: str):
         if str(cache_location) != str(REPO_ROOT):
             os.symlink(local_file_path, test_dir / remote_file_name)
             logger.info(
-                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}' "
+                f"  Created symlink for '{local_file_path}' to '{test_dir / remote_file_name}'"
             )
 
 
