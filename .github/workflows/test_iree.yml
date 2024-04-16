@@ -81,7 +81,7 @@ jobs:
       - name: "Setting up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.3'
 
       - name: "Setup Python venv"
         run: python3 -m venv ${VENV_DIR}
