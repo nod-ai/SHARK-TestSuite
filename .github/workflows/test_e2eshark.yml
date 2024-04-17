@@ -87,7 +87,7 @@ jobs:
           source ${E2E_VENV_DIR}/bin/activate
           cd e2eshark
           free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python ./run.py -r ./test-onnx -c ../../torch-mlir/build --report --cachedir /home/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --torchtolinalg --cleanup --postprocess --ci -v
+          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python ./run.py -r ./test-onnx -c ../../torch-mlir/build --report --cachedir /home/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
         working-directory: ./test-suite
 
       - name: Run Turbine Mode
