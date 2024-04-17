@@ -58,7 +58,7 @@ if __name__ == "__main__":
             print("The given file ", onnxfile, " does not exist\n")
             sys.exit(1)
 
-        model = onnx.load(onnxfile)
+        model = onnx.load(onnxfile, load_external_data=False)
         # If it gets past it, model was opened successfully
         print("File:", onnxfile, "\n")
 
