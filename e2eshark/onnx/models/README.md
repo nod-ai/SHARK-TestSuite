@@ -74,8 +74,15 @@ It's useful to specify 'another_dim_param * 2' seperately if you want, for examp
 Now that we chose some values for the dim_params, we can make some model inputs.
 
 ```python
-some_arg_name = numpy.random.rand(pv["batch_size"], pv["another_dim_param"]).astype(numpy.int64)
-another_arg_name = numpy.random.rand(pv["batch_size"], 12, pv["another_dim_param * 2"], 64).astype(numpy.float32)
+some_arg_name = numpy.random.randint(
+    -1000,
+    high=1000,
+    size=(pv["batch_size"], pv["another_dim_param"]),
+    dtype=numpy.int64,
+)
+another_arg_name = numpy.random.rand(
+    pv["batch_size"], 12, pv["another_dim_param * 2"], 64
+).astype(numpy.float32)
 model_inputs = [some_arg_name, another_arg_name]
 ```
 
