@@ -776,6 +776,10 @@ def runTestUsingClassicalFlow(args_tuple):
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
         torchmlirfilename = modelname + "." + args.todtype + ".onnx.torch.mlir"
         onnxfilename = "model.onnx"
+        if args.run_as_static:
+            testargs += " --run_as_static "
+        if args.verbose:
+            testargs += " --verbose "
         if getTestKind(testName) == "models":
             onnxfilename = testAbsPath + "/model.onnx"
             # Create soft link to the model.onnx
@@ -1392,6 +1396,12 @@ def main():
         help="Space efficient testing (removing the large mlir, vmfb files during the model runs)",
         action="store_true",
         default=False,
+    )
+    parser.add_argument(
+        "--run_as_static",
+        action="store_true",
+        default=False,
+        help="makes the dim_params for model.onnx static with param/value dict given in model.py",
     )
 
     args = parser.parse_args()
