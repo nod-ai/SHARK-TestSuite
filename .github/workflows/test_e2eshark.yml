@@ -54,6 +54,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: nod-ai/SHARK-Turbine
+          ref: torch_2.1_support
           path: turbine
 
   e2eshark:
@@ -93,10 +94,9 @@ jobs:
       - name: Run Turbine Mode
         run: |
           source ${E2E_VENV_DIR}/bin/activate
-          pip install -r ../turbine/core/pytorch-cpu-requirements.txt
-          pip install --pre --upgrade -r ../turbine/core/requirements.txt
-          pip install --pre -e ../turbine/core[testing]
-          pip install --pre -e ../turbine/models
+          pip install -f https://openxla.github.io/iree/pip-release-links.html --upgrade -r ../turbine/core/iree-requirements.txt
+          pip install -e ../turbine/core[testing]
+          pip install -e ../turbine/models
           pip uninstall -y transformers
           pip install transformers --no-dependencies
           cd e2eshark
