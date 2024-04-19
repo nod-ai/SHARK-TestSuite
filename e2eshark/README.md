@@ -111,8 +111,10 @@ And then run following
 ```
 CMAKE_GENERATOR=Ninja python setup.py bdist_wheel --dist-dir ./torch-mlir-wheel -v
 pip uninstall torch-mlir
-pip install torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl #**Note**: torch_mlir wheel version may change so you appropriate version
+pip install torch-mlir-wheel/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
 ```
+**Note**: torch_mlir wheel version may change so you appropriate version in above command
+
 To get a local build of IREE, follow (prefer the clang building option over gnu):
 https://iree.dev/building-from-source/getting-started 
 
