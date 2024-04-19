@@ -305,6 +305,12 @@ class IreeCompileRunItem(pytest.Item):
         super().__init__(**kwargs)
         self.spec = spec
 
+        if self.spec.skip_test:
+            self.add_marker(
+                pytest.mark.skip(f"{self.spec.test_name} missing required files")
+            )
+            return
+
         # TODO(scotttodd): swap cwd for a temp path?
         self.test_cwd = self.spec.test_directory
         vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
@@ -318,9 +324,6 @@ class IreeCompileRunItem(pytest.Item):
         self.run_args.append(f"--flagfile={self.spec.data_flagfile_name}")
 
     def runtest(self):
-        if self.spec.skip_test:
-            pytest.skip()
-
         # We want to test two phases: 'compile', and 'run'.
         # A test can be marked as expected to fail at either stage, with these
         # possible outcomes:
