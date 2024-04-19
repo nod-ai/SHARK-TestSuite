@@ -101,6 +101,9 @@ jobs:
           pip install -e ../turbine/models
           pip uninstall -y transformers
           pip install transformers --no-dependencies
+          pip uninstall -y torch-mlir
+          pip uninstall -y torch
+          pip install torch==2.1.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-dependencies
           cd e2eshark
           free -mh
           HF_TOKEN=${{ secrets.HF_TOKEN }} python ./run.py -r ./test-turbine -c ../../torch-mlir/build --report --cachedir /home/huggingface_cache --mode turbine -g models --cleanup --postprocess --ci -v
