@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   torch-mlir:
-    runs-on: nodai-amdgpu-mi210-x86-64
+    runs-on: nodai-amdgpu-w7900-x86-64
     env:
       MLIR_VENV_DIR: ${{ github.workspace }}/mlir_venv
     steps:
