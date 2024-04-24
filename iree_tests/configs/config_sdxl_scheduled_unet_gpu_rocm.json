@@ -7,8 +7,10 @@
       "--verify=false",
       "--iree-codegen-transform-dialect-library=specs/attention_and_matmul_spec.mlir",
       "--iree-global-opt-propagate-transposes=true",
+      "--iree-opt-outer-dim-concat=true",
       "--iree-vm-target-truncate-unsupported-floats",
       "--iree-llvmgpu-enable-prefetch=true",
+      "--iree-opt-data-tiling=false",
       "--iree-codegen-gpu-native-math-precision=true",
       "--iree-codegen-llvmgpu-use-vector-distribution"
     ],
