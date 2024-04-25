@@ -1130,8 +1130,6 @@ def runFrameworkTests(
     if args.ci:
         if "pytorch/models/vicuna-13b-v1.3" in uniqueTestList:
             uniqueTestList.remove("pytorch/models/vicuna-13b-v1.3")
-        if "onnx/models/RRDB_ESRGAN_vaiq_int8" in uniqueTestList:
-            uniqueTestList.remove("onnx/models/RRDB_ESRGAN_vaiq_int8")
     uploadDict = Manager().dict({})
     dateAndTime = str(datetime.datetime.now(datetime.timezone.utc))
     tupleOfListArg = []
