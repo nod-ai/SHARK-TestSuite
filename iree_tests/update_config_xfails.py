@@ -83,6 +83,8 @@ if __name__ == "__main__":
             continue
         user_properties = log_json["user_properties"]
 
+        # TODO(scotttodd): handle multiple config files writing to one log file?
+
         # Find the test directory name, since that is what our config.json uses
         # to label tests for skipping or XFAIL.
         test_directory_name = ""
