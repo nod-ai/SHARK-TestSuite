@@ -118,8 +118,9 @@ if __name__ == "__main__":
             logger.warning(f"Unhandled error for {test_directory_name}: '{repr}'")
 
     logger.info(f"Updating config")
-    config["expected_compile_failures"] = sorted(compile_failures)
-    config["expected_run_failures"] = sorted(run_failures)
+    # Remove duplicates and sort.
+    config["expected_compile_failures"] = sorted(list(set(compile_failures)))
+    config["expected_run_failures"] = sorted(list(set(run_failures)))
 
     logger.info(f"Writing updated config to '{config_file}'")
     with open(config_file, "w") as f:
