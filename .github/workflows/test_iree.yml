@@ -188,4 +188,5 @@ jobs:
       
       - name: "Running SDXL rocm pipeline benchmark"
         run: |
+          source ${VENV_DIR}/bin/activate
           bash iree_tests/benchmarks/benchmark_sdxl_rocm.sh
