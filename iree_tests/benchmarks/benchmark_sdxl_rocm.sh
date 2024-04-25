@@ -24,7 +24,7 @@ iree-compile "${THIS_DIR?}/sdxl_pipeline_bench_f16.mlir" \
 echo "Running sdxl benchmark"
 
 iree-benchmark-module \
-  --device=local-task \
+  --device=hip \
   --module="${PROMPT_ENCODER_DIR?}/model_gpu_rocm_real_weights.vmfb" \
   --parameters=model="${PROMPT_ENCODER_DIR?}/real_weights.irpa" \
   --module="${SCHEDULED_UNET_DIR?}/model_gpu_rocm_real_weights.vmfb" \
