@@ -17,12 +17,8 @@ PROMPT_ENCODER_DIR="${IREE_ROOT?}/pytorch/models/sdxl-prompt-encoder-tank"
 echo "Echo compiling full sdxl pipeline"
 
 iree-compile "${THIS_DIR?}/sdxl_pipeline_bench_f16.mlir" \
-  -iree-hal-target-backends=llvm-cpu \
-  --iree-llvmcpu-target-cpu-features=host \
-  --iree-llvmcpu-distribution-size=32 \
   --iree-hal-target-backends=rocm \
   --iree-rocm-target-chip=gfx90a \
-  --iree-opt-const-eval=false \
   -o "${THIS_DIR?}/sdxl_full_pipeline_fp16_rocm.vmfb"
 
 echo "Running sdxl benchmark"
