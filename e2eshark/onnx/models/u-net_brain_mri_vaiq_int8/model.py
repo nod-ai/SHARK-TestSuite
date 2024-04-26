@@ -32,9 +32,10 @@ outputs = session.get_outputs()
 model_output = session.run(
     [outputs[0].name],
     {inputs[0].name: model_input_X},
-)[0]
+)[0] 
+
 E2ESHARK_CHECK["input"] = [torch.from_numpy(model_input_X)]
-E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
+E2ESHARK_CHECK["output"] = [torch.from_numpy(model_output)]
 
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
