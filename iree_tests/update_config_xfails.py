@@ -124,4 +124,4 @@ if __name__ == "__main__":
 
     logger.info(f"Writing updated config to '{config_file}'")
     with open(config_file, "w") as f:
-        f.write(json.dumps(config, indent=2))
+        print(json.dumps(config, indent=2), file=f)
