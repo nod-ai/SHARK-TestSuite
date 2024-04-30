@@ -18,35 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  torch-mlir:
-    runs-on: nodai-amdgpu-mi250-x86-64
-    env:
-      MLIR_VENV_DIR: ${{ github.workspace }}/mlir_venv
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          submodules: true
-          repository: llvm/torch-mlir
-          path: torch-mlir
-
-      - name: Install python deps (nightly)
-        run: |
-          python3.11 -m venv ${MLIR_VENV_DIR}
-          source ${MLIR_VENV_DIR}/bin/activate
-          bash build_tools/ci/install_python_deps.sh nightly
-          python3.11 -m pip install --upgrade pip
-          pip uninstall -y PyYAML
-          pip install PyYAML==6.0.1
-          pip list
-        working-directory: ./torch-mlir
-
-      - name: Build
-        run: |
-          source ${MLIR_VENV_DIR}/bin/activate
-          bash build_tools/e2eshark_build.sh
-        working-directory: ./torch-mlir
-
   turbine:
     runs-on: nodai-amdgpu-mi250-x86-64
     steps:
@@ -58,7 +29,7 @@ jobs:
           path: turbine
 
   e2eshark:
-    needs: [turbine, torch-mlir]
+    needs: [turbine]
     runs-on: nodai-amdgpu-mi250-x86-64
     env:
       E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
@@ -77,9 +48,6 @@ jobs:
           source ${E2E_VENV_DIR}/bin/activate
           git submodule update --init
           pip install --upgrade pip
-          pip install -r ../torch-mlir/requirements.txt
-          pip install -r ../torch-mlir/torchvision-requirements.txt
-          pip install ../torch-mlir/torch-mlir-wheel/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
           pip install -r ./e2eshark/requirements.txt
         working-directory: ./test-suite
 
@@ -88,7 +56,7 @@ jobs:
           source ${E2E_VENV_DIR}/bin/activate
           cd e2eshark
           free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py -r ./test-onnx -c ../../torch-mlir/build --report --cachedir /home/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
+          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py -r ./test-onnx --report --cachedir /home/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
         working-directory: ./test-suite
 
       - name: Run Turbine Mode
@@ -104,12 +72,12 @@ jobs:
           pip install torch==2.1.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-dependencies
           cd e2eshark
           free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py -r ./test-turbine -c ../../torch-mlir/build --report --cachedir /home/huggingface_cache --mode turbine -g models --cleanup --postprocess --ci -v
+          HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py -r ./test-turbine --report --cachedir /home/huggingface_cache --mode turbine -g models --cleanup --postprocess --ci -v
         working-directory: ./test-suite
 
   upload_artifacts:
     needs: [e2eshark]
-    runs-on: nodai-amdgpu-mi210-x86-64
+    runs-on: nodai-amdgpu-mi250-x86-64
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
