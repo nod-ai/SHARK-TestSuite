@@ -54,6 +54,7 @@ jobs:
       - name: Run Onnx Mode
         run: |
           source ${E2E_VENV_DIR}/bin/activate
+          pip list
           cd e2eshark
           free -mh
           HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py \
