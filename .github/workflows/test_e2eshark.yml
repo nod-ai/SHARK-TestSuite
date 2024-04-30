@@ -70,6 +70,11 @@ jobs:
           pip install -r ./e2eshark/requirements.txt
           pip uninstall -y transformers
           pip install transformers -U
+          pip uninstall -y torch
+          pip uninstall -y torchvision
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            -r ../turbine/core/pytorch-cpu-requirements.txt \
+            -r ../turbine/core/torchvision-requirements.txt
         working-directory: ./test-suite
 
       - name: Run Turbine Mode
