@@ -843,7 +843,7 @@ def runTestUsingClassicalFlow(args_tuple):
     if args.verbose:
         print(f"Running classical flow for test {testName}")
     ireeInputType = "onnx"
-    if SHARED_TORCH_MLIR_BUILD:
+    if SHARED_TORCH_MLIR_BUILD or mode=="turbine":
         ireeInputType = "torch"
     # create a symlink to the utils file inside the test dir
     if not os.path.exists(utilspy):
