@@ -11,7 +11,8 @@ auto-gptq
 optimum
 azure-storage-blob
 # install nightly build of torch_mlir 
-torch_mlir -f  https://github.com/llvm/torch-mlir-release/releases/expanded_assets/dev-wheels
+-f https://github.com/llvm/torch-mlir-release/releases/expanded_assets/dev-wheels
+torch-mlir
 # install nightly build of iree-compiler and iree-runtime
 iree-compiler -f https://iree.dev/pip-release-links.html
 iree-runtime -f https://iree.dev/pip-release-links.html
