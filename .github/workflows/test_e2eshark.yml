@@ -72,6 +72,7 @@ jobs:
           pip install transformers -U
           pip uninstall -y torch
           pip uninstall -y torchvision
+          pip uninstall -y torch-mlir
           pip install --index-url https://download.pytorch.org/whl/cpu \
             -r ../turbine/core/pytorch-cpu-requirements.txt \
             -r ../turbine/core/torchvision-requirements.txt
