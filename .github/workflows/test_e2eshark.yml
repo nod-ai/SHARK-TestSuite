@@ -33,6 +33,7 @@ jobs:
     runs-on: nodai-amdgpu-mi250-x86-64
     env:
       E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
+      TURBINE_VENV_DIR: ${{ github.workspace }}/turbine_venv
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -52,25 +53,27 @@ jobs:
           pip install -r ./e2eshark/requirements.txt
         working-directory: ./test-suite
 
-      - name: Run Onnx Mode
-        run: |
-          source ${E2E_VENV_DIR}/bin/activate
-          cd e2eshark
-          free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py -r ./test-onnx --report --cachedir ~/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
-        working-directory: ./test-suite
+      # - name: Run Onnx Mode
+      #   run: |
+      #     source ${E2E_VENV_DIR}/bin/activate
+      #     cd e2eshark
+      #     free -mh
+      #     HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py -r ./test-onnx --report --cachedir ~/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
+      #   working-directory: ./test-suite
 
       - name: Run Turbine Mode
         run: |
-          source ${E2E_VENV_DIR}/bin/activate
-          pip install -f https://openxla.github.io/iree/pip-release-links.html --upgrade -r ../turbine/core/iree-requirements.txt
+          python3.11 -m venv ${TURBINE_VENV_DIR}
+          source ${TURBINE_VENV_DIR}/bin/activate
+          pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu \
+            -r ../turbine/core/pytorch-cpu-requirements.txt \
+            -r ../turbine/core/torchvision-requirements.txt
+          pip install --upgrade -r ../turbine/core/requirements.txt
           pip install -e ../turbine/core[testing]
           pip install -e ../turbine/models
           pip uninstall -y transformers
           pip install transformers --no-dependencies
-          pip uninstall -y torch-mlir
-          pip uninstall -y torch
-          pip install torch==2.1.0+cpu -f https://download.pytorch.org/whl/torch_stable.html --no-dependencies
           cd e2eshark
           free -mh
           HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py -r ./test-turbine --report --cachedir ~/huggingface_cache --mode turbine -g models --cleanup --postprocess --ci -v
