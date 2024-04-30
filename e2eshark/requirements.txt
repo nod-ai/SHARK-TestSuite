@@ -1,6 +1,7 @@
 tabulate
 simplejson
 ml_dtypes
+onnx
 onnxruntime
 transformers
 huggingface-cli
@@ -14,7 +15,3 @@ torch_mlir -f  https://github.com/llvm/torch-mlir-release/releases/expanded_asse
 # install nightly build of iree-compiler and iree-runtime
 iree-compiler -f https://iree.dev/pip-release-links.html
 iree-runtime -f https://iree.dev/pip-release-links.html
-
-
-
-
