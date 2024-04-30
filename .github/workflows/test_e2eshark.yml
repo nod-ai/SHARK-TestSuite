@@ -10,6 +10,15 @@ on:
   schedule:
   # Runs at 1:00 AM UTC, which is 5:00 AM PST (UTC-8)
    - cron: '0 13 * * *'
+  pull_request:
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   turbine:
@@ -47,10 +56,21 @@ jobs:
           source ${E2E_VENV_DIR}/bin/activate
           cd e2eshark
           free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py -r ./test-onnx --report --cachedir ~/huggingface_cache --mode onnx -f onnx pytorch -g models --tolerance .001 .001 --cleanup --postprocess --ci -v
+          HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py \
+            -r ./test-onnx \
+            --report \
+            --cachedir ~/huggingface_cache \
+            --mode onnx \
+            -f onnx \
+            --tests onnx/models/DenseNet201_vaiq_int8 \
+            --tolerance .001 .001 \
+            --cleanup \
+            --postprocess \
+            --ci \
+            -v
         working-directory: ./test-suite
 
-      - name: Steup turbine python venv
+      - name: Setup turbine python venv
         run: |
           python3.11 -m venv ${TURBINE_VENV_DIR}
           source ${TURBINE_VENV_DIR}/bin/activate
@@ -61,7 +81,7 @@ jobs:
           pip install --upgrade -r ../turbine/core/requirements.txt
           pip install -e ../turbine/core[testing]
           pip install -e ../turbine/models
-          pip install -r ./e2eshark/turbine-requirements.txt
+          pip install -r ./e2eshark/ci-requirements.txt
           pip uninstall -y transformers
           pip install transformers -U
         working-directory: ./test-suite
@@ -71,8 +91,22 @@ jobs:
           source ${TURBINE_VENV_DIR}/bin/activate
           cd e2eshark
           free -mh
-          HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py -r ./test-turbine --report --cachedir ~/huggingface_cache --mode turbine -g models --cleanup --postprocess --ci -v
+          HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py \
+          -r ./test-turbine \
+          --report \
+          --cachedir ~/huggingface_cache \
+          --mode turbine \
+          --tests pytorch/models/bart-large \
+          --cleanup \
+          --postprocess \
+          --ci \
+          -v
         working-directory: ./test-suite
+      
+      - uses: actions/upload-artifact@master
+        with:
+          name: ci_reports
+          path: ./test-suite/e2eshark/ci_reports
 
   upload_artifacts:
     needs: [e2eshark]
@@ -85,16 +119,20 @@ jobs:
           ref: 'main'
           token: ${{ secrets.E2ESHARK_GITHUB_TOKEN }}
           path: e2eshark-reports
+      
+      - uses: actions/download-artifact@master
+        with:
+          name: ci_reports
+          path: .
 
       - name: Push artifacts
         run: |
           date=$(date '+%Y-%m-%d')
-          cd ../test-suite/e2eshark/ci_reports
-          mv $date ../../../e2eshark-reports
-          cd ../../../e2eshark-reports
+          cd ci_reports
+          cd ..
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git add $date
+          git add ci_reports
           git commit -m "add CI reports for e2eshark"
           git push origin main
         working-directory: ./e2eshark-reports

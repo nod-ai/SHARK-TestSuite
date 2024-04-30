@@ -507,7 +507,6 @@ def runCodeGeneration(
     cleanup,
     uploadDict,
     dateAndTime,
-    ireeInputType,
 ):
     if args.verbose:
         print("Running code generation for", testName)
@@ -530,10 +529,6 @@ def runCodeGeneration(
         + args.backend
         + " "
     )
-    if args.mode == "onnx" and args.torchtolinalg:
-        commandname += " --iree-input-type=tm_tensor"
-    else:
-        commandname += " --iree-input-type=" + ireeInputType
     scriptcommand = (
         commandname
         + " "
@@ -842,9 +837,6 @@ def runTestUsingClassicalFlow(args_tuple):
     onnxfilename = ""
     if args.verbose:
         print(f"Running classical flow for test {testName}")
-    ireeInputType = "onnx"
-    if SHARED_TORCH_MLIR_BUILD or mode=="turbine":
-        ireeInputType = "torch"
     # create a symlink to the utils file inside the test dir
     if not os.path.exists(utilspy):
         print(f"ERROR: {utilspy} file missing")
@@ -966,7 +958,6 @@ def runTestUsingClassicalFlow(args_tuple):
             args.cleanup,
             uploadDict,
             dateAndTime,
-            ireeInputType,
         ):
             return 1
     if args.runupto == "iree-compile":
@@ -1272,7 +1263,7 @@ def generateReport(run_dir, testsList, args):
         print(statustable, file=statusf)
     with open(statustablepkl, "wb") as f:
         pickle.dump(statustablerows, f)
-    print(f"Generated status reoprt {statustablefile}")
+    print(f"Generated status report {statustablefile}")
 
     with open(timetablefile, "w") as timef:
         print(
@@ -1282,7 +1273,7 @@ def generateReport(run_dir, testsList, args):
         print(timetable, file=timef)
     with open(timetablepkl, "wb") as f:
         pickle.dump(timetablerows, f)
-    print(f"Generated time reoprt {timetablefile}")
+    print(f"Generated time report {timetablefile}")
 
     with open(summarytablefile, "w") as summaryf:
         print(
@@ -1292,7 +1283,7 @@ def generateReport(run_dir, testsList, args):
         print(summarytable, file=summaryf)
     with open(summarytablepkl, "wb") as f:
         pickle.dump(summarytabelerows, f)
-    print(f"Generated summary reoprt {summarytablefile}")
+    print(f"Generated summary report {summarytablefile}")
 
     with open(passlistfile, "w") as f:
         for items in passlist:
