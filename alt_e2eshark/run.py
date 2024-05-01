@@ -26,7 +26,7 @@ from e2e_testing.backends import SimpleIREEBackend
 
 
 def main():
-    # TODO: add argparse to customize config/backend/testlist/etc.
+    # TODO: add argparse to customize config/backend/testlist/verbosity/etc.
     config = OnnxTestConfig(str(test_dir), SimpleIREEBackend())
     test_list = GLOBAL_TEST_LIST
     run_tests(test_list, config, test_dir)
@@ -51,21 +51,23 @@ def run_tests(test_list, config, test_dir):
 
         # generate inputs from the test instance
         inputs = inst.construct_inputs()
-        inputs.save_to(log_dir)
+        inputs.save_to(log_dir + "input")
 
         # run native inference
         golden_outputs = inst.forward(inputs)
+        golden_outputs.save_to(log_dir + "golden_output")
 
         # generate mlir from the instance using the config
         mlir_module = config.mlir_import(inst)
         with open(log_dir + "import.mlir", "w") as f:
             f.write(str(mlir_module))
         # compile mlir_module using config (calls backend compile)
-        buffer = config.compile(mlir_module)
+        buffer = config.compile(mlir_module, path=log_dir)
         # explicitly call backend load method to get the forward function as a python callable
         callable_compiled_module = config.backend.load(buffer)
         # run the inputs through the loaded callable
         outputs = callable_compiled_module(inputs)
+        outputs.save_to(log_dir + "output")
 
         # model-specific post-processing:
         golden_outputs = inst.apply_postprocessing(golden_outputs)

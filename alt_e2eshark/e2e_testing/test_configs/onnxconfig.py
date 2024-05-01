@@ -32,8 +32,8 @@ class OnnxTestConfig(TestConfig):
         imp.import_all()
         return m
 
-    def compile(self, mlir_module):
-        return self.backend.compile(mlir_module)
+    def compile(self, mlir_module, *, path: str = None):
+        return self.backend.compile(mlir_module, path=path)
 
     def run(self, artifact, inputs):
         func = self.backend.load(artifact)

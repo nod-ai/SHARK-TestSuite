@@ -101,6 +101,8 @@ def pack_tensor(modelinput):
         bytearr = struct.pack("%sh" % len(mylist), *mylist)
     elif dtype == torch.int8:
         bytearr = struct.pack("%sb" % len(mylist), *mylist)
+    elif dtype == torch.uint8:
+        bytearr = struct.pack("%sB" % len(mylist), *mylist)
     elif dtype == torch.bool:
         bytearr = struct.pack("%s?" % len(mylist), *mylist)
     else:

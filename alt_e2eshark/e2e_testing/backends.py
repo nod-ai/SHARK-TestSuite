@@ -31,14 +31,21 @@ from torch_mlir.passmanager import PassManager
 
 class SimpleIREEBackend(BackendBase):
 
-    def compile(self, module):
+    def compile(self, module, *, path: str = None):
         pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
         with module.context as ctx:
             pm = PassManager.parse(pipeline)
             pm.run(module.operation)
-        return ireec.tools.compile_str(
+        if path:
+            with open(path + "import.torch.mlir", "w") as f:
+                f.write(str(module))
+        b = ireec.tools.compile_str(
             str(module), input_type="AUTO", target_backends=["llvm-cpu"]
         )
+        if path:
+            with open(path + "compiled_model.vmfb", "wb") as f:
+                f.write(b)
+        return b
 
     def load(self, artifact):
         config = ireert.Config("local-task")
