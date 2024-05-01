@@ -5,6 +5,7 @@ GLOBAL_TEST_LIST = []
 
 _SEEN_NAMES = set()
 
+
 def register_test(test_class: type, test_name: str):
     # Ensure that there are no duplicate names in the global test registry.
     if test_name in _SEEN_NAMES:
@@ -17,6 +18,6 @@ def register_test(test_class: type, test_name: str):
     GLOBAL_TEST_LIST.append(
         Test(
             unique_name=test_name,
-            model_constructor=lambda path : test_class(path + "/" + test_name + ".onnx"),
+            model_constructor=lambda path: test_class(path + "/" + test_name + ".onnx"),
         )
     )

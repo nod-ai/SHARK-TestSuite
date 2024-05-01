@@ -5,6 +5,7 @@ from torch_mlir.dialects import torch as torch_d
 from torch_mlir.ir import Context
 from e2e_testing.backends import BackendBase
 
+
 class OnnxTestConfig(TestConfig):
 
     def __init__(self, log_dir: str, backend: BackendBase):
@@ -20,11 +21,12 @@ class OnnxTestConfig(TestConfig):
         torch_d.register_dialect(context)
         model_info = onnx_importer.ModelInfo(model)
         m = model_info.create_module(context=context)
-        imp = onnx_importer.NodeImporter.define_function(model_info.main_graph, m.operation)
+        imp = onnx_importer.NodeImporter.define_function(
+            model_info.main_graph, m.operation
+        )
         imp.import_all()
         return m
-    
-    
+
     def compile(self, mlir_module):
         return self.backend.compile(mlir_module)
 

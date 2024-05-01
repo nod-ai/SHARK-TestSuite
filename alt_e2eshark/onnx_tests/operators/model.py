@@ -7,6 +7,8 @@ import os
 
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
+
+
 # add a test by setting test_dict["my_test_name"] = OnnxModelInfo(info about test)
 class AddModel(OnnxModelInfo):
     def construct_model(self):
@@ -36,7 +38,9 @@ class AddModel(OnnxModelInfo):
 
         onnx.save(onnx_model, self.model)
 
+
 register_test(AddModel, "add_test")
+
 
 class ConcatModel(OnnxModelInfo):
     def construct_model(self):
@@ -69,19 +73,23 @@ class ConcatModel(OnnxModelInfo):
 
         onnx.save(onnx_model, self.model)
 
+
 register_test(ConcatModel, "concat_test")
 
 
 class DynamicQuantizeLinearModel(OnnxModelInfo):
     def construct_model(self):
-        input_X = make_tensor_value_info("X", TensorProto.FLOAT, [3, 4]) 
+        input_X = make_tensor_value_info("X", TensorProto.FLOAT, [3, 4])
         output_Z = make_tensor_value_info("Z", TensorProto.UINT8, [3, 4])
         output_S = make_tensor_value_info("scale", TensorProto.FLOAT, [])
         output_P = make_tensor_value_info("zp", TensorProto.UINT8, [])
 
         # Create a 'DQL' node (NodeProto)
         DQL_node = make_node(
-            "DynamicQuantizeLinear", ["X"], ["Z", "scale", "zp"], "DQL_node"  # op_type  # inputs  # outputs  # node name
+            "DynamicQuantizeLinear",
+            ["X"],
+            ["Z", "scale", "zp"],
+            "DQL_node",  # op_type  # inputs  # outputs  # node name
         )
 
         # Create the graph (GraphProto)
@@ -94,9 +102,12 @@ class DynamicQuantizeLinearModel(OnnxModelInfo):
 
         # Create the model (ModelProto)
         onnx_model = make_model(graph)
-        onnx_model.opset_import[0].version = 11  # Set the opset version to ensure compatibility
+        onnx_model.opset_import[0].version = (
+            11  # Set the opset version to ensure compatibility
+        )
 
         # Save the model
         onnx.save(onnx_model, self.model)
+
 
 register_test(DynamicQuantizeLinearModel, "dynamic_quanitze_linear_test")
