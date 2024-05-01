@@ -1,10 +1,16 @@
-# This file will contain customizations for how to compile mlir from various entrypoints
+# Copyright 2024 Advanced Micro Devices, Inc.
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import abc
 from typing import TypeVar
 from e2e_testing.storage import TestTensors
 
 CompiledArtifact = TypeVar("CompiledArtifact")
 Invoker = TypeVar("Invoker")
+
+# This file should contain customizations for how to compile mlir from various entrypoints
 
 
 class BackendBase(abc.ABC):
