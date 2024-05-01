@@ -179,9 +179,10 @@ class TestTensors:
         return TestTensors(new_data)
 
     def save_to(self, path: str):
+        """path should be of the form /path/to/log/folder/unformattedname"""
         if self.type == torch.Tensor:
-            for d in self.data:
-                write_inference_input_bin_file(d, path)
+            data = self.data
         else:
-            for d in self.to_torch().data:
-                write_inference_input_bin_file(d, path)
+            data = self.to_torch().data
+        for i in range(len(data)):
+            write_inference_input_bin_file(data[i], path + f".{i}.bin")

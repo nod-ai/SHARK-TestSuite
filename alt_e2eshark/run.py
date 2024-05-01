@@ -51,6 +51,7 @@ def run_tests(test_list, config, test_dir):
 
         # generate inputs from the test instance
         inputs = inst.construct_inputs()
+        inputs.save_to(log_dir)
 
         # run native inference
         golden_outputs = inst.forward(inputs)
@@ -65,6 +66,10 @@ def run_tests(test_list, config, test_dir):
         callable_compiled_module = config.backend.load(buffer)
         # run the inputs through the loaded callable
         outputs = callable_compiled_module(inputs)
+
+        # model-specific post-processing:
+        golden_outputs = inst.apply_postprocessing(golden_outputs)
+        outputs = inst.apply_postprocessing(outputs)
 
         # store the results
         result = TestResult(

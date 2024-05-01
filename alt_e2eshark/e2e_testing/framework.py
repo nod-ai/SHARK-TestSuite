@@ -41,7 +41,7 @@ class OnnxModelInfo:
         self.model = onnx_model_path + "model.onnx"
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
-        """Applies self.model to self.input"""
+        """Applies self.model to self.input. Only override if necessary for specific models"""
         input = input.to_numpy().data
         if not os.path.exists(self.model):
             self.construct_model()
@@ -57,16 +57,20 @@ class OnnxModelInfo:
         return TestTensors(model_output)
 
     def construct_model(self):
-        """a method to be overwritten"""
+        """a method to be overwritten. To make a new test, define a subclass with an override for this method"""
         raise Exception(
             f"Model path {self.model} does not exist and no construct_model method is defined."
         )
 
     def construct_inputs(self):
-        """can be over-written to generate specific inputs"""
+        """can be overridden to generate specific inputs, but a default is provided for convenience"""
         if not os.path.exists(self.model):
             self.construct_model()
         return get_sample_inputs_for_onnx_model(self.model)
+
+    def apply_postprocessing(self, output: TestTensors):
+        """can be overridden to define post-processing methods for individual models"""
+        return output
 
 
 TestModel = Union[OnnxModelInfo, torch.nn.Module]

@@ -24,8 +24,8 @@ class BackendBase(abc.ABC):
         """loads the compiled artifact"""
 
 
-from iree import compiler as ic
-from iree import runtime as rt
+from iree import compiler as ireec
+from iree import runtime as ireert
 from torch_mlir.passmanager import PassManager
 
 
@@ -36,14 +36,14 @@ class SimpleIREEBackend(BackendBase):
         with module.context as ctx:
             pm = PassManager.parse(pipeline)
             pm.run(module.operation)
-        return ic.tools.compile_str(
-            str(module), input_type="torch", target_backends=["llvm-cpu"]
+        return ireec.tools.compile_str(
+            str(module), input_type="AUTO", target_backends=["llvm-cpu"]
         )
 
     def load(self, artifact):
-        config = rt.Config("local-task")
-        ctx = rt.SystemContext(config=config)
-        vm_module = rt.VmModule.copy_buffer(ctx.instance, artifact)
+        config = ireert.Config("local-task")
+        ctx = ireert.SystemContext(config=config)
+        vm_module = ireert.VmModule.copy_buffer(ctx.instance, artifact)
         ctx.add_vm_module(vm_module)
 
         def func(x, *, name="main"):
