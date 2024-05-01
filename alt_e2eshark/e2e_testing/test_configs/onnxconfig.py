@@ -1,9 +1,9 @@
-from e2e_testing.framework import TestConfig, OnnxModelInfo
-from torch_mlir.extras import onnx_importer
 import onnx
+from torch_mlir.extras import onnx_importer
 from torch_mlir.dialects import torch as torch_d
 from torch_mlir.ir import Context
 from e2e_testing.backends import BackendBase
+from e2e_testing.framework import TestConfig, OnnxModelInfo
 
 
 class OnnxTestConfig(TestConfig):

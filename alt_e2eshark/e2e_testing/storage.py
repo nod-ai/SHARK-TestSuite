@@ -1,9 +1,11 @@
-import io, torch, struct
-from typing import Tuple, Optional
+import io
 import numpy
+import struct
+import torch
+from typing import Tuple, Optional
 
 
-def loadTorchSave(filename):
+def load_torch_save(filename):
     with open(filename, "rb") as f:
         bindata = f.read()
     buf = io.BytesIO(bindata)
@@ -11,26 +13,26 @@ def loadTorchSave(filename):
     return loaded
 
 
-def getShapeString(torchtensor):
-    inputshape = list(torchtensor.shape)
-    inputshapestring = "x".join([str(item) for item in inputshape])
-    dtype = torchtensor.dtype
+def get_shape_string(torch_tensor):
+    input_shape = list(torch_tensor.shape)
+    input_shape_string = "x".join([str(item) for item in input_shape])
+    dtype = torch_tensor.dtype
     if dtype == torch.int64:
-        inputshapestring += "xi64"
+        input_shape_string += "xi64"
     elif dtype == torch.float32 or dtype == torch.float:
-        inputshapestring += "xf32"
+        input_shape_string += "xf32"
     elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
-        inputshapestring += "xbf16"
+        input_shape_string += "xbf16"
     elif dtype == torch.int8:
-        inputshapestring += "xi8"
+        input_shape_string += "xi8"
     elif dtype == torch.bool:
-        inputshapestring += "xi1"
+        input_shape_string += "xi1"
     else:
-        print("In getShapeString, found an unsupported data type", dtype)
-    return inputshapestring
+        print("In get_shape_string, found an unsupported data type", dtype)
+    return input_shape_string
 
 
-def unpackBytearray(barray, num_elem, dtype):
+def unpack_bytearray(barray, num_elem, dtype):
     num_array = None
     if dtype == torch.int64:
         num_array = struct.unpack("q" * num_elem, barray)
@@ -62,7 +64,7 @@ def unpackBytearray(barray, num_elem, dtype):
     return rettensor
 
 
-def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
+def load_raw_binary_as_torch_tensor(binaryfile, shape, dtype):
     # Read the whole files as bytes
     with open(binaryfile, "rb") as f:
         binarydata = f.read()
@@ -73,13 +75,13 @@ def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
     barray = bytearray(binarydata[0:tensor_num_bytes])
     # for byte in barray:
     #     print(f"{byte:02X}", end="")
-    rettensor = unpackBytearray(barray, num_elem, dtype)
+    rettensor = unpack_bytearray(barray, num_elem, dtype)
     reshapedtensor = rettensor.reshape(list(shape))
     f.close()
     return reshapedtensor
 
 
-def packTensor(modelinput):
+def pack_tensor(modelinput):
     mylist = modelinput.flatten().tolist()
     dtype = modelinput.dtype
     if dtype == torch.int64:
@@ -101,9 +103,9 @@ def packTensor(modelinput):
     return bytearr
 
 
-def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
+def write_inference_input_bin_file(modelinput, modelinputbinfilename):
     with open(modelinputbinfilename, "wb") as f:
-        bytearr = packTensor(modelinput)
+        bytearr = pack_tensor(modelinput)
         f.write(bytearr)
         f.close()
 
@@ -174,7 +176,7 @@ class TestTensors:
     def save_to(self, path: str):
         if self.type == torch.Tensor:
             for d in self.data:
-                writeInferenceInputBinFile(d, path)
+                write_inference_input_bin_file(d, path)
         else:
             for d in self.to_torch().data:
-                writeInferenceInputBinFile(d, path)
+                write_inference_input_bin_file(d, path)

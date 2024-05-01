@@ -1,4 +1,3 @@
-from typing import Callable, Optional
 from e2e_testing.framework import Test
 
 GLOBAL_TEST_LIST = []
@@ -18,6 +17,6 @@ def register_test(test_class: type, test_name: str):
     GLOBAL_TEST_LIST.append(
         Test(
             unique_name=test_name,
-            model_constructor=lambda path: test_class(path + "/" + test_name + ".onnx"),
+            model_constructor=lambda path: test_class(path),
         )
     )

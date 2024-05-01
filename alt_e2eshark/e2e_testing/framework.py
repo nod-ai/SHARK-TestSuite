@@ -1,5 +1,6 @@
 import onnxruntime
-import numpy, torch
+import numpy
+import torch
 import abc
 import os
 from typing import Union, TypeVar, Tuple, NamedTuple, Dict, Optional, Callable
@@ -32,7 +33,7 @@ class OnnxModelInfo:
     def __init__(
         self, onnx_model_path: str, dim_params: Optional[Dict[str, int]] = None
     ):
-        self.model = onnx_model_path
+        self.model = onnx_model_path + "model.onnx"
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input"""
