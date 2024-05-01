@@ -63,8 +63,8 @@ jobs:
             --report \
             --cachedir ~/huggingface_cache \
             --mode onnx \
-            -f onnx \
-            --tests onnx/models/DenseNet201_vaiq_int8 \
+            -f onnx pytorch \
+            -g models \
             --tolerance .001 .001 \
             --cleanup \
             --postprocess \
@@ -98,7 +98,7 @@ jobs:
           --report \
           --cachedir ~/huggingface_cache \
           --mode turbine \
-          --tests pytorch/models/bart-large \
+          -g models \
           --cleanup \
           --postprocess \
           --ci \
