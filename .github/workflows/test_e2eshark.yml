@@ -132,7 +132,7 @@ jobs:
           date=$(date '+%Y-%m-%d')
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git add date
+          git add $date
           git commit -m "add CI reports for e2eshark"
           git push origin main
         working-directory: ./e2eshark-reports
