@@ -1,6 +1,7 @@
 # This file will contain customizations for how to compile mlir from various entrypoints
 import abc
 from typing import TypeVar
+from e2e_testing.storage import TestTensors
 
 CompiledArtifact = TypeVar("CompiledArtifact")
 Invoker = TypeVar("Invoker")
@@ -34,8 +35,13 @@ class SimpleIREEBackend(BackendBase):
         ctx = rt.SystemContext(config=config)
         vm_module = rt.VmModule.copy_buffer(ctx.instance, artifact)
         ctx.add_vm_module(vm_module)
-        for m in ctx.modules:
-            print(m)
-        def func(inputs):
-            return 0
+        def func(x, *, name="main"):
+            x = x.data
+            device_array = ctx.modules.module[name](*x)
+            if isinstance(device_array, tuple):
+                np_array = []
+                for d in device_array:
+                    np_array.append(d.to_host())
+                return TestTensors(np_array)
+            return TestTensors((device_array.to_host(), ))
         return func

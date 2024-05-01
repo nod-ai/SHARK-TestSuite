@@ -116,12 +116,12 @@ class TestTensors:
             self.type == None
     
     def __repr__(self):
-        return self.data.__repr__()
+        return f'TestTensors({self.type}): {self.data.__repr__()}'
 
     def to_numpy(self) -> "TestTensors":
         '''returns a copy of self as a numpy.ndarray type'''
         if self.type == torch.Tensor:
-            new_data = Tuple([d.numpy() for d in self.data])
+            new_data = tuple([d.numpy() for d in self.data])
             return TestTensors(new_data)
         elif self.type == numpy.ndarray:
             return TestTensors(self.data)
@@ -131,7 +131,7 @@ class TestTensors:
     def to_torch(self) -> "TestTensors":
         '''returns a copy of self as a torch.Tensor type'''
         if self.type == numpy.ndarray:
-            new_data = Tuple([torch.from_numpy(d) for d in self.data])
+            new_data = tuple([torch.from_numpy(d) for d in self.data])
             return TestTensors(new_data)
         elif self.type == torch.Tensor:
             return TestTensors(self.data)

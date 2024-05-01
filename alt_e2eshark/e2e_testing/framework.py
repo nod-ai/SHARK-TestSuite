@@ -4,7 +4,8 @@ import abc
 import os
 from typing import Union, TypeVar, Tuple, NamedTuple, Dict, Optional, Callable
 from e2e_testing.storage import TestTensors
-from torch_mlir.ir import Module
+
+Module = TypeVar("Module")
 
 def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg):
     if node.type == "tensor(float)":
@@ -81,3 +82,13 @@ class TestResult(NamedTuple):
     input: TestTensors
     gold_output: TestTensors
     output: TestTensors
+
+def summarize_result(test_result: TestResult, tol):
+    output = test_result.output.to_torch().data
+    gold = test_result.gold_output.to_torch().data
+    if len(output) != len(gold):
+        raise Exception(f"num outputs: {len(output)} doesn't match num golden: {len(gold)} for test {test_result.name}")
+    match = []
+    for i in range(len(output)):
+        match.append(torch.isclose(output[i].to(dtype= gold[i].dtype),gold[i], *tol))
+    return TestTensors(tuple(match))

@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 sys.path.append(Path(__file__).parent)
-print(Path(__file__).parent)
 from e2e_testing.storage import TestTensors
 from e2e_testing.framework import *
 from e2e_testing.registry import GLOBAL_TEST_LIST
@@ -31,7 +30,6 @@ def run_tests(test_list, config, test_dir):
     results = []
     for t in test_list:
        log_dir = str(test_dir) + '/' + t.unique_name
-       print(log_dir)
        #TODO: Add logging/log_dir
        inst = t.model_constructor(str(test_dir)) 
        inputs = inst.construct_inputs()
@@ -41,12 +39,15 @@ def run_tests(test_list, config, test_dir):
        buffer = config.compile(mlir_module)
        callable_compiled_module = config.backend.load(buffer)
        outputs = callable_compiled_module(inputs)
+       
        result = TestResult(name=t.unique_name, input=inputs,gold_output=golden_outputs,output=outputs)
        
        log_result(result, log_dir)
 
 def log_result(result, log_dir):
-    print(result)
+    summary = summarize_result(result, [1e-4,1e-4])
+    with open(log_dir + ".log", "w+") as f:
+        f.write(str(summary))
 
 if __name__ == "__main__":
     main()
