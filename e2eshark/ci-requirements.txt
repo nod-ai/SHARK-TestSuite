@@ -6,3 +6,6 @@ accelerate
 auto-gptq
 optimum
 azure-storage-blob
+# install nightly build of torch_mlir 
+-f https://github.com/llvm/torch-mlir-release/releases/expanded_assets/dev-wheels
+torch-mlir
