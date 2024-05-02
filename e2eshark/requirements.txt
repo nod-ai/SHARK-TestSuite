@@ -5,6 +5,7 @@ onnx
 onnxruntime
 transformers
 huggingface-cli
+pillow
 sentencepiece
 accelerate
 auto-gptq
