@@ -4,10 +4,7 @@ import onnxruntime
 # import from e2eshark/tools to allow running in current dir, for run through
 # run.pl, commutils is symbolically linked to allow any rundir to work
 sys.path.insert(0, "../../../tools/stubs")
-from commonutils import E2ESHARK_CHECK_DEF, to_numpy
-from PIL import Image
-import torchvision.transforms as transforms
-import requests
+from commonutils import E2ESHARK_CHECK_DEF, to_numpy, setup_test_image
 
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)
@@ -24,22 +21,8 @@ session = onnxruntime.InferenceSession("model.onnx", None)
 
 # Even if model is quantized, the inputs and outputs are
 # not, so apply float32
-# Read the image
-url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-img = Image.open(requests.get(url, stream=True).raw)
-  
-# hit a quick resize
-resize = transforms.Resize([224, 224])
-img = resize(img)
-  
-# Define a transform to convert 
-# the image to torch tensor 
-img_ycbcr = img.convert('YCbCr')
-  
-# Convert the image to Torch tensor 
-to_tensor = transforms.ToTensor()
-img_ycbcr = to_tensor(img_ycbcr)
-img_ycbcr.unsqueeze_(0)
+# Get and process the image
+img_ycbcr = setup_test_image()
 
 model_input_X = to_numpy(img_ycbcr)
 
