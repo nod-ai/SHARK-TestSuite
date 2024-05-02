@@ -4,13 +4,10 @@ from PIL import Image
 import torchvision.transforms as transforms
 import requests
 
-def to_numpy(tensor):
-    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-
 # import from e2eshark/tools to allow running in current dir, for run through
 # run.pl, commutils is symbolically linked to allow any rundir to work
 sys.path.insert(0, "../../../tools/stubs")
-from commonutils import E2ESHARK_CHECK_DEF
+from commonutils import E2ESHARK_CHECK_DEF, to_numpy
 
 # Create an instance of it for this test
 E2ESHARK_CHECK = dict(E2ESHARK_CHECK_DEF)

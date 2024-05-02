@@ -80,3 +80,7 @@ def postProcess(e2esharkDict):
     else:
         postprocess_output = test_output
     return postprocess_output
+
+# used for image inputs for onnx vision models
+def to_numpy(tensor):
+    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
