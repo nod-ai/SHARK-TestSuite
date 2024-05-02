@@ -5,9 +5,7 @@ onnx
 onnxruntime
 transformers
 huggingface-cli
-pillow
 sentencepiece
-torchvision
 accelerate
 auto-gptq
 optimum
