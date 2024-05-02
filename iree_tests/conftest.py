@@ -377,7 +377,8 @@ class IreeCompileRunItem(pytest.Item):
     def test_compile(self):
         compile_env = os.environ.copy()
         compile_env["SPEC_LOCATION"] = os.getenv("SPEC_LOCATION", default=self.test_cwd)
-        proc = subprocess.run(' '.join(self.compile_args), env=compile_env, shell=True, capture_output=True, cwd=self.test_cwd)
+        cmd = subprocess.list2cmdline(self.compile_args)
+        proc = subprocess.run(cmd, env=compile_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeCompileException(proc, self.test_cwd)
 
