@@ -14,8 +14,7 @@
       "--iree-llvmgpu-enable-prefetch=true",
       "--iree-opt-data-tiling=false",
       "--iree-codegen-gpu-native-math-precision=true",
-      "--iree-codegen-llvmgpu-use-vector-distribution",
-      "--iree-preprocessing-pass-pipeline=builtin.module(iree-preprocessing-transpose-convolution-pipeline, util.func(iree-preprocessing-pad-to-intrinsics))"
+      "--iree-codegen-llvmgpu-use-vector-distribution"
     ],
     "iree_run_module_flags": [
       "--device=hip",
