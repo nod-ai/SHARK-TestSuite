@@ -383,7 +383,9 @@ class IreeCompileRunItem(pytest.Item):
             raise IreeCompileException(proc, self.test_cwd)
 
     def test_run(self):
-        proc = subprocess.run(self.run_args, capture_output=True, cwd=self.test_cwd)
+        run_env = os.environ.copy()
+        cmd = subprocess.list2cmdline(self.run_args)
+        proc = subprocess.run(cmd, env=run_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeRunException(proc, self.test_cwd, self.compile_args)
 
