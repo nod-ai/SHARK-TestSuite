@@ -1,3 +1,5 @@
+-r https://raw.githubusercontent.com/llvm/torch-mlir/main/requirements.txt
+-r https://raw.githubusercontent.com/llvm/torch-mlir/main/torchvision-requirements.txt
 tabulate
 simplejson
 ml_dtypes
@@ -16,5 +18,3 @@ torch-mlir
 # install nightly build of iree-compiler and iree-runtime
 iree-compiler -f https://iree.dev/pip-release-links.html
 iree-runtime -f https://iree.dev/pip-release-links.html
--r https://raw.githubusercontent.com/llvm/torch-mlir/main/requirements.txt
--r https://raw.githubusercontent.com/llvm/torch-mlir/main/torchvision-requirements.txt
