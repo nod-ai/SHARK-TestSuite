@@ -379,7 +379,7 @@ class IreeCompileRunItem(pytest.Item):
         compile_env["IREE_TEST_PATH_EXTENSION"] = os.getenv("IREE_TEST_PATH_EXTENSION", default=self.test_cwd)
         path_extension = compile_env["IREE_TEST_PATH_EXTENSION"]
         cmd = subprocess.list2cmdline(self.compile_args)
-        cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
+        cmd = cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
         proc = subprocess.run(cmd, env=compile_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeCompileException(proc, self.test_cwd)
@@ -444,6 +444,10 @@ class IreeRunException(Exception):
             outs = process.stdout.decode("utf-8")
         except:
             outs = str(process.stdout)  # Decode error or other: best we can do.
+        
+        compile_cmd = subprocess.list2cmdline(compile_args)
+        common_files_path = os.getenv("IREE_TEST_PATH_EXTENSION", default=cwd)
+        compile_cmd = compile_cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{common_files_path}")
 
         super().__init__(
             f"Error invoking iree-run-module\n"
@@ -451,7 +455,7 @@ class IreeRunException(Exception):
             f"Stderr diagnostics:\n{errs}\n"
             f"Stdout diagnostics:\n{outs}\n"
             f"Compiled with:\n"
-            f"  cd {cwd} && {' '.join(compile_args)}\n\n"
+            f"  cd {cwd} && {compile_cmd}\n\n"
             f"Run with:\n"
             f"  cd {cwd} && {process.args}\n\n"
         )
