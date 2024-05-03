@@ -377,8 +377,8 @@ class IreeCompileRunItem(pytest.Item):
     def test_compile(self):
         compile_env = os.environ.copy()
         compile_env["IREE_TEST_PATH_EXTENSION"] = os.getenv("IREE_TEST_PATH_EXTENSION", default=self.test_cwd)
-        os.environ["IREE_TEST_PATH_EXTENSION"] = compile_env["IREE_TEST_PATH_EXTENSION"]
         cmd = subprocess.list2cmdline(self.compile_args)
+        cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{compile_env["IREE_TEST_PATH_EXTENSION"]}")
         proc = subprocess.run(cmd, env=compile_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeCompileException(proc, self.test_cwd)
@@ -418,9 +418,6 @@ class IreeCompileException(Exception):
             errs = process.stderr.decode("utf-8")
         except:
             errs = str(process.stderr)  # Decode error or other: best we can do.
-        
-        path_extension = os.getenv("IREE_TEST_PATH_EXTENSION")
-        process.args.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
 
         super().__init__(
             f"Error invoking iree-compile\n"
