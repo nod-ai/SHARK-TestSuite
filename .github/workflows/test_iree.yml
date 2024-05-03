@@ -160,7 +160,7 @@ jobs:
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
       IREE_TEST_FILES: ~/iree_tests_cache
-      SPEC_LOCATION: ${{ github.workspace }}/iree_tests/specs
+      IREE_TEST_PATH_EXTENSION: ${{ github.workspace }}/iree_tests/specs
     steps:
       - name: "Checking out repository"
         uses: actions/checkout@v4
