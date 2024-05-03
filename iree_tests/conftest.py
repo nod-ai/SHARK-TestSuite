@@ -423,7 +423,7 @@ class IreeCompileException(Exception):
             f"Error code: {process.returncode}\n"
             f"Stderr diagnostics:\n{errs}\n\n"
             f"Invoked with:\n"
-            f"  cd {cwd} && {' '.join(process.args)}\n\n"
+            f"  cd {cwd} && {process.args}\n\n"
         )
 
 
@@ -451,7 +451,7 @@ class IreeRunException(Exception):
             f"Compiled with:\n"
             f"  cd {cwd} && {' '.join(compile_args)}\n\n"
             f"Run with:\n"
-            f"  cd {cwd} && {' '.join(process.args)}\n\n"
+            f"  cd {cwd} && {process.args}\n\n"
         )
 
 
