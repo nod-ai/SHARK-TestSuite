@@ -103,8 +103,6 @@ def run_tests(test_list, config, dir_name, cache_dir_name, no_artifacts, verbose
             os.mkdir(log_dir)
         # set cache directory for the individual test
         cache_dir = parent_cache_dir + t.unique_name + "/"
-        if not os.path.exists(cache_dir):
-            os.mkdir(cache_dir)
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args

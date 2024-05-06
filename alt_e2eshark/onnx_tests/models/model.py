@@ -6,6 +6,7 @@
 import os
 import numpy
 import onnx
+import torch
 from onnxruntime.tools.onnx_model_utils import make_dim_param_fixed, fix_output_shapes
 from e2e_testing import azutils
 from e2e_testing.framework import OnnxModelInfo
@@ -32,6 +33,19 @@ register_test(AzureDownloadableModel, "RAFT_vaiq_int8")
 register_test(AzureDownloadableModel, "pytorch-3dunet_vaiq_int8")
 register_test(AzureDownloadableModel, "FCN_vaiq_int8")
 register_test(AzureDownloadableModel, "u-net_brain_mri_vaiq_int8")
+
+
+class SampleModelWithPostprocessing(AzureDownloadableModel):
+    def apply_postprocessing(self, output: TestTensors):
+        processed_outputs = []
+        for d in output.to_torch().data:
+            processed_outputs.append(
+                torch.sort(torch.topk(torch.nn.functional.softmax(d, 1), 2)[1])[0]
+            )
+        return TestTensors(processed_outputs)
+
+
+register_test(SampleModelWithPostprocessing, "resnet50_vaiq_int8")
 
 
 class Opt125MAWQModelInfo(AzureDownloadableModel):
