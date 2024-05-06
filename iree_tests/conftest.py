@@ -322,6 +322,10 @@ class IreeCompileRunItem(pytest.Item):
         self.run_args.append(f"--flagfile={self.spec.data_flagfile_name}")
 
     def runtest(self):
+        # TODO(scotttodd): log files needed by the test (remote files / git LFS)
+        #     it should be easy to copy/paste commands from CI logs to get both
+        #     the test files and the flags used with them
+
         # We want to test two phases: 'compile', and 'run'.
         # A test can be marked as expected to fail at either stage, with these
         # possible outcomes:
