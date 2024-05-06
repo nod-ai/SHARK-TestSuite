@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import argparse
 import re
+import logging
 
 # append alt_e2eshark dir to path to allow importing without explicit pythonpath management
 TEST_DIR = Path(__file__).parent
@@ -58,9 +59,9 @@ def main(args):
             test for test in test_list if re.match(args.test_filter, test.unique_name)
         ]
 
-    # logging setup
+    # TODO: logging setup
 
-    # staging setup
+    # TODO: staging setup
 
     run_tests(test_list, config, args.rundirectory, args.no_artifacts, args.verbose)
 
@@ -73,53 +74,102 @@ def run_tests(test_list, config, dir_name, no_artifacts, verbose):
     # set up a parent log directory to store results
     if not os.path.exists(parent_log_dir):
         os.mkdir(parent_log_dir)
-    print(parent_log_dir)
+    num_passes = 0
 
     for t in test_list:
+
+        if verbose:
+            print(f"running test {t.unique_name}...")
+
         # set log directory for the individual test
         log_dir = parent_log_dir + t.unique_name + "/"
-        print(log_dir)
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
 
-        # build an instance of the test class
-        inst = t.model_constructor(log_dir)
+        try:
+            # TODO: convert staging to an Enum and figure out how to specify staging from args
 
-        # generate inputs from the test instance
-        inputs = inst.construct_inputs()
-        inputs.save_to(log_dir + "input")
+            # set up test
+            stage = "model_info_setup"
+            # build an instance of the test class
+            inst = t.model_constructor(log_dir)
+            # generate inputs from the test instance
+            inputs = inst.construct_inputs()
+            inputs.save_to(log_dir + "input")
 
-        # run native inference
-        golden_outputs = inst.forward(inputs)
-        golden_outputs.save_to(log_dir + "golden_output")
+            # run native inference
+            stage = "native_inference"
+            golden_outputs_raw = inst.forward(inputs)
+            golden_outputs_raw.save_to(log_dir + "golden_output")
 
-        artifact_save_to = None if no_artifacts else log_dir
-        # generate mlir from the instance using the config
-        mlir_module, func_name = config.mlir_import(inst, save_to=artifact_save_to)
-        # compile mlir_module using config (calls backend compile)
-        buffer = config.compile(mlir_module, save_to=artifact_save_to)
-        # run inference with the compiled module
-        outputs = config.run(buffer, inputs, func_name=func_name)
+            # generate mlir from the instance using the config
+            stage = "mlir_import"
+            artifact_save_to = None if no_artifacts else log_dir
+            mlir_module, func_name = config.mlir_import(inst, save_to=artifact_save_to)
 
-        # store outputs
-        outputs.save_to(log_dir + "output")
+            # compile mlir_module using config (calls backend compile)
+            stage = "compilation"
+            buffer = config.compile(mlir_module, save_to=artifact_save_to)
 
-        # model-specific post-processing:
-        golden_outputs = inst.apply_postprocessing(golden_outputs)
-        outputs = inst.apply_postprocessing(outputs)
+            # run inference with the compiled module
+            stage = "compiled_inference"
+            outputs_raw = config.run(buffer, inputs, func_name=func_name)
+            outputs_raw.save_to(log_dir + "output")
+
+            # apply model-specific post-processing:
+            stage = "post-processing"
+            golden_outputs = inst.apply_postprocessing(golden_outputs_raw)
+            outputs = inst.apply_postprocessing(outputs_raw)
+        except Exception as e:
+            log_exception(e, log_dir, stage, t.unique_name, verbose)
+            continue
 
         # store the results
         result = TestResult(
             name=t.unique_name, input=inputs, gold_output=golden_outputs, output=outputs
         )
         # log the results
-        log_result(result, log_dir, [1e-4, 1e-4])
+        test_passed = log_result(result, log_dir, [1e-4, 1e-4])
+        num_passes += int(test_passed)
+        if verbose:
+            to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
+            print(to_print)
+        elif not test_passed:
+            print(f"FAILED: {t.unique_name}")
+
+    print("\nTest Summary:")
+    print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
+    print(f"results stored in {parent_log_dir}")
 
 
 def log_result(result, log_dir, tol):
-    summary = summarize_result(result, tol)
+    summary = result_comparison(result, tol)
+    num_match = 0
+    num_total = 0
+    for s in summary:
+        num_match += s.sum().item()
+        num_total += s.nelement()
+    percent_correct = num_match / num_total
     with open(log_dir + "inference_comparison.log", "w+") as f:
-        f.write(f"matching values with (rtol,atol) = {tol}: {summary}\n{result}")
+        f.write(
+            f"matching values with (rtol,atol) = {tol}: {num_match} of {num_total} = {percent_correct*100}%\n"
+        )
+        f.write(f"Test Result:\n{result}")
+    return num_match == num_total
+
+
+def log_exception(e: Exception, path: str, stage: str, name: str, verbose: bool):
+    log_filename = path + stage + ".log"
+    base_str = f"Failed test at stage {stage} with exception:\n{e}\n"
+    with open(log_filename, "w") as f:
+        f.write(base_str)
+        if verbose:
+            print(f"\tFAILED ({stage})")
+            import traceback
+
+            traceback.print_exception(e, file=f)
+        else:
+            print(f"FAILED: {name}")
 
 
 def _get_argparse():

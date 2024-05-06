@@ -12,3 +12,11 @@ import os
 
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
+
+
+class QuantizedRAFTModel(OnnxModelInfo):
+    def construct_model(self):
+        return super().construct_model()
+
+
+register_test(QuantizedRAFTModel, "RAFT_vaiq_int8")

@@ -107,7 +107,7 @@ class TestResult(NamedTuple):
     output: TestTensors
 
 
-def summarize_result(test_result: TestResult, tol):
+def result_comparison(test_result: TestResult, tol):
     output = test_result.output.to_torch().data
     gold = test_result.gold_output.to_torch().data
     if len(output) != len(gold):
@@ -117,4 +117,4 @@ def summarize_result(test_result: TestResult, tol):
     match = []
     for i in range(len(output)):
         match.append(torch.isclose(output[i].to(dtype=gold[i].dtype), gold[i], *tol))
-    return TestTensors(tuple(match))
+    return match
