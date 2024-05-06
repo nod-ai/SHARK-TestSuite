@@ -15,7 +15,7 @@ from typing import Tuple
 REDUCE_TO_LINALG_PIPELINE = [
     "torch-lower-to-backend-contract",
     "func.func(cse, canonicalize)",
-    "func.func(convert-torch-to-linalg)",
+    "torch-backend-to-linalg-on-tensors-backend-pipeline",
 ]
 
 
