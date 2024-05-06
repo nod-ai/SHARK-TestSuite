@@ -20,42 +20,39 @@ class BackendBase(abc.ABC):
         """specifies how to compile an MLIR Module"""
 
     @abc.abstractmethod
-    def load(self, artifact: CompiledArtifact) -> Invoker:
-        """loads the compiled artifact"""
+    def load(self, artifact: CompiledArtifact, func_name: str) -> Invoker:
+        """loads the function with name func_name from compiled artifact. This method should return a function callable from python."""
 
 
 from iree import compiler as ireec
 from iree import runtime as ireert
-from torch_mlir.passmanager import PassManager
 
 
 class SimpleIREEBackend(BackendBase):
 
-    def compile(self, module, *, path: str = None):
-        pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
-        with module.context as ctx:
-            pm = PassManager.parse(pipeline)
-            pm.run(module.operation)
-        if path:
-            with open(path + "import.torch.mlir", "w") as f:
-                f.write(str(module))
+    def __init__(self, *, hal_target_backend="llvm-cpu"):
+        self.hal_target_backend = hal_target_backend
+
+    def compile(self, module, *, save_to: str = None):
+        # compile to a vmfb for llvm-cpu
         b = ireec.tools.compile_str(
-            str(module), input_type="AUTO", target_backends=["llvm-cpu"]
+            str(module), input_type="AUTO", target_backends=[self.hal_target_backend]
         )
-        if path:
-            with open(path + "compiled_model.vmfb", "wb") as f:
+        # log the vmfb
+        if save_to:
+            with open(save_to + "compiled_model.vmfb", "wb") as f:
                 f.write(b)
         return b
 
-    def load(self, artifact):
+    def load(self, artifact, *, func_name="main"):
         config = ireert.Config("local-task")
         ctx = ireert.SystemContext(config=config)
         vm_module = ireert.VmModule.copy_buffer(ctx.instance, artifact)
         ctx.add_vm_module(vm_module)
 
-        def func(x, *, name="main"):
+        def func(x):
             x = x.data
-            device_array = ctx.modules.module[name](*x)
+            device_array = ctx.modules.module[func_name](*x)
             if isinstance(device_array, tuple):
                 np_array = []
                 for d in device_array:

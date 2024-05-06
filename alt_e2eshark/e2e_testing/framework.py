@@ -33,7 +33,7 @@ def get_sample_inputs_for_onnx_model(model_path):
 
 
 class OnnxModelInfo:
-    """Stores information about an onnx test: the filepath to model.onnx, and how to construct/download it."""
+    """Stores information about an onnx test: the filepath to model.onnx, how to construct/download it, and how to construct sample inputs for a test run."""
 
     def __init__(
         self, onnx_model_path: str, dim_params: Optional[Dict[str, int]] = None

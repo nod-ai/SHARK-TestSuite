@@ -9,6 +9,7 @@ from torch_mlir.dialects import torch as torch_d
 from torch_mlir.ir import Context
 from e2e_testing.backends import BackendBase
 from e2e_testing.framework import TestConfig, OnnxModelInfo
+from torch_mlir.passmanager import PassManager
 
 
 class OnnxTestConfig(TestConfig):
@@ -18,23 +19,36 @@ class OnnxTestConfig(TestConfig):
         self.log_dir = log_dir
         self.backend = backend
 
-    def mlir_import(self, model_info: OnnxModelInfo):
+    def mlir_import(self, model_info: OnnxModelInfo, *, save_to: str = None):
         model = onnx.load(model_info.model)
-        model = onnx.shape_inference.infer_shapes(model)
-
+        shaped_model = onnx.shape_inference.infer_shapes(model, data_prop=True)
+        func_name = shaped_model.graph.name
         context = Context()
         torch_d.register_dialect(context)
-        model_info = onnx_importer.ModelInfo(model)
+        model_info = onnx_importer.ModelInfo(shaped_model)
         m = model_info.create_module(context=context)
         imp = onnx_importer.NodeImporter.define_function(
             model_info.main_graph, m.operation
         )
         imp.import_all()
-        return m
+        # log imported IR
+        if save_to:
+            with open(save_to + "model.torch_onnx.mlir", "w") as f:
+                f.write(str(m))
+        # convert imported torch-onnx ir to torch
+        pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
+        with m.context as ctx:
+            pm = PassManager.parse(pipeline)
+            pm.run(m.operation)
+        # log torch-mlir IR
+        if save_to:
+            with open(save_to + "model.torch.mlir", "w") as f:
+                f.write(str(m))
+        return m, func_name
 
-    def compile(self, mlir_module, *, path: str = None):
-        return self.backend.compile(mlir_module, path=path)
+    def compile(self, mlir_module, *, save_to: str = None):
+        return self.backend.compile(mlir_module, save_to=save_to)
 
-    def run(self, artifact, inputs):
-        func = self.backend.load(artifact)
+    def run(self, artifact, inputs, *, func_name="main"):
+        func = self.backend.load(artifact, func_name=func_name)
         return func(inputs)
