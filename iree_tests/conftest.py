@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 import argparse
+import logging
 import pyjson5
 import os
 import pytest
@@ -109,8 +110,9 @@ def pytest_sessionstart(session):
 
 
 def pytest_collect_file(parent, file_path):
-    if (not file_path.name.endswith("_spec.mlir") 
-        and (file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc"))):
+    if not file_path.name.endswith("_spec.mlir") and (
+        file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc")
+    ):
         return MlirFile.from_parent(parent, path=file_path)
 
 # --------------------------------------------------------------------------- #
@@ -380,6 +382,13 @@ class IreeCompileRunItem(pytest.Item):
         path_extension = compile_env["IREE_TEST_PATH_EXTENSION"]
         cmd = subprocess.list2cmdline(self.compile_args)
         cmd = cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
+
+        # TODO(scotttodd): expand flagfile(s)
+        logging.getLogger().info(
+            f"Launching compile command:\n"  #
+            f"cd {self.test_cwd} && {cmd}"
+        )
+
         proc = subprocess.run(cmd, env=compile_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeCompileException(proc, self.test_cwd)
@@ -387,6 +396,13 @@ class IreeCompileRunItem(pytest.Item):
     def test_run(self):
         run_env = os.environ.copy()
         cmd = subprocess.list2cmdline(self.run_args)
+
+        # TODO(scotttodd): expand flagfile(s)
+        logging.getLogger().info(
+            f"Launching run command:\n"  #
+            f"cd {self.test_cwd} && {cmd}"
+        )
+
         proc = subprocess.run(cmd, env=run_env, shell=True, capture_output=True, cwd=self.test_cwd)
         if proc.returncode != 0:
             raise IreeRunException(proc, self.test_cwd, self.compile_args)
@@ -444,7 +460,7 @@ class IreeRunException(Exception):
             outs = process.stdout.decode("utf-8")
         except:
             outs = str(process.stdout)  # Decode error or other: best we can do.
-        
+
         compile_cmd = subprocess.list2cmdline(compile_args)
         common_files_path = os.getenv("IREE_TEST_PATH_EXTENSION", default=cwd)
         compile_cmd = compile_cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{common_files_path}")
