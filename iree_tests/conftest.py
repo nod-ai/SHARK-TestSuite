@@ -378,7 +378,9 @@ class IreeCompileRunItem(pytest.Item):
 
     def test_compile(self):
         compile_env = os.environ.copy()
-        compile_env["IREE_TEST_PATH_EXTENSION"] = os.getenv("IREE_TEST_PATH_EXTENSION", default=self.test_cwd)
+        compile_env["IREE_TEST_PATH_EXTENSION"] = os.getenv(
+            "IREE_TEST_PATH_EXTENSION", default=str(self.test_cwd)
+        )
         path_extension = compile_env["IREE_TEST_PATH_EXTENSION"]
         cmd = subprocess.list2cmdline(self.compile_args)
         cmd = cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
