@@ -17,7 +17,10 @@ sys.path.append(TEST_DIR)
 from e2e_testing.framework import *
 
 # import frontend test configs:
-from e2e_testing.test_configs.onnxconfig import OnnxTestConfig
+from e2e_testing.test_configs.onnxconfig import (
+    OnnxTestConfig,
+    REDUCE_TO_LINALG_PIPELINE,
+)
 
 # import backend
 from e2e_testing.backends import SimpleIREEBackend
@@ -47,8 +50,9 @@ def main(args):
     # setup config
     if args.framework != "onnx":
         raise NotImplementedError("only onnx frontend supported now")
+    pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
     config = OnnxTestConfig(
-        str(TEST_DIR), SimpleIREEBackend(hal_target_backend=args.backend)
+        str(TEST_DIR), SimpleIREEBackend(hal_target_backend=args.backend), pipeline
     )
     # get test list
     # TODO: allow for no-run/mark xfails
@@ -63,17 +67,29 @@ def main(args):
 
     # TODO: staging setup
 
-    run_tests(test_list, config, args.rundirectory, args.no_artifacts, args.verbose)
+    run_tests(
+        test_list,
+        config,
+        args.rundirectory,
+        args.cachedir,
+        args.no_artifacts,
+        args.verbose,
+    )
 
 
-def run_tests(test_list, config, dir_name, no_artifacts, verbose):
+def run_tests(test_list, config, dir_name, cache_dir_name, no_artifacts, verbose):
     """runs tests in test_list based on config"""
     # TODO: multi-process, argparse, setup exception handling and logging
 
-    parent_log_dir = str(TEST_DIR) + "/" + dir_name + "/"
     # set up a parent log directory to store results
+    parent_log_dir = str(TEST_DIR) + "/" + dir_name + "/"
     if not os.path.exists(parent_log_dir):
         os.mkdir(parent_log_dir)
+    # set up a parent cache directory to store results
+    parent_cache_dir = cache_dir_name
+    if not os.path.exists(parent_cache_dir):
+        os.mkdir(parent_cache_dir)
+
     num_passes = 0
 
     for t in test_list:
@@ -85,6 +101,10 @@ def run_tests(test_list, config, dir_name, no_artifacts, verbose):
         log_dir = parent_log_dir + t.unique_name + "/"
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
+        # set cache directory for the individual test
+        cache_dir = parent_cache_dir + t.unique_name + "/"
+        if not os.path.exists(cache_dir):
+            os.mkdir(cache_dir)
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
@@ -92,7 +112,7 @@ def run_tests(test_list, config, dir_name, no_artifacts, verbose):
             # set up test
             stage = "model_info_setup"
             # build an instance of the test class
-            inst = t.model_constructor(log_dir)
+            inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
             # generate inputs from the test instance
             inputs = inst.construct_inputs()
             inputs.save_to(log_dir + "input")
@@ -106,6 +126,12 @@ def run_tests(test_list, config, dir_name, no_artifacts, verbose):
             stage = "mlir_import"
             artifact_save_to = None if no_artifacts else log_dir
             mlir_module, func_name = config.mlir_import(inst, save_to=artifact_save_to)
+
+            # apply torch-mlir lowerings
+            stage = "torch_mlir"
+            mlir_module = config.apply_torch_mlir_passes(
+                mlir_module, save_to=artifact_save_to
+            )
 
             # compile mlir_module using config (calls backend compile)
             stage = "compilation"
@@ -187,7 +213,6 @@ def _get_argparse():
     parser.add_argument(
         "-f",
         "--framework",
-        nargs="*",
         choices=["pytorch", "onnx", "tensorflow"],
         default="onnx",
         help="Run tests for given framework(s)",
@@ -223,7 +248,6 @@ def _get_argparse():
     parser.add_argument(
         "-g",
         "--groups",
-        nargs="*",
         choices=["operators", "combinations", "models"],
         default="all",
         help="Run given group of tests",
@@ -231,7 +255,6 @@ def _get_argparse():
     parser.add_argument(
         "-t",
         "--test-filter",
-        nargs="*",
         help="Run given specific test(s) only",
     )
     parser.add_argument(
@@ -248,6 +271,11 @@ def _get_argparse():
     )
 
     # logging
+    parser.add_argument(
+        "--cachedir",
+        help="Please select a dir with large free space to cache all torch, hf, turbine_tank model data",
+        required=True,
+    )
     parser.add_argument(
         "-v",
         "--verbose",
@@ -267,11 +295,6 @@ def _get_argparse():
         action="store_true",
         default=False,
     )
-    # parser.add_argument(
-    #     "--cachedir",
-    #     help="Please select a dir with large free space to cache all torch, hf, turbine_tank model data",
-    #     required=True,
-    # )
     # parser.add_argument(
     #     "-d",
     #     "--todtype",

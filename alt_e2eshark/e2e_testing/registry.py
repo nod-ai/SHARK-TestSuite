@@ -22,6 +22,6 @@ def register_test(test_class: type, test_name: str):
     GLOBAL_TEST_LIST.append(
         Test(
             unique_name=test_name,
-            model_constructor=lambda path: test_class(path),
+            model_constructor=test_class,
         )
     )

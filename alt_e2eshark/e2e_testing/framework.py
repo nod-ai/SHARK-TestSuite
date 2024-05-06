@@ -35,10 +35,10 @@ def get_sample_inputs_for_onnx_model(model_path):
 class OnnxModelInfo:
     """Stores information about an onnx test: the filepath to model.onnx, how to construct/download it, and how to construct sample inputs for a test run."""
 
-    def __init__(
-        self, onnx_model_path: str, dim_params: Optional[Dict[str, int]] = None
-    ):
+    def __init__(self, name: str, onnx_model_path: str, cache_dir: str):
+        self.name = name
         self.model = onnx_model_path + "model.onnx"
+        self.cache_dir = cache_dir
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
@@ -81,13 +81,17 @@ CompiledArtifact = TypeVar("CompiledArtifact")
 class TestConfig(abc.ABC):
 
     @abc.abstractmethod
-    def mlir_import(self, program: TestModel) -> Module:
+    def mlir_import(self, program: TestModel, *, save_to: str) -> Module:
         """imports the test model to an MLIR Module"""
 
     @abc.abstractmethod
-    def compile(self, mlir_module: Module) -> CompiledArtifact:
+    def compile(self, mlir_module: Module, *, save_to: str) -> CompiledArtifact:
         """converts the test program to a compiled artifact"""
         pass
+
+    @abc.abstractmethod
+    def apply_torch_mlir_passes(self, mlir_module: Module, *, save_to: str) -> Module:
+        """applies a (possibly empty) pass pipeline internal to self to provided mlir module"""
 
     @abc.abstractmethod
     def run(self, artifact: CompiledArtifact, input: TestTensors) -> TestTensors:
