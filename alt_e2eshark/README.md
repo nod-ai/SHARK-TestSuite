@@ -1,0 +1,126 @@
+ # e2eshark framework-to-iree-to-inference tests
+
+ This test suite enables developers to add small (operator level) to large (full model)
+ end-2-end tests that compare output of running a model in a Framework 
+ (e.g. Pytorch, ONNX) to the output of running the IREE-compiled artefact of 
+ the same model on a target backend (e.g. CPU, AIE). If the difference in outputs
+ is within a tolerable limit, then the test is reported as have passed, else the 
+ test is reported as have failed. In case of a failing test, the stage of the 
+ failure is reported. 
+
+ The test suite is organized starting with a framework name: pytorch, tensorflow, onnx. 
+ For each framework category, multiple modes are tested. 
+
+ - pytroch : starting model is a pytorch model
+ - tensorflow : stating model is a tensorflow model (planned for later)
+ - onnx : starting model is an onnx model generated using onnx python API or a an existing onnx model (zipped)
+ 
+ Following, upto three, modes are supported based upon what is possible for a framework:
+
+ - direct: Framework -> Framework graph (e.g. Torch Fx) -> Torch MLIR -> Compiled artefact -> Run target backend
+ - onnx: Framework -> ONNX -> Import as Torch ONNX in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
+ - ort: Framework -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend (planned for later)
+
+ If Framework is 'onnx', then mode 'direct' will mean same as 'onnx'. For onnx/operators and onnx/combinations,  
+ the onnx model should be created using ONNX Python APIs. For onnx/models, a prebuilt onnx model should be checked 
+ in as a zip file.
+ 
+ The target backend can be any IREE supported backend: llvm-cpu, amd-aie etc.
+
+## Contents
+ The contents are as below. Substitute 'Framework' by one of: pytorch, tensoflow, onnx
+ - requirements.txt : 'pip install -r requirements.txt' to install needed additional 
+                       packages not already in your venv or conda. If you have a venv or conda 
+                       environment for building torch mlir or iree, you can install 
+                       this on top of that. Also, peridically, run this step to keep packages current. 
+                       Sometimes you may need to force installation: 'pip install --force -r requirements.txt'
+ - run.py : Run 'python run.py --help' to learn about the script. This is the script to 
+            run a specific test, all tests in a framework, all frameworks as per choice of a user
+ - Framework/operators: This has operator level tests. Example: pytorch/operators/conv2d
+ - Framework/combinations: This has small tests testing combination of operators such as 
+                           pytorch/combinations/mlp testing a multi-layer perceptron which 
+                           has torch.linear followed by torch.relu and optionally repeated a few times
+ - Framework/models: This has full model test. Since this is full model test, you may need 
+                     necesary permsisions to download a model such as for llama2 you will 
+                     need hugging face token. You can either run 'huggingface-cli login' and 
+                     enter the HF token before launching the run.py or set an environment variable 
+                     named HF_TOKEN or provide it as "HF_TOKEN='token' python run.py 'options'"
+ - gold/passed.txt : This has list of tests that are passing as of today. If your check-in increases
+                     passing tests, please update this. After your changes in torch MLIR or IREE, 
+                     run all the tests upto inference and make sure that your are passing at least 
+                     at the level of gold/passed.txt
+ 
+ The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
+ cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
+ as per your choice. The default name for the run directory is 'test-run'.
+
+ Note that, you will be required to pass --cachedir argument to the run.py to point to a directory where 
+ model weights etc. from external model serving repositories such as from Torch Vision, Hugging Face etc.
+ will be downloaded. The downloaded data can be large, so set it to other than your home, 
+ preferably with 100 GB or more free space.
+
+## Setting up
+
+By default, a nightly build of torch_mlir and IREE is installed when you run:
+
+```bash
+python -m venv test_suite.venv /
+source test_suite.venv/bin/activate /
+pip install --upgrade pip /
+pip install -r ./requirements.txt
+```
+
+Therefore, you are not required to have a local build of either torch mlir or iree.
+
+However, if you want to test a local change in either torch mlir or iree, you can install local python packages to your venv as follows. 
+
+To install a local build of torch-mlir to your venv (this is written assuming the user is running a linux terminal):
+
+1. Make sure your venv is activated with 
+```bash
+source my_venv_directory/bin/activate
+```
+2. change directory to your torch-mlir repository
+```bash
+cd /path/to/torch-mlir
+```
+3. run the following command to build a python wheel for your torch-mlir build (note: this assumes your build directory is under the source directory with the name "build/")
+```bash
+TORCH_MLIR_CMAKE_BUILD_DIR=build/ TORCH_MLIR_CMAKE_ALREADY_BUILT=1 python setup.py bdist_wheel
+```
+4. install the wheel to your venv with:
+```bash
+pip install dist/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
+```
+(be sure the name of the wheel matches the one your previous script generated).
+
+If you re-build torch-mlir, you will need to repeat this process, so it is beneficial to debug torch-mlir failures using command line scripts first (with torch-mlir-opt), and once an issue is resolved, reinstall the local python and re-run the e2e test again. 
+
+TODO: local build of iree -> python packages. 
+
+## Adding a test
+
+For onnx framework tests, you add a test in one of the model.py files contained in '/e2eshark/onnx_tests/'.
+
+The OnnxModelInfo class simply requires that you define a function called "construct_model", which should define how to build the model.onnx file (be sure that the model.onnx file gets saved to your class' self.model, which should store the filepath to the model). 
+
+We provide a conveninece function for generating inputs by default, but to override this for an individual test, you can redefine "construct_inputs" for your test class. 
+
+Once a test class is generated, register the test with the test suite with:
+
+```python
+register_test(YourTestClassName,"name_of_test")
+```
+
+## Running a test
+
+Here is an example of running the test we made in the previous section with some commonly used flags:
+
+```bash
+python run.py --torchtolinalg --cachedir="../cache_dir" -t name_of_test
+```
+
+This will generate a new folder './test-run/name_of_test/' which contains some artifacts generated during the test. These artifacts can be used to run command line scripts to debug various failures. 
+
+
+
