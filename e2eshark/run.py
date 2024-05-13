@@ -14,40 +14,29 @@ from pathlib import Path
 import shutil
 import warnings
 import datetime
-from azure.storage.blob import BlobServiceClient
 import simplejson
 import json
 from multiprocessing import Manager
 from tools.aztestsetup import pre_test_onnx_models_azure_download
 from zipfile import ZipFile
+from _run_helper import (
+    getTestsList,
+    getTestKind,
+    changeToTestDir,
+    concatenateFiles,
+    loadE2eSharkCheckDictionary,
+    uploadToBlobStorage,
+    unzipONNXFile,
+    loadTorchSave,
+    getShapeString,
+    loadRawBinaryAsTorchSensor,
+    writeInferenceInputBinFile,
+    getTestsListFromFile,
+)
 
 # Need to allow invocation of run.py from anywhere
 sys.path.append(Path(__file__).parent)
 from tools.stubs.commonutils import applyPostProcessPipeline
-
-
-def getTestsList(frameworkname, test_types):
-    testsList = []
-    for test_type in test_types:
-        globpattern = frameworkname + "/" + test_type + "/*"
-        testsList += glob.glob(globpattern)
-    return testsList
-
-
-def changeToTestDir(run_dir):
-    try:
-        # If directory does not exist, make it
-        os.makedirs(run_dir, exist_ok=True)
-        os.chdir(run_dir)
-        return 0
-    except OSError as errormsg:
-        print(
-            "Could not make or change to test run directory",
-            run_dir,
-            " Error message: ",
-            errormsg,
-        )
-        return 1
 
 
 def launchCommand(args, scriptcommand, commandslog):
@@ -66,54 +55,6 @@ def launchCommand(args, scriptcommand, commandslog):
             errormsg,
         )
         return 1
-
-
-def concatenateFiles(inpfile1, inpfile2, outfile):
-    f1 = open(inpfile1, "r")
-    f2 = open(inpfile2, "r")
-    ofile = open(outfile, "w")
-    ofile.write(f1.read() + f2.read())
-    f1.close()
-    f2.close()
-    ofile.close()
-
-
-def loadE2eSharkCheckDictionary():
-    e2esharkDict = None
-    pklfilename = "E2ESHARK_CHECK.pkl"
-    if os.path.exists(pklfilename):
-        with open(pklfilename, "rb") as pkf:
-            e2esharkDict = pickle.load(pkf)
-    return e2esharkDict
-
-
-def uploadToBlobStorage(file_path, file_name, testName, uploadDict):
-    connection_string = os.getenv("AZURE_CONNECTION_STRING")
-    container_name = "e2esharkuserartifacts"
-
-    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    blob_client = blob_service_client.get_blob_client(
-        container=container_name, blob=file_name
-    )
-    blob = blob_client.from_connection_string(
-        conn_str=connection_string,
-        container_name=container_name,
-        blob_name=blob_client.blob_name,
-    )
-    # we check to see if we already uploaded the blob (don't want to duplicate)
-    if blob.exists():
-        print(f"model artifacts have already been uploaded for this blob name")
-        return
-    # upload to azure storage container e2esharkuserartifacts
-    with open(file_path, "rb") as data:
-        blob_client.upload_blob(data)
-    dict_value = uploadDict.get(testName)
-    if not dict_value:
-        uploadDict[testName] = [blob_client.url]
-    else:
-        dict_value.append(blob_client.url)
-        uploadDict[testName] = dict_value
-    return
 
 
 def logAndReturn(
@@ -151,143 +92,7 @@ def logAndReturn(
     return retval
 
 
-def unzipONNXFile(testName, abs_directory, unzipped_file_name):
-    # Look for any unzipped file and if there is not already an unzipped file
-    # then first time unzip it.
-    abs_unzip_file_name = abs_directory + "/" + unzipped_file_name
-    abs_zip_file_name = abs_unzip_file_name + ".zip"
-    # this test dir does not have a zipped test file, so nothing to do
-    if not os.path.exists(abs_zip_file_name):
-        return 0
-    # if not already unzipped, then
-    if not os.path.exists(abs_unzip_file_name):
-        if not os.access(abs_directory, os.W_OK):
-            print(
-                "The directory",
-                abs_directory,
-                "is not writeable. Could not unzip",
-                abs_zip_file_name,
-            )
-            return 1
-        with zipfile.ZipFile(abs_zip_file_name, "r") as zip_ref:
-            zip_ref.extractall(abs_directory)
-
-    return 0
-
-
-def getTestKind(testName):
-    # extract second last name in test name and if that is "models" and
-    # it may have zipped onnx files, unzip them if not already done so
-    second_last_name_inpath = os.path.split(os.path.split(testName)[0])[1]
-    return second_last_name_inpath
-
-
-def loadTorchSave(filename):
-    with open(filename, "rb") as f:
-        bindata = f.read()
-    buf = io.BytesIO(bindata)
-    loaded = torch.load(buf)
-    return loaded
-
-
-def getShapeString(torchtensor):
-    inputshape = list(torchtensor.shape)
-    inputshapestring = "x".join([str(item) for item in inputshape])
-    dtype = torchtensor.dtype
-    if dtype == torch.int64:
-        inputshapestring += "xi64"
-    elif dtype == torch.float32 or dtype == torch.float:
-        inputshapestring += "xf32"
-    elif dtype == torch.bfloat16 or dtype == torch.float16 or dtype == torch.int16:
-        inputshapestring += "xbf16"
-    elif dtype == torch.int8:
-        inputshapestring += "xi8"
-    elif dtype == torch.bool:
-        inputshapestring += "xi1"
-    else:
-        print("In getShapeString, found an unsupported data type", dtype)
-    return inputshapestring
-
-
-def unpackBytearray(barray, num_elem, dtype):
-    num_array = None
-    if dtype == torch.int64:
-        num_array = struct.unpack("q" * num_elem, barray)
-    elif dtype == torch.float32 or dtype == torch.float:
-        num_array = struct.unpack("f" * num_elem, barray)
-    elif dtype == torch.bfloat16:
-        num_array = struct.unpack("h" * num_elem, barray)
-        temptensor = torch.tensor(num_array, dtype=torch.int16)
-        rettensor = temptensor.view(dtype=torch.bfloat16)
-        return rettensor
-    elif dtype == torch.float16:
-        num_array = struct.unpack("h" * num_elem, barray)
-        temptensor = torch.tensor(num_array, dtype=torch.int16)
-        rettensor = temptensor.view(dtype=torch.float16)
-        return rettensor
-    elif dtype == torch.int32:
-        num_array = struct.unpack("l" * num_elem, barray)
-    elif dtype == torch.int16:
-        num_array = struct.unpack("h" * num_elem, barray)
-    elif dtype == torch.int8:
-        num_array = struct.unpack("b" * num_elem, barray)
-    elif dtype == torch.uint8:
-        num_array = struct.unpack("B" * num_elem, barray)
-    elif dtype == torch.bool:
-        num_array = struct.unpack("?" * num_elem, barray)
-    else:
-        print("In unpackBytearray, found an unsupported data type", dtype)
-    rettensor = torch.tensor(num_array, dtype=dtype)
-    return rettensor
-
-
-def loadRawBinaryAsTorchSensor(binaryfile, shape, dtype):
-    # Read the whole files as bytes
-    with open(binaryfile, "rb") as f:
-        binarydata = f.read()
-    # Number of elements in tensor
-    num_elem = torch.prod(torch.tensor(list(shape)))
-    # Total bytes
-    tensor_num_bytes = (num_elem * dtype.itemsize).item()
-    barray = bytearray(binarydata[0:tensor_num_bytes])
-    # for byte in barray:
-    #     print(f"{byte:02X}", end="")
-    rettensor = unpackBytearray(barray, num_elem, dtype)
-    reshapedtensor = rettensor.reshape(list(shape))
-    f.close()
-    return reshapedtensor
-
-
-def packTensor(modelinput):
-    mylist = modelinput.flatten().tolist()
-    dtype = modelinput.dtype
-    if dtype == torch.int64:
-        bytearr = struct.pack("%sq" % len(mylist), *mylist)
-    elif dtype == torch.float32 or dtype == torch.float:
-        bytearr = struct.pack("%sf" % len(mylist), *mylist)
-    elif dtype == torch.bfloat16 or dtype == torch.float16:
-        reinterprted = modelinput.view(dtype=torch.int16)
-        mylist = reinterprted.flatten().tolist()
-        bytearr = struct.pack("%sh" % len(mylist), *mylist)
-    elif dtype == torch.int16:
-        bytearr = struct.pack("%sh" % len(mylist), *mylist)
-    elif dtype == torch.int8:
-        bytearr = struct.pack("%sb" % len(mylist), *mylist)
-    elif dtype == torch.bool:
-        bytearr = struct.pack("%s?" % len(mylist), *mylist)
-    else:
-        print("In packTensor, found an unsupported data type", dtype)
-    return bytearr
-
-
-def writeInferenceInputBinFile(modelinput, modelinputbinfilename):
-    with open(modelinputbinfilename, "wb") as f:
-        bytearr = packTensor(modelinput)
-        f.write(bytearr)
-        f.close()
-
-
-def runTorchMLIRGeneration(
+def runOnnxToTorchMLIRGeneration(
     testName,
     modelname,
     mode,
@@ -303,39 +108,18 @@ def runTorchMLIRGeneration(
     cleanup,
     uploadDict,
     dateAndTime,
+    torch_mlir_pythonpath,
 ):
-    if args.verbose:
-        print("Running torch MLIR generation for", testName)
-    start = time.time()
-    curphase = phases[0]
-    if launchCommand(args, scriptcommand, commandslog):
-        print("Test", testName, "failed [" + curphase + "]")
-        end = time.time()
-        resultdict[curphase] = ["failed", end - start]
-        return logAndReturn(
-            commandslog,
-            timelog,
-            resultdict,
-            1,
-            uploadtestsList,
-            cleanup,
-            testName,
-            uploadDict,
-            dateAndTime,
-        )
-    end = time.time()
-    resultdict[curphase] = ["passed", end - start]
-    if mode == "onnx" or mode == "ort":
-        torch_mlir_pythonpath = (
-            SHARED_TORCH_MLIR_BUILD + "/tools/torch-mlir/python_packages/torch_mlir"
-        )
+
+    # If a torch mlit build is provided, use that else use iree-import-onnx
+    if SHARED_TORCH_MLIR_BUILD:
         # start phases[1]
         curphase = phases[1]
         # Import ONNX into torch MLIR as torch.operator custom OP
         torchonnxfilename = modelname + "." + args.todtype + ".torch-onnx.mlir"
         logfilename = curphase + ".log"
         scriptcommand = (
-            f"PYTHONPATH={torch_mlir_pythonpath} python -m torch_mlir.tools.import_onnx "
+            f"{torch_mlir_pythonpath} python -m torch_mlir.tools.import_onnx "
             + onnxfilename
             + " -o "
             + torchonnxfilename
@@ -374,8 +158,10 @@ def runTorchMLIRGeneration(
             )
             commandstring += "torch-backend-to-linalg-on-tensors-backend-pipeline)' "
         else:
-            commandstring += " -convert-torch-onnx-to-torch "
-
+            commandstring += " -pass-pipeline='builtin.module(func.func(convert-torch-onnx-to-torch),"
+            commandstring += (
+                "torch-lower-to-backend-contract,func.func(cse,canonicalize))' "
+            )
         # TORCH_MLIR_BUILD = path_config["TORCH_MLIR_BUILD"]
         # print(f"In RunTest - torch mlir build - {SHARED_TORCH_MLIR_BUILD}")
         scriptcommand = (
@@ -406,6 +192,111 @@ def runTorchMLIRGeneration(
             )
         end = time.time()
         resultdict[curphase] = ["passed", end - start]
+    else:
+        iree_import_onnx = "iree-import-onnx"
+        curphase = phases[1]
+        logfilename = curphase + ".log"
+        # if SHARED_IREE_BUILD:
+        # If local iree build provided use that instead of using the one installed
+        # in user's env
+        # TBD, pick from user's env later, for now use the env installed one
+        # iree_import_onnx = SHARED_IREE_BUILD + "/tools/" + iree_import_onnx
+        scriptcommand = (
+            iree_import_onnx
+            + " "
+            + onnxfilename
+            + " -o "
+            + torchmlirOutputfilename
+            + " 1> "
+            + logfilename
+            + " 2>&1"
+        )
+        start = time.time()
+        if launchCommand(args, scriptcommand, commandslog):
+            print("Test", testName, "failed [" + curphase + "]")
+            end = time.time()
+            resultdict[curphase] = ["failed", end - start]
+            return logAndReturn(
+                commandslog,
+                timelog,
+                resultdict,
+                1,
+                uploadtestsList,
+                cleanup,
+                testName,
+                uploadDict,
+                dateAndTime,
+            )
+        end = time.time()
+        resultdict[curphase] = ["passed", end - start]
+
+    return 0
+
+
+def runTorchMLIRGeneration(
+    testName,
+    modelname,
+    mode,
+    args,
+    phases,
+    scriptcommand,
+    commandslog,
+    timelog,
+    onnxfilename,
+    torchmlirOutputfilename,
+    resultdict,
+    uploadtestsList,
+    cleanup,
+    uploadDict,
+    dateAndTime,
+):
+    if args.verbose:
+        print("Running torch MLIR generation for", testName)
+
+    torch_mlir_pythonpath = ""
+    if SHARED_TORCH_MLIR_BUILD:
+        torch_mlir_pythonpath = f"PYHONPATH={SHARED_TORCH_MLIR_BUILD}/tools/torch-mlir/python_packages/torch_mlir"
+        scriptcommand = f"{torch_mlir_pythonpath} {scriptcommand}"
+
+    # Phase = 0, Run the model.py first
+    start = time.time()
+    curphase = phases[0]
+    if launchCommand(args, scriptcommand, commandslog):
+        print("Test", testName, "failed [" + curphase + "]")
+        end = time.time()
+        resultdict[curphase] = ["failed", end - start]
+        return logAndReturn(
+            commandslog,
+            timelog,
+            resultdict,
+            1,
+            uploadtestsList,
+            cleanup,
+            testName,
+            uploadDict,
+            dateAndTime,
+        )
+    end = time.time()
+    resultdict[curphase] = ["passed", end - start]
+    if mode == "onnx" or mode == "ort":
+        return runOnnxToTorchMLIRGeneration(
+            testName,
+            modelname,
+            mode,
+            args,
+            phases,
+            scriptcommand,
+            commandslog,
+            timelog,
+            onnxfilename,
+            torchmlirOutputfilename,
+            resultdict,
+            uploadtestsList,
+            cleanup,
+            uploadDict,
+            dateAndTime,
+            torch_mlir_pythonpath,
+        )
     return 0
 
 
@@ -445,10 +336,6 @@ def runCodeGeneration(
         + args.backend
         + " "
     )
-    if args.mode == "onnx" and args.torchtolinalg:
-        commandname += " --iree-input-type=tm_tensor"
-    else:
-        commandname += " --iree-input-type=torch"
     scriptcommand = (
         commandname
         + " "
@@ -673,7 +560,9 @@ def runInference(
             print(f"Gold reference[output[{i}]]:\n{goldoutput}\n", file=failedinflog)
             print(f"Inference Output[output[{i}]]:\n{infoutput}:\n", file=failedinflog)
             atol, rtol = getTolerances(args, infoutput.dtype)
-            diff = torch.abs(infoutput - goldoutput) <= (atol + rtol * torch.abs(goldoutput))
+            diff = torch.abs(infoutput - goldoutput) <= (
+                atol + rtol * torch.abs(goldoutput)
+            )
             print(f"Element-wise difference[output[{i}]]:\n{diff}\n", file=failedinflog)
             percentdiff = torch.sum(diff).item() / diff.nelement() * 100
             print(
@@ -755,7 +644,6 @@ def runTestUsingClassicalFlow(args_tuple):
     onnxfilename = ""
     if args.verbose:
         print(f"Running classical flow for test {testName}")
-
     # create a symlink to the utils file inside the test dir
     if not os.path.exists(utilspy):
         print(f"ERROR: {utilspy} file missing")
@@ -773,19 +661,29 @@ def runTestUsingClassicalFlow(args_tuple):
     if frameworkname == "pytorch":
         if mode == "turbine":
             stubrunmodelpy = toolsDirAbsPath + "/stubs/turbinemodel.py"
-            torchmlirOutputfilename = modelname + "." + args.todtype + ".pytorch" + torchmlirsuffix
+            torchmlirOutputfilename = (
+                modelname + "." + args.todtype + ".pytorch" + torchmlirsuffix
+            )
         else:
             stubrunmodelpy = toolsDirAbsPath + "/stubs/pytorchmodel.py"
             onnxfilename = modelname + "." + args.todtype + ".onnx"
-            torchmlirOutputfilename = modelname + "." + args.todtype + ".pytorch" + torchmlirsuffix
+            torchmlirOutputfilename = (
+                modelname + "." + args.todtype + ".pytorch" + torchmlirsuffix
+            )
             testargs += " --torchmlirimport " + args.torchmlirimport
     elif frameworkname == "onnx":
         # For onnx, dierct and onnx means same as direct generates/has onnx itself
         if mode == "direct" or mode == "turbine":
             mode = "onnx"
         stubrunmodelpy = toolsDirAbsPath + "/stubs/onnxmodel.py"
-        torchmlirOutputfilename = modelname + "." + args.todtype + ".onnx" + torchmlirsuffix
+        torchmlirOutputfilename = (
+            modelname + "." + args.todtype + ".onnx" + torchmlirsuffix
+        )
         onnxfilename = "model.onnx"
+        if args.run_as_static:
+            testargs += " --run_as_static "
+        if args.verbose:
+            testargs += " --verbose "
         if getTestKind(testName) == "models":
             onnxfilename = testAbsPath + "/model.onnx"
             # Create soft link to the model.onnx
@@ -1027,6 +925,9 @@ def runFrameworkTests(
     [uniqueTestList.append(test) for test in testsList if test not in uniqueTestList]
     if not uniqueTestList:
         return
+    if args.ci:
+        if "pytorch/models/vicuna-13b-v1.3" in uniqueTestList:
+            uniqueTestList.remove("pytorch/models/vicuna-13b-v1.3")
     uploadDict = Manager().dict({})
     dateAndTime = str(datetime.datetime.now(datetime.timezone.utc))
     tupleOfListArg = []
@@ -1040,11 +941,17 @@ def runFrameworkTests(
     if args.verbose:
         print("Following tests will be run:", uniqueTestList)
 
-    with Pool(poolSize, initializer, (TORCH_MLIR_BUILD, IREE_BUILD)) as p:
-        result = p.map_async(runTest, tupleOfListArg)
-        result.wait()
-        if args.verbose:
-            print("All tasks submitted to process pool completed")
+    if args.ci:
+        for i in range(0, len(tupleOfListArg)):
+            initializer(TORCH_MLIR_BUILD, IREE_BUILD)
+            runTest(tupleOfListArg[i])
+    else:
+        with Pool(poolSize, initializer, (TORCH_MLIR_BUILD, IREE_BUILD)) as p:
+            result = p.map_async(runTest, tupleOfListArg)
+            result.wait()
+            if args.verbose:
+                print("All tasks submitted to process pool completed")
+
     with open("upload_urls.json", "w") as convert_file:
         # convert_file.write(json.dumps(uploadDict._getvalue()))
         convert_file.write(
@@ -1054,13 +961,6 @@ def runFrameworkTests(
                 sort_keys=True,
             )
         )
-
-
-def convertNumToString(rows):
-    strrows = []
-    for row in rows:
-        strrows += [[str(i) for i in row]]
-    return strrows
 
 
 def getSummaryRows(listofstatusrows, listoftimerows, tableheader):
@@ -1163,7 +1063,7 @@ def generateReport(run_dir, testsList, args):
         print(statustable, file=statusf)
     with open(statustablepkl, "wb") as f:
         pickle.dump(statustablerows, f)
-    print(f"Generated status reoprt {statustablefile}")
+    print(f"Generated status report {statustablefile}")
 
     with open(timetablefile, "w") as timef:
         print(
@@ -1173,7 +1073,7 @@ def generateReport(run_dir, testsList, args):
         print(timetable, file=timef)
     with open(timetablepkl, "wb") as f:
         pickle.dump(timetablerows, f)
-    print(f"Generated time reoprt {timetablefile}")
+    print(f"Generated time report {timetablefile}")
 
     with open(summarytablefile, "w") as summaryf:
         print(
@@ -1183,7 +1083,7 @@ def generateReport(run_dir, testsList, args):
         print(summarytable, file=summaryf)
     with open(summarytablepkl, "wb") as f:
         pickle.dump(summarytabelerows, f)
-    print(f"Generated summary reoprt {summarytablefile}")
+    print(f"Generated summary report {summarytablefile}")
 
     with open(passlistfile, "w") as f:
         for items in passlist:
@@ -1227,16 +1127,6 @@ def checkBuild(run_dir, args):
             )
             sys.exit(1)
     return (TORCH_MLIR_BUILD, IREE_BUILD)
-
-
-def getTestsListFromFile(testlistfile):
-    testlist = []
-    if not os.path.exists(testlistfile):
-        print(f"The file {testlistfile} does not exist")
-    with open(testlistfile, "r") as tf:
-        testlist += tf.read().splitlines()
-    testlist = [item.strip().strip(os.sep) for item in testlist]
-    return testlist
 
 
 def main():
@@ -1288,7 +1178,6 @@ def main():
     parser.add_argument(
         "-c",
         "--torchmlirbuild",
-        required=True,
         help="Path to the torch-mlir build directory",
     )
     parser.add_argument(
@@ -1403,6 +1292,18 @@ def main():
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--run_as_static",
+        action="store_true",
+        default=False,
+        help="makes the dim_params for model.onnx static with param/value dict given in model.py",
+    )
+    parser.add_argument(
+        "--ci",
+        help="Adjusted behavior, so that CI works and artifacts are in right place",
+        action="store_true",
+        default=False,
+    )
 
     args = parser.parse_args()
     cache_dir = args.cachedir
@@ -1448,11 +1349,6 @@ def main():
     frameworks = args.frameworks
     TORCH_MLIR_BUILD, IREE_BUILD = checkBuild(run_dir, args)
     # assert
-    if TORCH_MLIR_BUILD == "":
-        print(
-            "ERROR: Torch MLIR build path is required to be set using --torchmlirbuild"
-        )
-        sys.exit(1)
 
     print("Starting e2eshark tests. Using", args.jobs, "processes")
     print("Cache Directory: " + cache_path)
@@ -1463,7 +1359,14 @@ def main():
 
     if args.verbose:
         print("Test run with arguments: ", vars(args))
-    print("Torch MLIR build:", TORCH_MLIR_BUILD)
+
+    if TORCH_MLIR_BUILD:
+        print("Torch MLIR build:", TORCH_MLIR_BUILD)
+    else:
+        print(
+            "Note: No Torch MLIR build provided using --torchmlirbuild. iree-import-onnx will be used to convert onnx to torch onnx mlir"
+        )
+
     if IREE_BUILD:
         print("IREE build:", IREE_BUILD)
     else:
@@ -1547,6 +1450,21 @@ def main():
     # report generation
     if args.report:
         generateReport(run_dir, totalTestList, args)
+
+    if args.ci:
+        today = datetime.date.today()
+        path = script_dir + "/ci_reports"
+        if not os.path.exists(path):
+            os.mkdir(path)
+        path += "/" + str(today)
+        if not os.path.exists(path):
+            os.mkdir(path)
+        mode_path = path + f"/{args.mode}_reports"
+        if not os.path.exists(mode_path):
+            os.mkdir(mode_path)
+        shutil.move(run_dir + "/statusreport.md", mode_path + "/statusreport.md")
+        shutil.move(run_dir + "/summaryreport.md", mode_path + "/summaryreport.md")
+        shutil.move(run_dir + "/timereport.md", mode_path + "/timereport.md")
 
     # When all processes are done, print
     print("\nCompleted run of e2e shark tests")
