@@ -59,7 +59,7 @@ with open(model_path, "wb") as f:
 
 # Initialize the ONNX runtime session and run inference
 session = onnxruntime.InferenceSession(model_path, None)
-model_input_X = numpy.random.randn(2, 3, 4).astype(numpy.float32)
+model_input_X = numpy.random.uniform(low = 0.1, high = 1, size = (2,3,4)).astype(numpy.float32)
 
 inputs = session.get_inputs()
 outputs = session.get_outputs()
