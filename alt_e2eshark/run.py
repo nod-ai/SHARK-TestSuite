@@ -5,13 +5,14 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import sys
+import warnings
 from pathlib import Path
 import argparse
 import re
 import logging
 
 # append alt_e2eshark dir to path to allow importing without explicit pythonpath management
-TEST_DIR = Path(__file__).parent
+TEST_DIR = str(Path(__file__).parent)
 sys.path.append(TEST_DIR)
 
 from e2e_testing.framework import *
@@ -24,6 +25,16 @@ from e2e_testing.test_configs.onnxconfig import (
 
 # import backend
 from e2e_testing.backends import SimpleIREEBackend
+
+ALL_STAGES = [
+    "setup",
+    "native_inference",
+    "mlir_import",
+    "torch_mlir",
+    "compilation",
+    "compiled_inference",
+    "post-processing",
+]
 
 
 def get_tests(groups):
@@ -65,7 +76,12 @@ def main(args):
 
     # TODO: logging setup
 
-    # TODO: staging setup
+    stages = ALL_STAGES
+
+    if args.stages:
+        stages = args.stages
+    if args.skip_stages:
+        stages = [s for s in stages if s not in args.skip_stages]
 
     run_tests(
         test_list,
@@ -74,10 +90,13 @@ def main(args):
         args.cachedir,
         args.no_artifacts,
         args.verbose,
+        stages,
     )
 
 
-def run_tests(test_list, config, dir_name, cache_dir_name, no_artifacts, verbose):
+def run_tests(
+    test_list, config, dir_name, cache_dir_name, no_artifacts, verbose, stages
+):
     """runs tests in test_list based on config"""
     # TODO: multi-process, argparse, setup exception handling and logging
 
@@ -91,6 +110,10 @@ def run_tests(test_list, config, dir_name, cache_dir_name, no_artifacts, verbose
         os.mkdir(parent_cache_dir)
 
     num_passes = 0
+    warnings.filterwarnings("ignore")
+
+    if verbose:
+        print(f"Stages to be run: {stages}")
 
     for t in test_list:
 
@@ -108,58 +131,71 @@ def run_tests(test_list, config, dir_name, cache_dir_name, no_artifacts, verbose
             # TODO: convert staging to an Enum and figure out how to specify staging from args
 
             # set up test
-            stage = "model_info_setup"
-            # build an instance of the test class
-            inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
-            # generate inputs from the test instance
-            inputs = inst.construct_inputs()
-            inputs.save_to(log_dir + "input")
+            curr_stage = "setup"
+            if curr_stage in stages:
+                # build an instance of the test class
+                inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
+                # generate inputs from the test instance
+                inputs = inst.construct_inputs()
+                inputs.save_to(log_dir + "input")
 
             # run native inference
-            stage = "native_inference"
-            golden_outputs_raw = inst.forward(inputs)
-            golden_outputs_raw.save_to(log_dir + "golden_output")
+            curr_stage = "native_inference"
+            if curr_stage in stages:
+                golden_outputs_raw = inst.forward(inputs)
+                golden_outputs_raw.save_to(log_dir + "golden_output")
 
             # generate mlir from the instance using the config
-            stage = "mlir_import"
-            artifact_save_to = None if no_artifacts else log_dir
-            mlir_module, func_name = config.mlir_import(inst, save_to=artifact_save_to)
+            curr_stage = "mlir_import"
+            if curr_stage in stages:
+                artifact_save_to = None if no_artifacts else log_dir
+                mlir_module, func_name = config.mlir_import(
+                    inst, save_to=artifact_save_to
+                )
 
             # apply torch-mlir lowerings
-            stage = "torch_mlir"
-            mlir_module = config.apply_torch_mlir_passes(
-                mlir_module, save_to=artifact_save_to
-            )
+            curr_stage = "torch_mlir"
+            if curr_stage in stages:
+                mlir_module = config.apply_torch_mlir_passes(
+                    mlir_module, save_to=artifact_save_to
+                )
 
             # compile mlir_module using config (calls backend compile)
-            stage = "compilation"
-            buffer = config.compile(mlir_module, save_to=artifact_save_to)
+            curr_stage = "compilation"
+            if curr_stage in stages:
+                buffer = config.compile(mlir_module, save_to=artifact_save_to)
 
             # run inference with the compiled module
-            stage = "compiled_inference"
-            outputs_raw = config.run(buffer, inputs, func_name=func_name)
-            outputs_raw.save_to(log_dir + "output")
+            curr_stage = "compiled_inference"
+            if curr_stage in stages:
+                outputs_raw = config.run(buffer, inputs, func_name=func_name)
+                outputs_raw.save_to(log_dir + "output")
 
             # apply model-specific post-processing:
-            stage = "post-processing"
-            golden_outputs = inst.apply_postprocessing(golden_outputs_raw)
-            outputs = inst.apply_postprocessing(outputs_raw)
+            curr_stage = "post-processing"
+            if curr_stage in stages:
+                golden_outputs = inst.apply_postprocessing(golden_outputs_raw)
+                outputs = inst.apply_postprocessing(outputs_raw)
         except Exception as e:
-            log_exception(e, log_dir, stage, t.unique_name, verbose)
+            log_exception(e, log_dir, curr_stage, t.unique_name, verbose)
             continue
 
         # store the results
-        result = TestResult(
-            name=t.unique_name, input=inputs, gold_output=golden_outputs, output=outputs
-        )
-        # log the results
-        test_passed = log_result(result, log_dir, [1e-4, 1e-4])
-        num_passes += int(test_passed)
-        if verbose:
-            to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
-            print(to_print)
-        elif not test_passed:
-            print(f"FAILED: {t.unique_name}")
+        if "setup" and "native_inference" and "compiled_inference" in stages:
+            result = TestResult(
+                name=t.unique_name,
+                input=inputs,
+                gold_output=golden_outputs,
+                output=outputs,
+            )
+            # log the results
+            test_passed = log_result(result, log_dir, [1e-4, 1e-4])
+            num_passes += int(test_passed)
+            if verbose:
+                to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
+                print(to_print)
+            elif not test_passed:
+                print(f"FAILED: {t.unique_name}")
 
     print("\nTest Summary:")
     print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
@@ -230,17 +266,29 @@ def _get_argparse():
 
     # arguments for customizing test-stages:
     parser.add_argument(
-        "--runfrom",
-        choices=["model-run", "torch-mlir", "iree-compile"],
-        default="model-run",
-        help="Start from model-run, or torch MLIR, or IREE compiled artefact",
+        "--stages",
+        nargs="*",
+        choices=ALL_STAGES,
+        help="Manually specify which test stages to run.",
     )
     parser.add_argument(
-        "--runupto",
-        choices=["torch-mlir", "iree-compile", "inference"],
-        default="inference",
-        help="Run upto torch MLIR generation, IREE compilation, or inference",
+        "--skip-stages",
+        nargs="*",
+        choices=ALL_STAGES,
+        help="Manually specify which test stages to skip.",
     )
+    # parser.add_argument(
+    #     "--runfrom",
+    #     choices=["model-run", "torch-mlir", "iree-compile"],
+    #     default="model-run",
+    #     help="Start from model-run, or torch MLIR, or IREE compiled artefact",
+    # )
+    # parser.add_argument(
+    #     "--runupto",
+    #     choices=["torch-mlir", "iree-compile", "inference"],
+    #     default="inference",
+    #     help="Run upto torch MLIR generation, IREE compilation, or inference",
+    # )
 
     # test-list filtering arguments:
     parser.add_argument(

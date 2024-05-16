@@ -68,7 +68,6 @@ class Opt125MAWQModelInfo(AzureDownloadableModel):
         pv_zip = zip(self.dim_params, self.dim_values)
         pv = dict(pv_zip)
 
-        # get some model inputs
         model_inputs = [
             numpy.random.randint(
                 -1000,
@@ -97,6 +96,68 @@ class Opt125MAWQModelInfo(AzureDownloadableModel):
 register_test(Opt125MAWQModelInfo, "opt-125M-awq")
 
 
+# hugging face example:
+class Opt125MGPTQModelInfo(OnnxModelInfo):
+    def construct_model(self):
+        # model origin: https://huggingface.co/jlsilva/facebook-opt-125m-gptq4bit
+        test_modelname = "facebook/opt-125m"
+        quantizedmodelname = "jlsilva/facebook-opt-125m-gptq4bit"
+        kwargs = {
+            "torch_dtype": torch.float32,
+            "trust_remote_code": True,
+        }
+        from transformers import AutoModelForCausalLM, AutoTokenizer, GPTQConfig
+
+        quantization_config = GPTQConfig(bits=8, disable_exllama=True)
+        kwargs["quantization_config"] = quantization_config
+        kwargs["device_map"] = "cpu"
+        self.pytorch_model = AutoModelForCausalLM.from_pretrained(
+            quantizedmodelname, **kwargs
+        )
+        # model.output_hidden_states = False
+        self.tokenizer = AutoTokenizer.from_pretrained(test_modelname)
+        self.prompt = "What is nature of our existence?"
+        self.encoding = self.tokenizer(self.prompt, return_tensors="pt")
+        torch.onnx.export(
+            self.pytorch_model,
+            (self.encoding["input_ids"], self.encoding["attention_mask"]),
+            self.model,
+            opset_version=20,
+        )
+
+    def construct_inputs(self):
+        if not self.__dict__.__contains__("tokenizer"):
+            self.construct_model()
+        return TestTensors(
+            (self.encoding["input_ids"], self.encoding["attention_mask"])
+        )
+
+    def forward(self, input):
+        response = self.pytorch_model.generate(
+            input.data[0],
+            do_sample=True,
+            top_k=50,
+            max_length=100,
+            top_p=0.95,
+            temperature=1.0,
+        )
+        return TestTensors((response,))
+
+        # model_response = model.generate(
+        #     E2ESHARK_CHECK["input"],
+        #     do_sample=True,
+        #     top_k=50,
+        #     max_length=100,
+        #     top_p=0.95,
+        #     temperature=1.0,
+        # )
+        # print("Response:", tokenizer.decode(model_response[0]))
+
+
+register_test(Opt125MGPTQModelInfo, "opt-125m-gptq")
+
+
+# this is to sample adding a static version of a test
 # class Opt125MAWQStaticModel(Opt125MAWQModelInfo):
 #     def construct_model(self):
 #         self.set_model_params(1,1,0)
