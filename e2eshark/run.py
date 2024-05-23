@@ -211,7 +211,6 @@ def runOnnxToTorchMLIRGeneration(
             + logfilename
             + " 2>&1"
         )
-        print(scriptcommand)
         start = time.time()
         if launchCommand(args, scriptcommand, commandslog):
             print("Test", testName, "failed [" + curphase + "]")
