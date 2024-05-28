@@ -57,7 +57,7 @@ jobs:
             --upgrade \
             iree-compiler \
             iree-runtime
-      - name: "Installing other Python requirements"
+      - name: "Installing Python test requirements"
         run: |
           source ${VENV_DIR}/bin/activate
           python3 -m pip install -r iree_tests/requirements.txt
