@@ -9,6 +9,9 @@ on:
   # TODO(scotttodd): run on schedule (nightly), and/or on pushes to `main`
   pull_request:
     paths:
+      # This file itself.
+      - ".github/workflows/test_iree.yml"
+      # The iree_tests subproject.
       - "iree_tests/**"
   workflow_dispatch:
 
