@@ -108,6 +108,8 @@ jobs:
             sdxl-config-file: config_sdxl_scheduled_unet_gpu_rocm.json
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
+      IREE_TEST_FILES: ~/iree_tests_cache
+      IREE_TEST_PATH_EXTENSION: ${{ github.workspace }}/iree_tests/specs
       MODELS_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.models-config-file }}
       SDXL_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.sdxl-config-file }}
     steps:
