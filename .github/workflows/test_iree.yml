@@ -137,6 +137,19 @@ jobs:
             --durations=0 \
             --config-files=iree_tests/configs/config_pytorch_models_cpu_llvm_task.json
 
+      - name: "Running real weight model tests - Prompt Encoder CPU"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          pytest iree_tests/pytorch/models/sdxl-prompt-encoder-tank \
+            -rpfE \
+            -k real_weights \
+            --no-skip-tests-missing-files \
+            --capture=no \
+            --log-cli-level=info \
+            --timeout=1200 \
+            --durations=0 \
+            --config-files=iree_tests/configs/config_sdxl_prompt_encoder_cpu_llvm_task.json
+
       - name: "Running real weight model tests - Scheduled UNet CPU"
         run: |
           source ${VENV_DIR}/bin/activate
@@ -149,6 +162,19 @@ jobs:
             --timeout=1200 \
             --durations=0 \
             --config-files=iree_tests/configs/config_sdxl_scheduled_unet_cpu_llvm_task.json
+      
+      - name: "Running real weight model tests - VAE Decode CPU"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          pytest iree_tests/pytorch/models/sdxl-vae-decode-tank \
+            -rpfE \
+            -k real_weights \
+            --no-skip-tests-missing-files \
+            --capture=no \
+            --log-cli-level=info \
+            --timeout=1200 \
+            --durations=0 \
+            --config-files=iree_tests/configs/config_sdxl_vae_decode_cpu_llvm_task.json
 
   linux_x86_64_mi250_gpu_models:
     name: Linux (x86_64 mi250) Models GPU
@@ -198,6 +224,19 @@ jobs:
             --timeout=1200 \
             --durations=0 \
             --config-files=iree_tests/configs/config_gpu_rocm_models.json
+      
+      - name: "Running real weight model tests - Prompt Encoder ROCm AMDGPU"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          pytest iree_tests/pytorch/models/sdxl-prompt-encoder-tank \
+            -rpfE \
+            -k real_weights \
+            --no-skip-tests-missing-files \
+            --capture=no \
+            --log-cli-level=info \
+            --timeout=1200 \
+            --durations=0 \
+            --config-files=iree_tests/configs/config_sdxl_prompt_encoder_gpu_rocm.json
 
       - name: "Running real weight model tests - Scheduled UNet ROCm AMDGPU"
         run: |
@@ -211,6 +250,19 @@ jobs:
             --timeout=1200 \
             --durations=0 \
             --config-files=iree_tests/configs/config_sdxl_scheduled_unet_gpu_rocm.json
+
+      - name: "Running real weight model tests - VAE Decode ROCm AMDGPU"
+        run: |
+          source ${VENV_DIR}/bin/activate
+          pytest iree_tests/pytorch/models/sdxl-vae-decode-tank \
+            -rpfE \
+            -k real_weights \
+            --no-skip-tests-missing-files \
+            --capture=no \
+            --log-cli-level=info \
+            --timeout=1200 \
+            --durations=0 \
+            --config-files=iree_tests/configs/config_sdxl_vae_decode_gpu_rocm.json
 
       - name: "Running SDXL rocm pipeline benchmark"
         run: |
