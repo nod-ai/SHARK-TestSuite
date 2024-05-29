@@ -64,7 +64,7 @@ with open("model.onnx", "wb") as f:
 session = onnxruntime.InferenceSession("model.onnx", None)
 model_input_X = numpy.random.randn(8, 3, 32, 32).astype(numpy.float32)
 model_input_rois = numpy.array([
-    [2, 1, 16, 5, 30],
+    [2, 1, 16, 9, 24],
     [7, 5, 5, 13, 13]
 ], dtype=numpy.float32)
 
@@ -80,7 +80,6 @@ print("Input shape:", model_input_X.shape)
 print("Output shape:", numpy.array(model_output[0]).shape)
 
 # Moving to torch to handle bfloat16 as numpy does not support bfloat16
-E2ESHARK_CHECK = dict()
 E2ESHARK_CHECK["input"] = [torch.from_numpy(model_input_X), torch.from_numpy(model_input_rois)]
 E2ESHARK_CHECK["output"] = [torch.from_numpy(arr) for arr in model_output]
 
