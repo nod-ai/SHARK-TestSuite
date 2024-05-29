@@ -98,7 +98,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: cpu_llvm_sync
+          - name: cpu_llvm_task
             runs-on: nodai-amdgpu-w7900-x86-64
             models-config-file: config_pytorch_models_cpu_llvm_task.json
             sdxl-prompt-encoder-config-file: config_sdxl_prompt_encoder_cpu_llvm_task.json
@@ -164,7 +164,7 @@ jobs:
             --config-files=${MODELS_CONFIG_FILE_PATH}
 
       - name: "Running real weights SDXL prompt encoder tests"
-        id: prompt_encode
+        id: prompt_encoder
         if: ${{ !cancelled() }}
         run: |
           source ${VENV_DIR}/bin/activate
@@ -211,7 +211,7 @@ jobs:
       - name: "Running SDXL ROCm pipeline benchmark"
         if: |
           contains(matrix.name, 'rocm') &&
-          steps.prompt_encode.outcome == 'success' && 
+          steps.prompt_encoder.outcome == 'success' && 
           steps.unet.outcome == 'success' && steps.vae.outcome == 'success'
         run: |
           source ${VENV_DIR}/bin/activate
