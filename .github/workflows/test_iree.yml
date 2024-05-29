@@ -207,8 +207,8 @@ jobs:
             --config-files=${SDXL_VAE_DECODE_CONFIG_FILE_PATH}
 
       - name: "Running SDXL ROCm pipeline benchmark"
-        if: contains(matrix.name, 'rocm')
         if: |
+          contains(matrix.name, 'rocm') &&
           steps.prompt_encode.outcome == 'success' && 
           steps.unet.outcome == 'success' && steps.vae.outcome == 'success'
         run: |
