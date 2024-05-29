@@ -115,7 +115,9 @@ jobs:
       IREE_TEST_FILES: ~/iree_tests_cache
       IREE_TEST_PATH_EXTENSION: ${{ github.workspace }}/iree_tests/specs
       MODELS_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.models-config-file }}
-      SDXL_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.sdxl-config-file }}
+      SDXL_PROMPT_ENCODER_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.sdxl-prompt-encoder-config-file }}
+      SDXL_UNET_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.sdxl-unet-config-file }}
+      SDXL_VAE_DECODE_CONFIG_FILE_PATH: iree_tests/configs/${{ matrix.sdxl-vae-decode-config-file }}
     steps:
       - name: "Checking out repository"
         uses: actions/checkout@v4
