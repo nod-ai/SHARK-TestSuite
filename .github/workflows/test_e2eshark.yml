@@ -12,15 +12,23 @@ on:
    - cron: '0 12 * * *'
 
 jobs:
-  turbine:
+  SHARK-Turbine:
     runs-on: nodai-amdgpu-mi250-x86-64
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
           repository: nod-ai/SHARK-Turbine
-          ref: torch_2.1
-          path: turbine
+          path: SHARK-Turbine
+  
+  iree-tubrine:
+    runs-on: nodai-amdgpu-mi250-x86-64
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          repository: iree-org/iree-turbine
+          path: iree-turbine
 
   e2eshark:
     needs: [turbine]
@@ -76,18 +84,11 @@ jobs:
 
       - name: Setup turbine python venv
         run: |
-          python3.11 -m venv ${TURBINE_VENV_DIR}
-          source ${TURBINE_VENV_DIR}/bin/activate
-          pip install --upgrade pip
-          pip install --index-url https://download.pytorch.org/whl/cpu \
-            -r ../turbine/core/pytorch-cpu-requirements.txt \
-            -r ../turbine/core/torchvision-requirements.txt
-          pip install --upgrade -r ../turbine/core/requirements.txt
-          pip install -e ../turbine/core[testing]
-          pip install -e ../turbine/models
-          pip install -r ./e2eshark/ci-requirements.txt
-          pip uninstall -y transformers
-          pip install transformers -U
+          source ${E2E_VENV_DIR}/bin/activate
+          pip install -f https://iree.dev/pip-release-links.html --upgrade \
+          -r ../iree-turbine/iree-requirements.txt
+          pip install -e ../iree-turbine[testing]
+          pip install -e ../SHARK-Turbine/models
         working-directory: ./test-suite
 
       - name: Run Turbine Mode
