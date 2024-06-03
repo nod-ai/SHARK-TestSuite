@@ -12,35 +12,28 @@ on:
    - cron: '0 12 * * *'
 
 jobs:
-  SHARK-Turbine:
-    runs-on: nodai-amdgpu-mi250-x86-64
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          repository: nod-ai/SHARK-Turbine
-          path: SHARK-Turbine
-  
-  iree-turbine:
-    runs-on: nodai-amdgpu-mi250-x86-64
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          repository: iree-org/iree-turbine
-          path: iree-turbine
-
   e2eshark:
-    needs: [turbine]
     runs-on: nodai-amdgpu-mi250-x86-64
     env:
       E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
     steps:
-      - name: Checkout repo
+      - name: Checkout Test Suite
         uses: actions/checkout@v2
         with:
           repository: nod-ai/SHARK-TestSuite
           path: test-suite
+
+      - name: Checkout SHARK Turbine
+        uses: actions/checkout@v2
+        with:
+          repository: nod-ai/SHARK-Turbine
+          path: SHARK-Turbine
+
+      - name: Checkout iree turbine
+        uses: actions/checkout@v2
+        with:
+          repository: iree-org/iree-turbine
+          path: iree-turbine
 
       - name: "Setup e2eshark python venv"
         run: |
