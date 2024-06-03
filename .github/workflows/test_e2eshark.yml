@@ -21,7 +21,7 @@ jobs:
           repository: nod-ai/SHARK-Turbine
           path: SHARK-Turbine
   
-  iree-tubrine:
+  iree-turbine:
     runs-on: nodai-amdgpu-mi250-x86-64
     steps:
       - name: Checkout repo
@@ -35,7 +35,6 @@ jobs:
     runs-on: nodai-amdgpu-mi250-x86-64
     env:
       E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
-      TURBINE_VENV_DIR: ${{ github.workspace }}/turbine_venv
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -93,7 +92,7 @@ jobs:
 
       - name: Run Turbine Mode
         run: |
-          source ${TURBINE_VENV_DIR}/bin/activate
+          source ${E2E_VENV_DIR}/bin/activate
           cd e2eshark
           free -mh
           HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py \
