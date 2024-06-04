@@ -110,19 +110,25 @@ def import_onnx_files(test_dir_path, imported_dir_path):
 
     # Import converted model.onnx to model.mlir.
     imported_model_path = imported_dir_path / "model.mlir"
+
+    # TODO(scotttodd): allow console script or tool
     exec_args = [
-        "iree-import-onnx",
+        # "iree-import-onnx",
+        # "python",
+        "D:/dev/projects/SHARK-TestSuite/iree_tests/source_build.venv/Scripts/python",
+        "-m",
+        "iree.compiler.tools.import_onnx",
         str(converted_model_path),
         "-o",
         str(imported_model_path),
     ]
     ret = subprocess.run(exec_args, capture_output=True)
     if ret.returncode != 0:
-        # print(
-        #     f"  {imported_dir_path.name[5:]} import failed,\n    stdout: {ret.stdout},\n    stderr: {ret.stderr}",
-        #     file=sys.stderr,
-        # )
-        print(f"  {imported_dir_path.name[5:]} import failed", file=sys.stderr)
+        print(
+            f"  {imported_dir_path.name[5:]} import failed,\n    stdout: {ret.stdout},\n    stderr: {ret.stderr}",
+            file=sys.stderr,
+        )
+        # print(f"  {imported_dir_path.name[5:]} import failed", file=sys.stderr)
         return False
 
     test_data_dirs = sorted(test_dir_path.glob("test_data_set*"))
