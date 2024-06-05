@@ -218,7 +218,7 @@ jobs:
           pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py --goldentime 5565
     
       - name: Upload SDXL ROCm benchmark artifacts
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@v4
         with:
-          name: benchmark-artifact
+          name: sdxl-benchmark-output
           path: iree_tests/benchmarks/benchmark_out_rocm.txt
