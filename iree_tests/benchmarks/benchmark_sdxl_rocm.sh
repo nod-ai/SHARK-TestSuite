@@ -39,6 +39,6 @@ iree-benchmark-module \
   --input=1x64xi64 \
   --input=1x64xi64 \
   --input=1x64xi64 \
-  --benchmark_repetitions=3
+  --benchmark_repetitions=3 > benchmark_out_rocm.txt \
 
 echo "Succesfully finished sdxl pipeline benchmark"
