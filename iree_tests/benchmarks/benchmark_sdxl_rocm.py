@@ -58,7 +58,6 @@ def test_sdxl_rocm_benchmark(goldentime):
         return
     with open(f"{benchmark_dir}/benchmark_out_rocm.txt") as f:
         bench_lines = f.readlines()
-    print("printing file lines")
     benchmark_results = decode_output(bench_lines)
     benchmark_mean_time = int(benchmark_results[15].time.split()[0])
     assert benchmark_mean_time < goldentime
