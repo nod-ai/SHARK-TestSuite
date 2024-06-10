@@ -215,5 +215,12 @@ jobs:
           steps.unet.outcome == 'success' && steps.vae.outcome == 'success'
         run: |
           source ${VENV_DIR}/bin/activate
-          pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py --goldentime-rocm-ms 2000 --log-cli-level=info
+          pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py \
+            --goldentime-rocm-e2e-ms 1634.2 \
+            --goldentime-rocm-unet-ms 441.2 \
+            --goldentime-rocm-clip-ms 18.2 \
+            --goldentime-rocm-vae-ms 286.5 \
+            --log-cli-level=info
+          echo "### SDXL Benchmark Summary:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
           echo "$(<job_summary.txt )" >> $GITHUB_STEP_SUMMARY
