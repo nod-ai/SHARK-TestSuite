@@ -220,7 +220,10 @@ jobs:
             --goldentime-rocm-unet-ms 450.4 \
             --goldentime-rocm-clip-ms 18.9 \
             --goldentime-rocm-vae-ms 288.5 \
-            --log-cli-level=info
+            --gpu-number 6 \
+            --rocm-chip gfx90a \
+            --log-cli-level=info \
+            --reruns 3
           echo "### SDXL Benchmark Summary:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
           echo "$(<job_summary.txt )" >> $GITHUB_STEP_SUMMARY

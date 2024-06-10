@@ -27,12 +27,12 @@ def run_iree_command(args: Sequence[str] = ()):
     logging.getLogger().info(f"Command failed with error: {proc.stderr}")
     return 1, proc.stdout
 
-def run_sdxl_rocm_benchmark():
+def run_sdxl_rocm_benchmark(rocm_chip, gpu_number):
     exec_args = [
         "iree-compile",
         f"{benchmark_dir}/sdxl_pipeline_bench_f16.mlir",
         "--iree-hal-target-backends=rocm",
-        "--iree-rocm-target-chip=gfx90a",
+        f"--iree-rocm-target-chip={rocm_chip}",
         "--iree-global-opt-propagate-transposes=true",
         "--iree-codegen-llvmgpu-use-vector-distribution",
         "--iree-codegen-gpu-native-math-precision=true",
@@ -48,7 +48,7 @@ def run_sdxl_rocm_benchmark():
         return 1, stdout
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://6",
+        f"--device=hip://{gpu_number}",
         "--device_allocator=caching",
         f"--module={prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={prompt_encoder_dir}/real_weights.irpa",
@@ -69,10 +69,10 @@ def run_sdxl_rocm_benchmark():
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
 
-def run_sdxl_unet_rocm_benchmark():
+def run_sdxl_unet_rocm_benchmark(gpu_number):
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://6",
+        f"--device=hip://{gpu_number}",
         "--device_allocator=caching",
         f"--module={scheduled_unet_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={scheduled_unet_dir}/real_weights.irpa",
@@ -88,10 +88,10 @@ def run_sdxl_unet_rocm_benchmark():
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
 
-def run_sdxl_prompt_encoder_rocm_benchmark():
+def run_sdxl_prompt_encoder_rocm_benchmark(gpu_number):
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://6",
+        f"--device=hip://{gpu_number}",
         "--device_allocator=caching",
         f"--module={prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={prompt_encoder_dir}/real_weights.irpa",
@@ -105,10 +105,10 @@ def run_sdxl_prompt_encoder_rocm_benchmark():
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
 
-def run_sdxl_vae_decode_rocm_benchmark():
+def run_sdxl_vae_decode_rocm_benchmark(gpu_number):
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://6",
+        f"--device=hip://{gpu_number}",
         "--device_allocator=caching",
         f"--module={vae_decode_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={vae_decode_dir}/real_weights.irpa",
@@ -159,39 +159,43 @@ def job_summary_process(ret_value, output):
     return benchmark_mean_time
 
 def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet, 
-    goldentime_rocm_clip, goldentime_rocm_vae):
+    goldentime_rocm_clip, goldentime_rocm_vae, gpu_number, rocm_chip):
     # if the benchmark returns 1, benchmark failed
     job_summary_lines = []
 
     # e2e benchmark
-    ret_value, output = run_sdxl_rocm_benchmark()
+    ret_value, output = run_sdxl_rocm_benchmark(rocm_chip, gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
     assert benchmark_mean_time < goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress"
-    mean_line = f"E2E Benchmark Time: {str(benchmark_mean_time)}"
+    mean_line = (f"E2E Benchmark Time: {str(benchmark_mean_time)} ms"
+                 f" (golden time {goldentime_rocm_e2e} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
     # unet benchmark
-    ret_value, output = run_sdxl_unet_rocm_benchmark()
+    ret_value, output = run_sdxl_unet_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
     assert benchmark_mean_time < goldentime_rocm_unet, "SDXL unet benchmark time should not regress"
-    mean_line = f"Scheduled Unet Benchmark Time: {str(benchmark_mean_time)}"
+    mean_line = (f"Scheduled Unet Benchmark Time: {str(benchmark_mean_time)} ms"
+                 f" (golden time {goldentime_rocm_unet} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
     # prompt encoder benchmark
-    ret_value, output = run_sdxl_prompt_encoder_rocm_benchmark()
+    ret_value, output = run_sdxl_prompt_encoder_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
     assert benchmark_mean_time < goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress"
-    mean_line = f"Prompt Encoder Benchmark Time: {str(benchmark_mean_time)}"
+    mean_line = (f"Prompt Encoder Benchmark Time: {str(benchmark_mean_time)} ms"
+                 f" (golden time {goldentime_rocm_clip} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
     # vae decode benchmark
-    ret_value, output = run_sdxl_vae_decode_rocm_benchmark()
+    ret_value, output = run_sdxl_vae_decode_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
     assert benchmark_mean_time < goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress"
-    mean_line = f"VAE Decode Benchmark Time: {str(benchmark_mean_time)}"
+    mean_line = (f"VAE Decode Benchmark Time: {str(benchmark_mean_time)} ms"
+                  f" (golden time {goldentime_rocm_vae} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
