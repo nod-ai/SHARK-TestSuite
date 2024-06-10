@@ -215,10 +215,5 @@ jobs:
           steps.unet.outcome == 'success' && steps.vae.outcome == 'success'
         run: |
           source ${VENV_DIR}/bin/activate
-          pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py --goldentime 5565
-    
-      - name: Upload SDXL ROCm benchmark artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sdxl-benchmark-output
-          path: iree_tests/benchmarks/benchmark_out_rocm.txt
+          pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py --goldentime-rocm-ms 2000 --log-cli-level=info
+          echo "$(<job_summary.txt )" >> $GITHUB_STEP_SUMMARY
