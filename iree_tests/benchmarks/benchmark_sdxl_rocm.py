@@ -48,7 +48,7 @@ def run_sdxl_rocm_benchmark():
         return 1, stdout
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://7",
+        "--device=hip://6",
         "--device_allocator=caching",
         f"--module={prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={prompt_encoder_dir}/real_weights.irpa",
@@ -72,7 +72,7 @@ def run_sdxl_rocm_benchmark():
 def run_sdxl_unet_rocm_benchmark():
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://7",
+        "--device=hip://6",
         "--device_allocator=caching",
         f"--module={scheduled_unet_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={scheduled_unet_dir}/real_weights.irpa",
@@ -91,7 +91,7 @@ def run_sdxl_unet_rocm_benchmark():
 def run_sdxl_prompt_encoder_rocm_benchmark():
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://7",
+        "--device=hip://6",
         "--device_allocator=caching",
         f"--module={prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={prompt_encoder_dir}/real_weights.irpa",
@@ -108,7 +108,7 @@ def run_sdxl_prompt_encoder_rocm_benchmark():
 def run_sdxl_vae_decode_rocm_benchmark():
     exec_args = [
         "iree-benchmark-module",
-        "--device=hip://7",
+        "--device=hip://6",
         "--device_allocator=caching",
         f"--module={vae_decode_dir}/model_gpu_rocm_real_weights.vmfb",
         f"--parameters=model={vae_decode_dir}/real_weights.irpa",
