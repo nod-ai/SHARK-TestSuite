@@ -216,10 +216,10 @@ jobs:
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py \
-            --goldentime-rocm-e2e-ms 1660.2 \
-            --goldentime-rocm-unet-ms 500 \
-            --goldentime-rocm-clip-ms 30 \
-            --goldentime-rocm-vae-ms 350 \
+            --goldentime-rocm-e2e-ms 1657.2 \
+            --goldentime-rocm-unet-ms 450.2 \
+            --goldentime-rocm-clip-ms 18.7 \
+            --goldentime-rocm-vae-ms 288.5 \
             --log-cli-level=info
           echo "### SDXL Benchmark Summary:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
