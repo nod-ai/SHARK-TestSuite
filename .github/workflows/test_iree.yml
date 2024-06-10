@@ -223,7 +223,7 @@ jobs:
             --gpu-number 6 \
             --rocm-chip gfx90a \
             --log-cli-level=info \
-            --retry 3
+            --retries 3
           echo "### SDXL Benchmark Summary:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
           echo "$(<job_summary.txt )" >> $GITHUB_STEP_SUMMARY
