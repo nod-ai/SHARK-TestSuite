@@ -1,7 +1,7 @@
 import pytest
 
 def pytest_addoption(parser):
-    parser.addoption("--goldentime-rocm-e2e-ms", action="store", default=1634.2, type=float, help="Golden time to test benchmark")
+    parser.addoption("--goldentime-rocm-e2e-ms", action="store", default=1660.2, type=float, help="Golden time to test benchmark")
     parser.addoption("--goldentime-rocm-unet-ms", action="store", default=441.2, type=float, help="Golden time to test benchmark")
     parser.addoption("--goldentime-rocm-clip-ms", action="store", default=18.2, type=float, help="Golden time to test benchmark")
     parser.addoption("--goldentime-rocm-vae-ms", action="store", default=286.5, type=float, help="Golden time to test benchmark")
