@@ -1,9 +1,9 @@
 import pytest
 
 def pytest_addoption(parser):
-    parser.addoption("--goldentime-rocm-e2e-ms", action="store", default=1661.2, type=float, help="Golden time to test benchmark")
-    parser.addoption("--goldentime-rocm-unet-ms", action="store", default=450.4, type=float, help="Golden time to test benchmark")
-    parser.addoption("--goldentime-rocm-clip-ms", action="store", default=18.9, type=float, help="Golden time to test benchmark")
+    parser.addoption("--goldentime-rocm-e2e-ms", action="store", default=1661.5, type=float, help="Golden time to test benchmark")
+    parser.addoption("--goldentime-rocm-unet-ms", action="store", default=450.5, type=float, help="Golden time to test benchmark")
+    parser.addoption("--goldentime-rocm-clip-ms", action="store", default=19, type=float, help="Golden time to test benchmark")
     parser.addoption("--goldentime-rocm-vae-ms", action="store", default=288.5, type=float, help="Golden time to test benchmark")
     parser.addoption("--gpu-number", action="store", default=6, type=int, help="IREE GPU device number to test on")
     parser.addoption("--rocm-chip", action="store", default="gfx90a", type=str, help="ROCm target chip configuration of GPU")

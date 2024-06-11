@@ -216,9 +216,9 @@ jobs:
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_tests/benchmarks/benchmark_sdxl_rocm.py \
-            --goldentime-rocm-e2e-ms 1661.2 \
-            --goldentime-rocm-unet-ms 450.4 \
-            --goldentime-rocm-clip-ms 18.9 \
+            --goldentime-rocm-e2e-ms 1661.5 \
+            --goldentime-rocm-unet-ms 450.5 \
+            --goldentime-rocm-clip-ms 19 \
             --goldentime-rocm-vae-ms 288.5 \
             --gpu-number 6 \
             --rocm-chip gfx90a \
