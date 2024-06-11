@@ -111,7 +111,10 @@ def import_onnx_files(test_dir_path, imported_dir_path):
     # Import converted model.onnx to model.mlir.
     imported_model_path = imported_dir_path / "model.mlir"
     exec_args = [
-        "iree-import-onnx",
+        "python3",
+        "-m",
+        "iree.compiler.tools.import_onnx",
+        #"iree-import-onnx",
         str(converted_model_path),
         "-o",
         str(imported_model_path),
