@@ -230,7 +230,8 @@ with open("model.onnx", "wb") as f:
     f.write(onnx_model.SerializeToString())
 
 session = onnxruntime.InferenceSession("model.onnx", None)
-model_input_X = numpy.random.randn(1, 1, 7, 7).astype(numpy.float32)
+model_input_X = numpy.absolute(
+    numpy.random.randn(1, 1, 7, 7).astype(numpy.float32))
 inputs = session.get_inputs()
 outputs = session.get_outputs()
 
