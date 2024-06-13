@@ -199,7 +199,7 @@ print("Output:", E2ESHARK_CHECK["output"])
 X = make_tensor_value_info("X", TensorProto.FLOAT, [1, 1, 7, 7])
 
 # Create an output
-Y = make_tensor_value_info("Y", TensorProto.FLOAT, [1, 1, 5, 5])
+Y = make_tensor_value_info("Y", TensorProto.FLOAT, [1, 1, 4, 4])
 
 # Create a node (NodeProto)
 lppool_node = make_node(
