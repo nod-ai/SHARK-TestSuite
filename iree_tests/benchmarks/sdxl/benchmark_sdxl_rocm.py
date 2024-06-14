@@ -185,6 +185,9 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
+    # new line
+    job_summary_lines.append("\n")
+
     # unet compilation stats check
     with open(f"{scheduled_unet_dir}/compilation_info.json", 'r') as file:
         comp_stats = json.load(file)
@@ -202,6 +205,9 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
                         f" (golden binary size {goldensize_rocm_unet} bytes)")
     job_summary_lines.append(compilation_line)
     logging.getLogger().info(compilation_line)
+
+    # new line
+    job_summary_lines.append("\n")
 
     # prompt encoder benchmark
     ret_value, output = run_sdxl_prompt_encoder_rocm_benchmark(gpu_number)
@@ -229,6 +235,9 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
                         f" (golden binary size {goldensize_rocm_clip} bytes)")
     job_summary_lines.append(compilation_line)
     logging.getLogger().info(compilation_line)
+
+    # new line
+    job_summary_lines.append("\n")
 
     # vae decode benchmark
     ret_value, output = run_sdxl_vae_decode_rocm_benchmark(gpu_number)
