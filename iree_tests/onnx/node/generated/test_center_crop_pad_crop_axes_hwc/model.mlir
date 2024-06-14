@@ -1,28 +1,8 @@
 module {
-  func.func public @test_center_crop_pad_crop_axes_hwc(%arg0: !torch.vtensor<[20,8,3],f32>, %arg1: !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32> attributes {torch.onnx_meta.ir_version = 8 : si64, torch.onnx_meta.opset_version = 18 : si64, torch.onnx_meta.producer_name = "backend-test", torch.onnx_meta.producer_version = ""} {
+  func.func @test_center_crop_pad_crop_axes_hwc(%arg0: !torch.vtensor<[20,8,3],f32>, %arg1: !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32> attributes {torch.onnx_meta.ir_version = 8 : si64, torch.onnx_meta.opset_version = 18 : si64, torch.onnx_meta.producer_name = "backend-test", torch.onnx_meta.producer_version = ""} {
     %none = torch.constant.none
-    %0 = call @"('CenterCropPad', '', 18, [tensor_type {\0A  elem_type: 1\0A  shape {\0A    dim {\0A      dim_value: 20\0A    }\0A    dim {\0A      dim_value: 8\0A    }\0A    dim {\0A      dim_value: 3\0A    }\0A  }\0A}\0A, tensor_type {\0A  elem_type: 7\0A  shape {\0A    dim {\0A      dim_value: 2\0A    }\0A  }\0A}\0A], [tensor_type {\0A  elem_type: 1\0A  shape {\0A    dim {\0A      dim_value: 10\0A    }\0A    dim {\0A      dim_value: 9\0A    }\0A    dim {\0A      dim_value: 3\0A    }\0A  }\0A}\0A], input: \22x\22\0Ainput: \22shape\22\0Aoutput: \22y\22\0Aop_type: \22CenterCropPad\22\0Aattribute {\0A  name: \22axes\22\0A  ints: 0\0A  ints: 1\0A  type: INTS\0A}\0A)"(%arg0, %arg1) : (!torch.vtensor<[20,8,3],f32>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32>
+    %0 = torch.operator "onnx.CenterCropPad"(%arg0, %arg1) {torch.onnx.axes = [0 : si64, 1 : si64]} : (!torch.vtensor<[20,8,3],f32>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32> 
     return %0 : !torch.vtensor<[10,9,3],f32>
-  }
-  func.func private @"('CenterCropPad', '', 18, [tensor_type {\0A  elem_type: 1\0A  shape {\0A    dim {\0A      dim_value: 20\0A    }\0A    dim {\0A      dim_value: 8\0A    }\0A    dim {\0A      dim_value: 3\0A    }\0A  }\0A}\0A, tensor_type {\0A  elem_type: 7\0A  shape {\0A    dim {\0A      dim_value: 2\0A    }\0A  }\0A}\0A], [tensor_type {\0A  elem_type: 1\0A  shape {\0A    dim {\0A      dim_value: 10\0A    }\0A    dim {\0A      dim_value: 9\0A    }\0A    dim {\0A      dim_value: 3\0A    }\0A  }\0A}\0A], input: \22x\22\0Ainput: \22shape\22\0Aoutput: \22y\22\0Aop_type: \22CenterCropPad\22\0Aattribute {\0A  name: \22axes\22\0A  ints: 0\0A  ints: 1\0A  type: INTS\0A}\0A)"(%arg0: !torch.vtensor<[20,8,3],f32>, %arg1: !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32> attributes {torch.onnx_meta.ir_version = 8 : si64, torch.onnx_meta.opset_version = 18 : si64, torch.onnx_meta.producer_name = "", torch.onnx_meta.producer_version = ""} {
-    %none = torch.constant.none
-    %0 = torch.operator "onnx.Constant"() {torch.onnx.value = dense<2> : tensor<1xsi64>} : () -> !torch.vtensor<[1],si64> 
-    %1 = torch.operator "onnx.Constant"() {torch.onnx.value_ints = [0 : si64, 1 : si64]} : () -> !torch.vtensor<[2],si64> 
-    %2 = torch.operator "onnx.Shape"(%arg0) : (!torch.vtensor<[20,8,3],f32>) -> !torch.vtensor<[3],si64> 
-    %3 = torch.operator "onnx.Gather"(%2, %1) : (!torch.vtensor<[3],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %4 = torch.operator "onnx.Max"(%3, %arg1) : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %5 = torch.operator "onnx.Sub"(%4, %3) : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %6 = torch.operator "onnx.Div"(%5, %0) : (!torch.vtensor<[2],si64>, !torch.vtensor<[1],si64>) -> !torch.vtensor<[2],si64> 
-    %7 = torch.operator "onnx.Sub"(%5, %6) : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %8 = torch.operator "onnx.Concat"(%6, %7) {torch.onnx.axis = 0 : si64} : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[4],si64> 
-    %9 = torch.operator "onnx.Pad"(%arg0, %8, %none, %1) : (!torch.vtensor<[20,8,3],f32>, !torch.vtensor<[4],si64>, !torch.none, !torch.vtensor<[2],si64>) -> !torch.vtensor<[?,?,?],f32> 
-    %10 = torch.operator "onnx.Shape"(%9) : (!torch.vtensor<[?,?,?],f32>) -> !torch.vtensor<[3],si64> 
-    %11 = torch.operator "onnx.Gather"(%10, %1) : (!torch.vtensor<[3],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %12 = torch.operator "onnx.Sub"(%11, %arg1) : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %13 = torch.operator "onnx.Div"(%12, %0) : (!torch.vtensor<[2],si64>, !torch.vtensor<[1],si64>) -> !torch.vtensor<[2],si64> 
-    %14 = torch.operator "onnx.Add"(%13, %arg1) : (!torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[2],si64> 
-    %15 = torch.operator "onnx.Slice"(%9, %13, %14, %1) : (!torch.vtensor<[?,?,?],f32>, !torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>, !torch.vtensor<[2],si64>) -> !torch.vtensor<[10,9,3],f32> 
-    return %15 : !torch.vtensor<[10,9,3],f32>
   }
 }
 
