@@ -197,7 +197,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
 
     module_path = f"{scheduled_unet_dir}/model_gpu_rocm_real_weights.vmfb"
     binary_size = Path(module_path).stat().st_size
-    assert binary_size <= goldensize_rocm_unet
+    assert binary_size <= goldensize_rocm_unet, "SDXL scheduled unet binary size should not get bigger"
     compilation_line = (f"Scheduled Unet Binary Size: {binary_size} bytes"
                         f" (golden binary size {goldensize_rocm_unet} bytes)")
     job_summary_lines.append(compilation_line)
@@ -216,7 +216,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     with open(f"{prompt_encoder_dir}/compilation_info.json", 'r') as file:
         comp_stats = json.load(file)
     clip_dispatch_count = int(comp_stats["stream-aggregate"]["execution"]["dispatch-count"])
-    assert clip_dispatch_count <= goldendispatch_rocm_clip
+    assert clip_dispatch_count <= goldendispatch_rocm_clip, "SDXL prompt encoder dispatch count should not regress"
     compilation_line = (f"Prompt Encoder Dispatch Count: {clip_dispatch_count}"
                         f" (golden dispatch count {goldendispatch_rocm_clip})")
     job_summary_lines.append(compilation_line)
@@ -224,7 +224,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
 
     module_path = f"{prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb"
     binary_size = Path(module_path).stat().st_size
-    assert binary_size <= goldensize_rocm_clip
+    assert binary_size <= goldensize_rocm_clip, "SDXL prompt encoder binary size should not get bigger"
     compilation_line = (f"Prompt Encoder Binary Size: {binary_size} bytes"
                         f" (golden binary size {goldensize_rocm_clip} bytes)")
     job_summary_lines.append(compilation_line)
@@ -243,7 +243,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     with open(f"{vae_decode_dir}/compilation_info.json", 'r') as file:
         comp_stats = json.load(file)
     vae_dispatch_count = int(comp_stats["stream-aggregate"]["execution"]["dispatch-count"])
-    assert vae_dispatch_count <= goldendispatch_rocm_vae
+    assert vae_dispatch_count <= goldendispatch_rocm_vae, "SDXL vae decode dispatch count should not regress"
     compilation_line = (f"VAE Decode Dispatch Count: {vae_dispatch_count}"
                         f" (golden dispatch count {goldendispatch_rocm_vae})")
     job_summary_lines.append(compilation_line)
@@ -251,7 +251,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
 
     module_path = f"{vae_decode_dir}/model_gpu_rocm_real_weights.vmfb"
     binary_size = Path(module_path).stat().st_size
-    assert binary_size <= goldensize_rocm_vae
+    assert binary_size <= goldensize_rocm_vae, "SDXL vae decode binary size should not get bigger"
     compilation_line = (f"VAE Decode Binary Size: {binary_size} bytes"
                         f" (golden binary size {goldensize_rocm_vae} bytes)")
     job_summary_lines.append(compilation_line)
