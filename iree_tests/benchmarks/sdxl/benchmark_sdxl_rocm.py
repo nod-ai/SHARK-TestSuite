@@ -176,6 +176,9 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
+    # new line
+    job_summary_lines.append("\n")
+
     # unet benchmark
     ret_value, output = run_sdxl_unet_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
@@ -184,9 +187,6 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
                  f" (golden time {goldentime_rocm_unet} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
-
-    # new line
-    job_summary_lines.append("\n")
 
     # unet compilation stats check
     with open(f"{scheduled_unet_dir}/compilation_info.json", 'r') as file:
