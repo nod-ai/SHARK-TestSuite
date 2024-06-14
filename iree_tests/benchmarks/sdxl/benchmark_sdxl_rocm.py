@@ -9,9 +9,11 @@ from collections import namedtuple
 import logging
 from typing import Sequence
 import subprocess
+import json
+from pathlib import Path
 
 benchmark_dir = os.path.dirname(os.path.realpath(__file__))
-iree_root = os.path.dirname(benchmark_dir)
+iree_root = os.path.dirname(os.path.dirname(benchmark_dir))
 prompt_encoder_dir = f"{iree_root}/pytorch/models/sdxl-prompt-encoder-tank"
 scheduled_unet_dir = f"{iree_root}/pytorch/models/sdxl-scheduled-unet-3-tank"
 vae_decode_dir = f"{iree_root}/pytorch/models/sdxl-vae-decode-tank"
@@ -159,7 +161,9 @@ def job_summary_process(ret_value, output):
     return benchmark_mean_time
 
 def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet, 
-    goldentime_rocm_clip, goldentime_rocm_vae, gpu_number, rocm_chip):
+    goldentime_rocm_clip, goldentime_rocm_vae, gpu_number, rocm_chip,
+    goldendispatch_rocm_unet, goldendispatch_rocm_clip, goldendispatch_rocm_vae,
+    goldensize_rocm_unet, goldensize_rocm_clip, goldensize_rocm_vae):
     # if the benchmark returns 1, benchmark failed
     job_summary_lines = []
 
@@ -181,6 +185,24 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
+    # unet compilation stats check
+    with open(f"{scheduled_unet_dir}/compilation_info.json", 'r') as file:
+        comp_stats = json.load(file)
+    unet_dispatch_count = int(comp_stats["stream-aggregate"]["execution"]["dispatch-count"])
+    assert unet_dispatch_count <= goldendispatch_rocm_unet, "SDXL scheduled unet dispatch count should not regress"
+    compilation_line = (f"Scheduled Unet Dispatch Count: {unet_dispatch_count}"
+                        f" (golden dispatch count {goldendispatch_rocm_unet})")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
+
+    module_path = f"{scheduled_unet_dir}/model_gpu_rocm_real_weights.vmfb"
+    binary_size = Path(module_path).stat().st_size
+    assert binary_size <= goldensize_rocm_unet
+    compilation_line = (f"Scheduled Unet Binary Size: {binary_size} bytes"
+                        f" (golden binary size {goldensize_rocm_unet} bytes)")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
+
     # prompt encoder benchmark
     ret_value, output = run_sdxl_prompt_encoder_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
@@ -190,6 +212,24 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
 
+    # prompt encoder compilation stats check
+    with open(f"{prompt_encoder_dir}/compilation_info.json", 'r') as file:
+        comp_stats = json.load(file)
+    clip_dispatch_count = int(comp_stats["stream-aggregate"]["execution"]["dispatch-count"])
+    assert clip_dispatch_count <= goldendispatch_rocm_clip
+    compilation_line = (f"Prompt Encoder Dispatch Count: {clip_dispatch_count}"
+                        f" (golden dispatch count {goldendispatch_rocm_clip})")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
+
+    module_path = f"{prompt_encoder_dir}/model_gpu_rocm_real_weights.vmfb"
+    binary_size = Path(module_path).stat().st_size
+    assert binary_size <= goldensize_rocm_clip
+    compilation_line = (f"Prompt Encoder Binary Size: {binary_size} bytes"
+                        f" (golden binary size {goldensize_rocm_clip} bytes)")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
+
     # vae decode benchmark
     ret_value, output = run_sdxl_vae_decode_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
@@ -198,6 +238,24 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
                   f" (golden time {goldentime_rocm_vae} ms)")
     job_summary_lines.append(mean_line)
     logging.getLogger().info(mean_line)
+
+    # vae decode compilation stats check
+    with open(f"{vae_decode_dir}/compilation_info.json", 'r') as file:
+        comp_stats = json.load(file)
+    vae_dispatch_count = int(comp_stats["stream-aggregate"]["execution"]["dispatch-count"])
+    assert vae_dispatch_count <= goldendispatch_rocm_vae
+    compilation_line = (f"VAE Decode Dispatch Count: {vae_dispatch_count}"
+                        f" (golden dispatch count {goldendispatch_rocm_vae})")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
+
+    module_path = f"{vae_decode_dir}/model_gpu_rocm_real_weights.vmfb"
+    binary_size = Path(module_path).stat().st_size
+    assert binary_size <= goldensize_rocm_vae
+    compilation_line = (f"VAE Decode Binary Size: {binary_size} bytes"
+                        f" (golden binary size {goldensize_rocm_vae} bytes)")
+    job_summary_lines.append(compilation_line)
+    logging.getLogger().info(compilation_line)
 
     with open('job_summary.txt', 'w') as job_summary_file:
         for line in job_summary_lines:
