@@ -216,7 +216,7 @@ jobs:
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_tests/benchmarks/sdxl/benchmark_sdxl_rocm.py \
-            --goldentime-rocm-e2e-ms 1661.5 \
+            --goldentime-rocm-e2e-ms 1000 \
             --goldentime-rocm-unet-ms 450.5 \
             --goldentime-rocm-clip-ms 19 \
             --goldentime-rocm-vae-ms 288.5 \
