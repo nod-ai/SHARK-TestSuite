@@ -32,7 +32,6 @@ def run_iree_command(args: Sequence[str] = ()):
     return 1, proc.stdout
 
 def run_sdxl_rocm_benchmark(rocm_chip, gpu_number):
-    logging.getLogger().info("HEREee")
     exec_args = [
         "iree-compile",
         f"{benchmark_dir}/sdxl_pipeline_bench_f16.mlir",
