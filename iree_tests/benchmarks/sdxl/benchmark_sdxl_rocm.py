@@ -170,7 +170,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     # e2e benchmark
     ret_value, output = run_sdxl_rocm_benchmark(rocm_chip, gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
-    assert benchmark_mean_time <= goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress"
+    check.less_equal(benchmark_mean_time, goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress")
     mean_line = (f"E2E Benchmark Time: {str(benchmark_mean_time)} ms"
                  f" (golden time {goldentime_rocm_e2e} ms)")
     e2e_mean_time = benchmark_mean_time
@@ -179,7 +179,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     # unet benchmark
     ret_value, output = run_sdxl_unet_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
-    assert benchmark_mean_time <= goldentime_rocm_unet, "SDXL unet benchmark time should not regress"
+    check.less_equal(benchmark_mean_time, goldentime_rocm_unet, "SDXL unet benchmark time should not regress")
     mean_line = (f"Scheduled Unet Benchmark Time: {str(benchmark_mean_time)} ms"
                  f" (golden time {goldentime_rocm_unet} ms)")
     unet_mean_time = benchmark_mean_time
@@ -205,7 +205,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     # prompt encoder benchmark
     ret_value, output = run_sdxl_prompt_encoder_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
-    assert benchmark_mean_time <= goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress"
+    check.less_equal(benchmark_mean_time, goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress")
     mean_line = (f"Prompt Encoder Benchmark Time: {str(benchmark_mean_time)} ms"
                  f" (golden time {goldentime_rocm_clip} ms)")
     clip_mean_time = benchmark_mean_time
@@ -231,7 +231,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     # vae decode benchmark
     ret_value, output = run_sdxl_vae_decode_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
-    assert benchmark_mean_time <= goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress"
+    check.less_equal(benchmark_mean_time, goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress")
     mean_line = (f"VAE Decode Benchmark Time: {str(benchmark_mean_time)} ms"
                   f" (golden time {goldentime_rocm_vae} ms)")
     vae_mean_time = benchmark_mean_time
