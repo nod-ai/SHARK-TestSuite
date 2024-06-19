@@ -10,5 +10,5 @@ pytest-check
 # Remote file downloading
 azure-storage-blob
 
-# Markdown generator
+# Markdown table generator
 tabulate

@@ -255,6 +255,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     vae_binary_size = binary_size
     logging.getLogger().info(compilation_line)
 
+    # Create mean time table's header and rows
     mean_time_header = ["Benchmark", "Current time (ms)", "Expected/golden time (ms)"]
     mean_time_rows = [
         ["E2E†", f"{e2e_mean_time}", f"{goldentime_rocm_e2e}"],
@@ -263,6 +264,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
         ["VAE Decode", f"{vae_mean_time}", f"{goldentime_rocm_vae}"]
     ]
 
+    # Create dispatch count table's header and rows
     dispatch_count_header = ["Benchmark", "Current dispatch count", "Expected/golden dispatch count"]
     dispatch_count_rows = [
         ["Scheduled Unet", f"{unet_dispatch_count}", f"{goldendispatch_rocm_unet}"],
@@ -270,6 +272,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
         ["VAE Decode", f"{vae_dispatch_count}", f"{goldendispatch_rocm_vae}"]
     ]
 
+    # Create binary size table's header and rows
     binary_size_header = ["Benchmark", "Current binary size (bytes)", "Expected/golden binary size (bytes)"]
     binary_size_rows = [
         ["Scheduled Unet", f"{unet_binary_size}", f"{goldensize_rocm_unet}"],
@@ -277,21 +280,25 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
         ["VAE Decode", f"{vae_binary_size}", f"{goldensize_rocm_vae}"]
     ]
 
+    # Create mean time table using tabulate
     mean_time_full = [mean_time_header] + mean_time_rows
     mean_time_table = tabulate.tabulate(
         mean_time_full, headers="firstrow", tablefmt="pipe"
     )
 
+    # Create dispatch count table using tabulate
     dispatch_count_full = [dispatch_count_header] + dispatch_count_rows
     dispatch_count_table = tabulate.tabulate(
         dispatch_count_full, headers="firstrow", tablefmt="pipe"
     )
 
+    # Create binary size of compiled artifacts table using tabulate
     binary_size_full = [binary_size_header] + binary_size_rows
     binary_size_table = tabulate.tabulate(
         binary_size_full, headers="firstrow", tablefmt="pipe"
     )
 
+    # Write markdown tables to job summary file
     with open("job_summary.md", "w") as job_summary:
         print("SDXL Benchmark Summary:\n", file=job_summary)
         print(mean_time_table, file=job_summary)
