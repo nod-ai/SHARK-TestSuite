@@ -15,6 +15,7 @@ iree_root = os.path.dirname(benchmark_dir)
 prompt_encoder_dir = f"{iree_root}/pytorch/models/sdxl-prompt-encoder-tank"
 scheduled_unet_dir = f"{iree_root}/pytorch/models/sdxl-scheduled-unet-3-tank"
 vae_decode_dir = f"{iree_root}/pytorch/models/sdxl-vae-decode-tank"
+rocm_chip = os.getenv("ROCM_CHIP")
 
 def run_iree_command(args: Sequence[str] = ()):
     command = "Exec:", " ".join(args)
@@ -27,7 +28,7 @@ def run_iree_command(args: Sequence[str] = ()):
     logging.getLogger().info(f"Command failed with error: {proc.stderr}")
     return 1, proc.stdout
 
-def run_sdxl_rocm_benchmark(rocm_chip, gpu_number):
+def run_sdxl_rocm_benchmark(gpu_number):
     exec_args = [
         "iree-compile",
         f"{benchmark_dir}/sdxl_pipeline_bench_f16.mlir",
@@ -159,12 +160,12 @@ def job_summary_process(ret_value, output):
     return benchmark_mean_time
 
 def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet, 
-    goldentime_rocm_clip, goldentime_rocm_vae, gpu_number, rocm_chip):
+    goldentime_rocm_clip, goldentime_rocm_vae, gpu_number):
     # if the benchmark returns 1, benchmark failed
     job_summary_lines = []
 
     # e2e benchmark
-    ret_value, output = run_sdxl_rocm_benchmark(rocm_chip, gpu_number)
+    ret_value, output = run_sdxl_rocm_benchmark(gpu_number)
     benchmark_mean_time = job_summary_process(ret_value, output)
     assert benchmark_mean_time <= goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress"
     mean_line = (f"E2E Benchmark Time: {str(benchmark_mean_time)} ms"
