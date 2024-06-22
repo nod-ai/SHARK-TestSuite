@@ -319,7 +319,12 @@ class IreeCompileRunItem(pytest.Item):
 
         self.run_args = ["iree-run-module", f"--module={vmfb_name}"]
         self.run_args.extend(self.spec.iree_run_module_flags)
-        self.run_args.append(f"--flagfile={self.spec.data_flagfile_name}")
+
+        # expand data flag file, so beter for logging and can use environment variables
+        flag_file_path = f"{self.test_cwd}/{self.spec.data_flagfile_name}"
+        file = open(flag_file_path)
+        for line in file:
+            self.run_args.append(line.rstrip())
 
     def runtest(self):
         # TODO(scotttodd): log files needed by the test (remote files / git LFS)
@@ -385,6 +390,8 @@ class IreeCompileRunItem(pytest.Item):
         compile_env["IREE_TEST_PATH_EXTENSION"] = os.getenv(
             "IREE_TEST_PATH_EXTENSION", default=str(self.test_cwd)
         )
+
+        # expand environment variable for logging
         path_extension = compile_env["IREE_TEST_PATH_EXTENSION"]
         cmd = subprocess.list2cmdline(self.compile_args)
         cmd = cmd.replace("${IREE_TEST_PATH_EXTENSION}", f"{path_extension}")
@@ -401,8 +408,15 @@ class IreeCompileRunItem(pytest.Item):
 
     def test_run(self):
         run_env = os.environ.copy()
-        cmd = subprocess.list2cmdline(self.run_args)
+        run_env["IREE_TEST_BACKEND"] = os.getenv(
+            "IREE_TEST_BACKEND", default="none"
+        )
 
+        # expand environment variable for logging
+        backend = run_env["IREE_TEST_BACKEND"]
+        cmd = subprocess.list2cmdline(self.run_args)
+        cmd = cmd.replace("${IREE_TEST_BACKEND}", f"{backend}")
+        
         # TODO(scotttodd): expand flagfile(s)
         logging.getLogger().info(
             f"Launching run command:\n"  #
