@@ -171,7 +171,6 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     benchmark_e2e_mean_time = job_summary_process(ret_value, output)
     mean_line = (f"E2E Benchmark Time: {str(benchmark_e2e_mean_time)} ms"
                  f" (golden time {goldentime_rocm_e2e} ms)")
-    e2e_mean_time = benchmark_mean_time
     logging.getLogger().info(mean_line)
 
     # unet benchmark
