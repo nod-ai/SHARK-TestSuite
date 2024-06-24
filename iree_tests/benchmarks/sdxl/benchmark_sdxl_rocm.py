@@ -12,7 +12,6 @@ import subprocess
 import json
 from pathlib import Path
 import tabulate
-from pytest_check import check
 
 benchmark_dir = os.path.dirname(os.path.realpath(__file__))
 iree_root = os.path.dirname(os.path.dirname(benchmark_dir))
