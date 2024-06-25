@@ -183,7 +183,7 @@ jobs:
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_special_models/sd3 \
-            --k ${{ matrix.backend }} \
+            -k ${{ matrix.backend }} \
             -rpfE \
             --capture=no \
             --log-cli-level=info \
