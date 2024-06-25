@@ -6,7 +6,7 @@ pytest-timeout
 pytest-xdist
 pyjson5
 pytest-check
-pytest-dependency
+pytest-depends
 
 # Remote file downloading
 azure-storage-blob
