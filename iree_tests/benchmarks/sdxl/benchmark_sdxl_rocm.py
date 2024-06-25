@@ -12,6 +12,7 @@ import subprocess
 import json
 from pathlib import Path
 import tabulate
+import pytest-check
 
 benchmark_dir = os.path.dirname(os.path.realpath(__file__))
 iree_root = os.path.dirname(os.path.dirname(benchmark_dir))
@@ -67,7 +68,8 @@ def run_sdxl_rocm_benchmark(rocm_chip, gpu_number):
         "--input=1x64xi64",
         "--input=1x64xi64",
         "--input=1x64xi64",
-        "--benchmark_repetitions=3",
+        "--benchmark_repetitions=10",
+        "--benchmark_min_warmup_time=3.0",
     ]
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
@@ -86,7 +88,8 @@ def run_sdxl_unet_rocm_benchmark(gpu_number):
         "--input=2x6xf16",
         "--input=1xf16",
         "--input=1xi64",
-        "--benchmark_repetitions=3",
+        "--benchmark_repetitions=10",
+        "--benchmark_min_warmup_time=3.0",
     ]
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
@@ -103,7 +106,8 @@ def run_sdxl_prompt_encoder_rocm_benchmark(gpu_number):
         "--input=1x64xi64",
         "--input=1x64xi64",
         "--input=1x64xi64",
-        "--benchmark_repetitions=3",
+        "--benchmark_repetitions=10",
+        "--benchmark_min_warmup_time=3.0",
     ]
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
@@ -117,7 +121,8 @@ def run_sdxl_vae_decode_rocm_benchmark(gpu_number):
         f"--parameters=model={vae_decode_dir}/real_weights.irpa",
         "--function=main",
         "--input=1x4x128x128xf16",
-        "--benchmark_repetitions=3",
+        "--benchmark_repetitions=10",
+        "--benchmark_min_warmup_time=3.0",
     ]
     # iree benchmark command for full sdxl pipeline
     return run_iree_command(exec_args)
@@ -158,7 +163,7 @@ def job_summary_process(ret_value, output):
     bench_lines = output.decode().split("\n")[3:]
     benchmark_results = decode_output(bench_lines)
     logging.getLogger().info(benchmark_results)
-    benchmark_mean_time = float(benchmark_results[3].time.split()[0])
+    benchmark_mean_time = float(benchmark_results[10].time.split()[0])
     return benchmark_mean_time
 
 def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet, 
@@ -290,13 +295,13 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
 
     # Check all values are either <= than golden values for times and == for compilation statistics.
 
-    assert benchmark_e2e_mean_time <= goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress"
-    assert benchmark_unet_mean_time <= goldentime_rocm_unet, "SDXL unet benchmark time should not regress"
-    assert unet_dispatch_count == goldendispatch_rocm_unet, "SDXL scheduled unet dispatch count should not regress"
-    assert unet_binary_size == goldensize_rocm_unet, "SDXL scheduled unet binary size should not get bigger"
-    assert benchmark_clip_mean_time <= goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress"
-    assert clip_dispatch_count == goldendispatch_rocm_clip, "SDXL prompt encoder dispatch count should not regress"
-    assert clip_binary_size == goldensize_rocm_clip, "SDXL prompt encoder binary size should not get bigger"
-    assert benchmark_vae_mean_time <= goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress"
-    assert vae_dispatch_count == goldendispatch_rocm_vae, "SDXL vae decode dispatch count should not regress"
-    assert vae_binary_size == goldensize_rocm_vae, "SDXL vae decode binary size should not get bigger"
+    check.less_equal(benchmark_e2e_mean_time, goldentime_rocm_e2e, "SDXL e2e benchmark time should not regress")
+    check.less_equal(benchmark_unet_mean_time, goldentime_rocm_unet, "SDXL unet benchmark time should not regress")
+    check.equal(unet_dispatch_count, goldendispatch_rocm_unet, "SDXL scheduled unet dispatch count should not regress")
+    check.equal(unet_binary_size, goldensize_rocm_unet, "SDXL scheduled unet binary size should not get bigger")
+    check.less_equal(benchmark_clip_mean_time, goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress")
+    check.equal(clip_dispatch_count, goldendispatch_rocm_clip, "SDXL prompt encoder dispatch count should not regress")
+    check.equal(clip_binary_size, goldensize_rocm_clip, "SDXL prompt encoder binary size should not get bigger")
+    check.less_equal(benchmark_vae_mean_time, goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress")
+    check.equal(vae_dispatch_count, goldendispatch_rocm_vae, "SDXL vae decode dispatch count should not regress")
+    check.equal(vae_binary_size, goldensize_rocm_vae, "SDXL vae decode binary size should not get bigger")

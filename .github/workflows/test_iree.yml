@@ -228,6 +228,5 @@ jobs:
             --goldensize-rocm-vae-bytes 762067 \
             --gpu-number 6 \
             --rocm-chip gfx90a \
-            --log-cli-level=info \
-            --retries 3
+            --log-cli-level=info
           echo "$(<job_summary.md )" >> $GITHUB_STEP_SUMMARY
