@@ -101,9 +101,11 @@ jobs:
           - name: cpu_llvm_task
             runs-on: nodai-amdgpu-mi250-x86-64
             models-config-file: config_pytorch_models_cpu_llvm_task.json
+            backend: cpu
           - name: gpu_mi250_rocm
             runs-on: nodai-amdgpu-mi250-x86-64
             models-config-file: config_gpu_rocm_models.json
+            backend: rocm
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
       ROCM_CHIP: gfx90a
@@ -164,10 +166,11 @@ jobs:
       
       - name: "Running SDXL special model tests"
         id: special_models_sdxl
-        if: contains(matrix.name, 'rocm')
+        if: ${{ !cancelled() }}
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_special_models/sdxl \
+            -k ${{ matrix.backend }} \
             -rpfE \
             --capture=no \
             --log-cli-level=info \
@@ -176,10 +179,11 @@ jobs:
       
       - name: "Running SD3 special model tests"
         id: special_models_sd3
-        if: contains(matrix.name, 'rocm')
+        if: ${{ !cancelled() }}
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_special_models/sd3 \
+            --k ${{ matrix.backend }} \
             -rpfE \
             --capture=no \
             --log-cli-level=info \
