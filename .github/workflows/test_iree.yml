@@ -99,7 +99,7 @@ jobs:
       matrix:
         include:
           - name: cpu_llvm_task
-            runs-on: nodai-amdgpu-w7900-x86-64
+            runs-on: nodai-amdgpu-mi250-x86-64
             models-config-file: config_pytorch_models_cpu_llvm_task.json
           - name: gpu_mi250_rocm
             runs-on: nodai-amdgpu-mi250-x86-64
