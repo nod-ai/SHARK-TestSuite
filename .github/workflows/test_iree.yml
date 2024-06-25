@@ -165,8 +165,8 @@ jobs:
       - name: "Running SDXL special model tests"
         id: special_models_sdxl
         if: |
-          ${{ !cancelled() }} &&
-          contains(matrix.name, 'rocm')
+          contains(matrix.name, 'rocm') &&
+          ${{ !cancelled() }}
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_special_models/sdxl \
@@ -179,8 +179,8 @@ jobs:
       - name: "Running SD3 special model tests"
         id: special_models_sd3
         if: |
-          ${{ !cancelled() }} &&
-          contains(matrix.name, 'rocm')
+          contains(matrix.name, 'rocm') &&
+          ${{ !cancelled() }}
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_special_models/sd3 \
