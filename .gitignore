@@ -31,3 +31,7 @@
 
 # Test report files
 test-run
+
+# Model files
+*.bin
+*.irpa
