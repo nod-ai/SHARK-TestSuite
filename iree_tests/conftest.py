@@ -312,11 +312,6 @@ class IreeCompileRunItem(pytest.Item):
 
         # TODO(scotttodd): swap cwd for a temp path?
         self.test_cwd = self.spec.test_directory
-        vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
-
-        self.compile_args = ["iree-compile", self.spec.input_mlir_name]
-        self.compile_args.extend(self.spec.iree_compile_flags)
-        self.compile_args.extend(["-o", str(vmfb_name)])
 
         self.run_args = []
         self.run_args.extend(self.spec.iree_run_module_flags)
