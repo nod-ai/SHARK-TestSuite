@@ -98,7 +98,7 @@ jobs:
       matrix:
         include:
           - name: cpu_llvm_task
-            runs-on: nodai-amdgpu-w7900-x86-64
+            runs-on: nodai-amdgpu-mi250-x86-64
             pytorch-models-config-file: config_pytorch_models_cpu_llvm_task.json
             sharktank-models-config-file: config_sharktank_models_cpu_llvm_task.json
             sdxl-prompt-encoder-config-file: config_sdxl_prompt_encoder_cpu_llvm_task.json
