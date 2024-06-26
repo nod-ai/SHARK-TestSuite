@@ -136,8 +136,8 @@ jobs:
           python3 -m pip install \
             --find-links https://iree.dev/pip-release-links.html \
             --upgrade \
-            iree-compiler \
-            iree-runtime
+            iree-compiler==20240621.931 \
+            iree-runtime==20240621.931
       - name: "Installing Python test requirements"
         run: |
           source ${VENV_DIR}/bin/activate
