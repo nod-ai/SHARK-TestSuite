@@ -31,7 +31,7 @@ COMMON_RUN_FLAGS = [
     "--input=2x16x128x128xf16=@inference_input.0.bin",
     "--input=2x154x4096xf16=@inference_input.1.bin",
     "--input=2x2048xf16=@inference_input.2.bin",
-    "--input=1xf16=@inference_input.3.bin",
+    "--input=2xf16=@inference_input.3.bin",
     "--expected_output=2x16x128x128xf32=@inference_output.0.bin"
 ]
 
