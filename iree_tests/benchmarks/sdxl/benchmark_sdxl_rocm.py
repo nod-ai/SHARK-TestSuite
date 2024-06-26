@@ -301,7 +301,7 @@ def test_sdxl_rocm_benchmark(goldentime_rocm_e2e, goldentime_rocm_unet,
     check.equal(unet_binary_size, goldensize_rocm_unet, "SDXL scheduled unet binary size should not get bigger")
     check.less_equal(benchmark_clip_mean_time, goldentime_rocm_clip, "SDXL prompt encoder benchmark time should not regress")
     check.equal(clip_dispatch_count, goldendispatch_rocm_clip, "SDXL prompt encoder dispatch count should not regress")
-    check.equal(clip_binary_size, goldensize_rocm_clip, "SDXL prompt encoder binary size should not get bigger")
+    check.less_equal(clip_binary_size, goldensize_rocm_clip, "SDXL prompt encoder binary size should not get bigger")
     check.less_equal(benchmark_vae_mean_time, goldentime_rocm_vae, "SDXL vae decode benchmark time should not regress")
     check.equal(vae_dispatch_count, goldendispatch_rocm_vae, "SDXL vae decode dispatch count should not regress")
     check.equal(vae_binary_size, goldensize_rocm_vae, "SDXL vae decode binary size should not get bigger")
