@@ -8,6 +8,7 @@ import logging
 import os
 import subprocess
 from pathlib import Path
+from typing import List
 
 class IreeCompileException(Exception):
     """Compiler exception that preserves the command line and error output."""
