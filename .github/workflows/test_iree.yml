@@ -209,7 +209,7 @@ jobs:
             --goldendispatch-rocm-unet 1718 \
             --goldendispatch-rocm-clip 1571 \
             --goldendispatch-rocm-vae 250 \
-            --goldensize-rocm-unet-bytes 2088217 \
+            --goldensize-rocm-unet-bytes 2058393 \
             --goldensize-rocm-clip-bytes 785493 \
             --goldensize-rocm-vae-bytes 762067 \
             --gpu-number 6 \
