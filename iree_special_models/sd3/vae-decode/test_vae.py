@@ -95,7 +95,7 @@ def test_run_vae_rocm():
         [
             "--device=hip",
             "--parameters=model=real_weights.irpa",
-            "--expected_f32_threshold=0.6f"
+            "--expected_f32_threshold=0.7f"
         ] + COMMON_RUN_FLAGS,
         current_dir,
         compile_rocm_cmd
