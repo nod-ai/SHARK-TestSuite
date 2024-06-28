@@ -149,7 +149,7 @@ jobs:
           python3 iree_tests/download_remote_files.py --root-dir sharktank
 
       - name: "Running real weights PyTorch model tests"
-        if: "matrix.pytorch-models-config-file != '' && !cancelled()"
+        if: "matrix.models-config-file != '' && !cancelled()"
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_tests/pytorch/models \
@@ -164,7 +164,7 @@ jobs:
             --config-files=${MODELS_CONFIG_FILE_PATH}
 
       - name: "Running SHARK Tank model tests"
-        if: "matrix.sharktank-models-config-file != '' && !cancelled()"
+        if: "matrix.models-config-file != '' && !cancelled()"
         run: |
           source ${VENV_DIR}/bin/activate
           pytest iree_tests/sharktank \
