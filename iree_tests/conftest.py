@@ -14,6 +14,7 @@ import os
 import pytest
 import subprocess
 
+IREE_TESTS_ROOT = Path(__file__).parent
 
 # --------------------------------------------------------------------------- #
 # pytest hooks
@@ -247,6 +248,7 @@ class MlirFile(pytest.File):
         #     ...
 
         test_directory = self.path.parent
+        relative_test_directory = test_directory.relative_to(IREE_TESTS_ROOT).as_posix()
         test_directory_name = test_directory.name
 
         test_cases = self.discover_test_cases()
@@ -255,18 +257,20 @@ class MlirFile(pytest.File):
             return []
 
         for config in self.config.iree_test_configs:
-            if test_directory_name in config.get("skip_compile_tests", []):
+            if relative_test_directory in config.get("skip_compile_tests", []):
                 continue
 
             expect_compile_success = self.config.getoption(
                 "ignore_xfails"
-            ) or test_directory_name not in config.get("expected_compile_failures", [])
+            ) or relative_test_directory not in config.get(
+                "expected_compile_failures", []
+            )
             expect_run_success = self.config.getoption(
                 "ignore_xfails"
-            ) or test_directory_name not in config.get("expected_run_failures", [])
+            ) or relative_test_directory not in config.get("expected_run_failures", [])
             skip_run = self.config.getoption(
                 "skip_all_runs"
-            ) or test_directory_name in config.get("skip_run_tests", [])
+            ) or relative_test_directory in config.get("skip_run_tests", [])
             config_name = config["config_name"]
 
             # TODO(scotttodd): don't compile once per test case?
