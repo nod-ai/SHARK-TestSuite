@@ -253,7 +253,7 @@ class MlirFile(pytest.File):
 
         test_cases = self.discover_test_cases()
         if len(test_cases) == 0:
-            print(f"No test cases for '{test_directory_name}'")
+            logging.getLogger().debug(f"No test cases for '{test_directory_name}'")
             return []
 
         for config in self.config.iree_test_configs:
