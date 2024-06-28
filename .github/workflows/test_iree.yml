@@ -99,13 +99,13 @@ jobs:
         include:
           - name: cpu_llvm_task
             runs-on: nodai-amdgpu-w7900-x86-64
-            models-config-file: pytorch_models_cpu_llvm_task.json
+            models-config-file: models_cpu_llvm_task.json
             sdxl-prompt-encoder-config-file: sdxl_prompt_encoder_cpu_llvm_task.json
             sdxl-unet-config-file: sdxl_scheduled_unet_cpu_llvm_task.json
             sdxl-vae-decode-config-file: sdxl_vae_decode_cpu_llvm_task.json
           - name: gpu_mi250_rocm
             runs-on: nodai-amdgpu-mi250-x86-64
-            models-config-file: gpu_rocm_models.json
+            models-config-file: models_gpu_rocm_gfx90a.json
             sdxl-prompt-encoder-config-file: sdxl_prompt_encoder_gpu_rocm.json
             sdxl-unet-config-file: sdxl_scheduled_unet_gpu_rocm.json
             sdxl-vae-decode-config-file: sdxl_vae_decode_gpu_rocm.json
