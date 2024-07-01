@@ -14,7 +14,7 @@ on:
       # The iree_tests subproject.
       - "iree_tests/**"
       # The iree_special_models subproject.
-      - "iree_tests/**"
+      - "iree_special_models/**"
   workflow_dispatch:
 
 concurrency:

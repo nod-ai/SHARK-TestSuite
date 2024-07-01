@@ -8,7 +8,7 @@ import pytest
 from ireers import *
 import os
 
-# iree_tests/special_models/sdxl/vae-decode
+# iree_special_models/sdxl/vae-decode
 current_dir = os.path.dirname(os.path.realpath(__file__))
 rocm_chip = os.getenv("ROCM_CHIP", default="gfx90a")
 
