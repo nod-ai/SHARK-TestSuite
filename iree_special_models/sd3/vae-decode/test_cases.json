@@ -4,8 +4,8 @@
       {
         "name": "real_weights",
         "remote_files": [
-          "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd3-vae-updated/inference_input.0.bin",
-          "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd3-vae-updated/inference_output.0.bin",
+          "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd3-vae/inference_input.0.bin",
+          "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd3-vae/inference_output.0.bin",
           "https://sharkpublic.blob.core.windows.net/sharkpublic/sai/sd3-vae/real_weights.irpa"
         ]
       }
