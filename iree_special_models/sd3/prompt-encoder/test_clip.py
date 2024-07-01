@@ -8,8 +8,8 @@ import pytest
 from ireers import *
 import os
 
-# iree_special_models/sd3/prompt-encoder
-current_dir = os.path.dirname(os.path.realpath(__file__))
+repo_root = os.getenv("REPO_ROOT")
+current_dir = repo_root + "/iree_special_models/sd3/prompt-encoder"
 rocm_chip = os.getenv("ROCM_CHIP", default="gfx90a")
 
 ###############################################################################

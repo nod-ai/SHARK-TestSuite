@@ -161,7 +161,7 @@ def download_huggingface_remote_file(
       environment variable.
     """
     remote_file_name = remote_file.rsplit("/", 1)[-1]
-    relative_dir = test_dir.relative_to(THIS_DIR)
+    relative_dir = test_dir.relative_to(REPO_ROOT)
 
     # Extract path components from Hugging Face URL to use with huggingface_hub.
     # (https://pypi.org/project/huggingface-hub/).
