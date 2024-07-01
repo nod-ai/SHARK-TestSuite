@@ -168,4 +168,4 @@ $ pytest iree_special_models/sdxl
 
 5. Add a `test_cases.json` pointing at the uploaded remote files and source mlir to its own test folder. Also, add a test python file to the folder that tests all the configurations for the model. Take a look at [this example](/iree_special_models/sdxl/prompt-encoder/test_clip.py)
 
-For examples on how to generate model artifacts from different repos/tools and an appendix on tools to use to work with weights and bytecode mlirs, you can find more information [here](/iree_tests/README.md)
+For examples on how to generate model artifacts from different repos/tools and an appendix on tools to use to work with weights and bytecode mlirs, you can find more information [here](/iree_tests/README.md) Just make sure that you are adhering to the 3 file structure specified above.
