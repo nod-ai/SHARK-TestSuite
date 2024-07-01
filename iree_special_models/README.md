@@ -55,7 +55,7 @@ providers. Download these files with
 $ python download_remote_files.py
 
 # Just files for one subdirectory
-$ python download_remote_files.py --root-dir pytorch/models/resnet50
+$ python download_remote_files.py --root-dir iree_special_models/sdxl/prompt-encoder
 ```
 
 ## Running tests
