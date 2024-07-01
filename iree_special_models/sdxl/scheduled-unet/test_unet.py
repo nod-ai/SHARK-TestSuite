@@ -9,7 +9,7 @@ from ireers import *
 import os
 import setuptools
 
-repo_root = os.getenv("REPO_ROOT")
+repo_root = os.getenv("TEST_SUITE_REPO_ROOT")
 current_dir = repo_root + "/iree_special_models/sdxl/scheduled-unet"
 iree_test_path_extension = os.getenv("IREE_TEST_PATH_EXTENSION", default=current_dir)
 rocm_chip = os.getenv("ROCM_CHIP", default="gfx90a")

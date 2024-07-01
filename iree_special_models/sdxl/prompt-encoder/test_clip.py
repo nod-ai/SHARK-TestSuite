@@ -8,7 +8,7 @@ import pytest
 from ireers import *
 import os
 
-repo_root = os.getenv("REPO_ROOT")
+repo_root = os.getenv("TEST_SUITE_REPO_ROOT")
 current_dir = repo_root + "/iree_special_models/sdxl/prompt-encoder"
 rocm_chip = os.getenv("ROCM_CHIP", default="gfx90a")
 
