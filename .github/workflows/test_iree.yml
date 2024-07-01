@@ -103,11 +103,11 @@ jobs:
         include:
           - name: cpu_llvm_task
             runs-on: nodai-amdgpu-mi250-x86-64
-            models-config-file: config_pytorch_models_cpu_llvm_task.json
+            models-config-file: models_cpu_llvm_task.json
             backend: cpu
           - name: gpu_mi250_rocm
             runs-on: nodai-amdgpu-mi250-x86-64
-            models-config-file: config_gpu_rocm_models.json
+            models-config-file: models_gpu_rocm_gfx90a.json
             backend: rocm
     env:
       VENV_DIR: ${{ github.workspace }}/.venv
