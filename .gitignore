@@ -28,8 +28,6 @@
 *.safetensors
 *.gguf
 *.vmfb
-*.bin
-*.irpa
 
 # Test report files
 test-run
