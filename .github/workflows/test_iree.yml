@@ -157,7 +157,7 @@ jobs:
             iree_tests/pytorch/models \
             iree_tests/sharktank \
             -n 4 \
-            -rpfE \
+            -rA \
             -k real_weights \
             --no-skip-tests-missing-files \
             --capture=no \
@@ -165,7 +165,7 @@ jobs:
             --timeout=1200 \
             --durations=0 \
             --config-files=${MODELS_CONFIG_FILE_PATH}
-      
+
       - name: "Running SDXL special model tests"
         id: special_models_sdxl
         if: ${{ !cancelled() }}
@@ -178,7 +178,7 @@ jobs:
             --log-cli-level=info \
             --timeout=1200 \
             --durations=0
-      
+
       - name: "Running SD3 special model tests"
         id: special_models_sd3
         if: ${{ !cancelled() }}
