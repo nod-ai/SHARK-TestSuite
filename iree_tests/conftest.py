@@ -357,7 +357,7 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeCompileException,
                     strict=True,
-                    reason="Expected compilation to fail (remove from 'expected_compile_failures')",
+                    reason="Expected compilation to fail (included in 'expected_compile_failures')",
                 )
             )
         if not self.spec.expect_run_success:
@@ -365,7 +365,7 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeRunException,
                     strict=True,
-                    reason="Expected run to fail (remove from 'expected_run_failures')",
+                    reason="Expected run to fail (included in 'expected_run_failures')",
                 )
             )
 
@@ -389,7 +389,9 @@ class IreeCompileRunItem(pytest.Item):
     def test_run(self):
         mlir_name = self.spec.input_mlir_name
         vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
-        compile_cmd = get_compile_cmd(mlir_name, vmfb_name, self.spec.iree_compile_flags)
+        compile_cmd = get_compile_cmd(
+            mlir_name, vmfb_name, self.spec.iree_compile_flags
+        )
         iree_run_module(vmfb_name, self.run_args, self.test_cwd, compile_cmd)
 
     def repr_failure(self, excinfo):
@@ -410,6 +412,7 @@ class IreeCompileRunItem(pytest.Item):
     # Defining this for pytest-retry to avoid an AttributeError.
     def _initrequest(self):
         pass
+
 
 class IreeXFailCompileRunException(Exception):
     pass

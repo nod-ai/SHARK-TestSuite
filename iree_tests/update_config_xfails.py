@@ -107,9 +107,9 @@ if __name__ == "__main__":
         elif "Error invoking iree-run-module" in repr:
             logger.debug(f"test {test_directory_name} failed to run")
             run_failures.append(test_directory_name)
-        elif "remove from 'expected_compile_failures'" in repr:
+        elif "included in 'expected_compile_failures'" in repr:
             logger.debug(f"test {test_directory_name} compiled and ran successfully")
-        elif "remove from 'expected_run_failures'" in repr:
+        elif "included in 'expected_run_failures'" in repr:
             logger.debug(f"test {test_directory_name} ran successfully")
         elif "move to 'expected_run_failures'" in repr:
             logger.debug(f"test {test_directory_name} compile xfail -> run fail")
