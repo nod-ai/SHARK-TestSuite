@@ -19,7 +19,7 @@
       "pytorch/models/resnet50",
 
       // error: One or more operations with large vector sizes (16384 bytes) were found
-      "sharktank/punet/int8/sdxl_int8_export_mlir",
+      "sharktank/punet/int8",
     ],
     "expected_run_failures": []
   }
