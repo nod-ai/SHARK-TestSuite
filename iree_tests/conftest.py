@@ -225,7 +225,7 @@ class MlirCompileRunTest(pytest.File):
         if self.path.name == TEST_DATA_FLAGFILE_NAME:
             test_cases.append(
                 MlirCompileRunTest.TestCase(
-                    name="test",
+                    name="",
                     mlir_file=mlir_file,
                     runtime_flagfile=TEST_DATA_FLAGFILE_NAME,
                     enabled=have_lfs_files,
@@ -290,11 +290,20 @@ class MlirCompileRunTest(pytest.File):
             config_name = config["config_name"]
 
             for test_case in test_cases:
+                # Generate test item names like 'model.mlir::cpu_llvm_sync::splats'.
+                # These show up in pytest output.
+                mlir_file = test_case.mlir_file
+                name_parts = [
+                    e for e in [mlir_file.name, config_name, test_case.name] if e
+                ]
+                item_name = "::".join(name_parts)
+                # Generate simpler test names to use in filenames.
                 test_name = config_name + "_" + test_case.name
+
                 spec = IreeCompileAndRunTestSpec(
                     test_directory=test_directory,
-                    input_mlir_name=test_case.mlir_file.name,
-                    input_mlir_stem=test_case.mlir_file.stem,
+                    input_mlir_name=mlir_file.name,
+                    input_mlir_stem=mlir_file.stem,
                     data_flagfile_name=test_case.runtime_flagfile,
                     test_name=test_name,
                     iree_compile_flags=config["iree_compile_flags"],
@@ -304,7 +313,7 @@ class MlirCompileRunTest(pytest.File):
                     skip_run=skip_run,
                     skip_test=not test_case.enabled,
                 )
-                yield IreeCompileRunItem.from_parent(self, name=test_name, spec=spec)
+                yield IreeCompileRunItem.from_parent(self, name=item_name, spec=spec)
 
 
 class IreeCompileRunItem(pytest.Item):
@@ -422,7 +431,9 @@ class IreeCompileRunItem(pytest.Item):
         return super().repr_failure(excinfo)
 
     def reportinfo(self):
-        display_name = f"{self.path.parent.name}::{self.name}"
+        display_name = (
+            f"{self.path.parent.name}::{self.spec.input_mlir_name}::{self.name}"
+        )
         return self.path, 0, f"IREE compile and run: {display_name}"
 
     # Defining this for pytest-retry to avoid an AttributeError.
