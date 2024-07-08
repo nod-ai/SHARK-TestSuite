@@ -6,7 +6,6 @@
 
 name: IREE Test Suite
 on:
-  # TODO(scotttodd): run on schedule (nightly), and/or on pushes to `main`
   pull_request:
     paths:
       # This file itself.
@@ -16,6 +15,9 @@ on:
       # The iree_special_models subproject.
       - "iree_special_models/**"
   workflow_dispatch:
+  schedule:
+    # Runs at 3:00 PM UTC, which is 8:00 AM PST
+    - cron: "0 15 * * *"
 
 concurrency:
   # A PR number if a pull request and otherwise the commit hash. This cancels

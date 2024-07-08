@@ -303,8 +303,11 @@ class IreeCompileRunItem(pytest.Item):
         super().__init__(**kwargs)
         self.spec = spec
 
+        relative_test_directory = self.spec.test_directory.relative_to(
+            IREE_TESTS_ROOT
+        ).as_posix()
         self.user_properties.append(
-            ("test_directory_name", self.spec.test_directory.name)
+            ("relative_test_directory_name", relative_test_directory)
         )
         self.user_properties.append(("input_mlir_name", self.spec.input_mlir_name))
         self.user_properties.append(("test_name", self.spec.test_name))
