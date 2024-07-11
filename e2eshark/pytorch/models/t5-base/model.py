@@ -4,10 +4,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-import sys, argparse
+import sys
 import torch
-import torch.nn as nn
-import torch_mlir
 from transformers import T5Model, AutoTokenizer
 
 # import from e2eshark/tools to allow running in current dir, for run through
@@ -55,3 +53,6 @@ print("Output:", E2ESHARK_CHECK["output"])
 # For geneartive AI models, input is int and should be kept that way for
 # casted models as well
 E2ESHARK_CHECK["inputtodtype"] = False
+
+# not possible to postprocess output here (model outputs text, not probability distribution/logits)
+# example use of this model input: "translate this sentence to spanish: Hi" -> output: "Hola"

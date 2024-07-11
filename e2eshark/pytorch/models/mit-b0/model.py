@@ -4,10 +4,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-import sys, argparse
+import sys
 import torch
-import torch.nn as nn
-import torch_mlir
 from transformers import SegformerImageProcessor, SegformerForImageClassification
 from PIL import Image
 import requests
@@ -44,11 +42,13 @@ print("Output:", E2ESHARK_CHECK["output"])
 E2ESHARK_CHECK["inputtodtype"] = False
 
 # Post process output to do:
-# torch.nn.functional.softmax(output, -1)
+# output shape: [1000]
+# torch.nn.functional.softmax(output, dim=0)
 # The output logits is the shape of (B, L).
 # (batch size, num labels)
 # This way we create a probability distribution for each possible label
-# when classifying sentence.
+# when classifying sentence and pick the top one.
 E2ESHARK_CHECK["postprocess"] = [
     (torch.nn.functional.softmax, [-1], False, 0),
+    (torch.topk, [1, 1], True, 1),
 ]

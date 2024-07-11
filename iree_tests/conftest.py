@@ -8,11 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 import argparse
+import logging
 import pyjson5
 import os
 import pytest
 import subprocess
+from ireers import *
 
+IREE_TESTS_ROOT = Path(__file__).parent
 
 # --------------------------------------------------------------------------- #
 # pytest hooks
@@ -56,7 +59,7 @@ def pytest_addoption(parser):
         this_dir = Path(__file__).parent
         repo_root = this_dir.parent
         default_config_files = [
-            repo_root / "iree_tests/configs/config_onnx_cpu_llvm_sync.json",
+            repo_root / "iree_tests/configs/onnx_cpu_llvm_sync.json",
         ]
     parser.addoption(
         "--config-files",
@@ -109,9 +112,11 @@ def pytest_sessionstart(session):
 
 
 def pytest_collect_file(parent, file_path):
-    if (not file_path.name.endswith("_spec.mlir") 
-        and (file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc"))):
+    if not file_path.name.endswith("_spec.mlir") and (
+        file_path.name.endswith(".mlir") or file_path.name.endswith(".mlirbc")
+    ):
         return MlirFile.from_parent(parent, path=file_path)
+
 
 # --------------------------------------------------------------------------- #
 
@@ -244,26 +249,29 @@ class MlirFile(pytest.File):
         #     ...
 
         test_directory = self.path.parent
+        relative_test_directory = test_directory.relative_to(IREE_TESTS_ROOT).as_posix()
         test_directory_name = test_directory.name
 
         test_cases = self.discover_test_cases()
         if len(test_cases) == 0:
-            print(f"No test cases for '{test_directory_name}'")
+            logging.getLogger().debug(f"No test cases for '{test_directory_name}'")
             return []
 
         for config in self.config.iree_test_configs:
-            if test_directory_name in config.get("skip_compile_tests", []):
+            if relative_test_directory in config.get("skip_compile_tests", []):
                 continue
 
             expect_compile_success = self.config.getoption(
                 "ignore_xfails"
-            ) or test_directory_name not in config.get("expected_compile_failures", [])
+            ) or relative_test_directory not in config.get(
+                "expected_compile_failures", []
+            )
             expect_run_success = self.config.getoption(
                 "ignore_xfails"
-            ) or test_directory_name not in config.get("expected_run_failures", [])
+            ) or relative_test_directory not in config.get("expected_run_failures", [])
             skip_run = self.config.getoption(
                 "skip_all_runs"
-            ) or test_directory_name in config.get("skip_run_tests", [])
+            ) or relative_test_directory in config.get("skip_run_tests", [])
             config_name = config["config_name"]
 
             # TODO(scotttodd): don't compile once per test case?
@@ -295,8 +303,11 @@ class IreeCompileRunItem(pytest.Item):
         super().__init__(**kwargs)
         self.spec = spec
 
+        relative_test_directory = self.spec.test_directory.relative_to(
+            IREE_TESTS_ROOT
+        ).as_posix()
         self.user_properties.append(
-            ("test_directory_name", self.spec.test_directory.name)
+            ("relative_test_directory_name", relative_test_directory)
         )
         self.user_properties.append(("input_mlir_name", self.spec.input_mlir_name))
         self.user_properties.append(("test_name", self.spec.test_name))
@@ -309,17 +320,16 @@ class IreeCompileRunItem(pytest.Item):
 
         # TODO(scotttodd): swap cwd for a temp path?
         self.test_cwd = self.spec.test_directory
-        vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
 
-        self.compile_args = ["iree-compile", self.spec.input_mlir_name]
-        self.compile_args.extend(self.spec.iree_compile_flags)
-        self.compile_args.extend(["-o", str(vmfb_name)])
-
-        self.run_args = ["iree-run-module", f"--module={vmfb_name}"]
+        self.run_args = []
         self.run_args.extend(self.spec.iree_run_module_flags)
         self.run_args.append(f"--flagfile={self.spec.data_flagfile_name}")
 
     def runtest(self):
+        # TODO(scotttodd): log files needed by the test (remote files / git LFS)
+        #     it should be easy to copy/paste commands from CI logs to get both
+        #     the test files and the flags used with them
+
         # We want to test two phases: 'compile', and 'run'.
         # A test can be marked as expected to fail at either stage, with these
         # possible outcomes:
@@ -350,7 +360,7 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeCompileException,
                     strict=True,
-                    reason="Expected compilation to fail (remove from 'expected_compile_failures')",
+                    reason="Expected compilation to fail (included in 'expected_compile_failures')",
                 )
             )
         if not self.spec.expect_run_success:
@@ -358,7 +368,7 @@ class IreeCompileRunItem(pytest.Item):
                 pytest.mark.xfail(
                     raises=IreeRunException,
                     strict=True,
-                    reason="Expected run to fail (remove from 'expected_run_failures')",
+                    reason="Expected run to fail (included in 'expected_run_failures')",
                 )
             )
 
@@ -375,14 +385,17 @@ class IreeCompileRunItem(pytest.Item):
             raise e
 
     def test_compile(self):
-        proc = subprocess.run(self.compile_args, capture_output=True, cwd=self.test_cwd)
-        if proc.returncode != 0:
-            raise IreeCompileException(proc, self.test_cwd)
+        mlir_name = self.spec.input_mlir_name
+        vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
+        iree_compile(mlir_name, vmfb_name, self.spec.iree_compile_flags, self.test_cwd)
 
     def test_run(self):
-        proc = subprocess.run(self.run_args, capture_output=True, cwd=self.test_cwd)
-        if proc.returncode != 0:
-            raise IreeRunException(proc, self.test_cwd, self.compile_args)
+        mlir_name = self.spec.input_mlir_name
+        vmfb_name = f"{self.spec.input_mlir_stem}_{self.spec.test_name}.vmfb"
+        compile_cmd = get_compile_cmd(
+            mlir_name, vmfb_name, self.spec.iree_compile_flags
+        )
+        iree_run_module(vmfb_name, self.run_args, self.test_cwd, compile_cmd)
 
     def repr_failure(self, excinfo):
         """Called when self.runtest() raises an exception."""
@@ -402,52 +415,6 @@ class IreeCompileRunItem(pytest.Item):
     # Defining this for pytest-retry to avoid an AttributeError.
     def _initrequest(self):
         pass
-
-
-class IreeCompileException(Exception):
-    """Compiler exception that preserves the command line and error output."""
-
-    def __init__(self, process: subprocess.CompletedProcess, cwd: str):
-        try:
-            errs = process.stderr.decode("utf-8")
-        except:
-            errs = str(process.stderr)  # Decode error or other: best we can do.
-
-        super().__init__(
-            f"Error invoking iree-compile\n"
-            f"Error code: {process.returncode}\n"
-            f"Stderr diagnostics:\n{errs}\n\n"
-            f"Invoked with:\n"
-            f"  cd {cwd} && {' '.join(process.args)}\n\n"
-        )
-
-
-class IreeRunException(Exception):
-    """Runtime exception that preserves the command line and error output."""
-
-    def __init__(
-        self, process: subprocess.CompletedProcess, cwd: str, compile_args: List[str]
-    ):
-        # iree-run-module sends output to both stdout and stderr
-        try:
-            errs = process.stderr.decode("utf-8")
-        except:
-            errs = str(process.stderr)  # Decode error or other: best we can do.
-        try:
-            outs = process.stdout.decode("utf-8")
-        except:
-            outs = str(process.stdout)  # Decode error or other: best we can do.
-
-        super().__init__(
-            f"Error invoking iree-run-module\n"
-            f"Error code: {process.returncode}\n"
-            f"Stderr diagnostics:\n{errs}\n"
-            f"Stdout diagnostics:\n{outs}\n"
-            f"Compiled with:\n"
-            f"  cd {cwd} && {' '.join(compile_args)}\n\n"
-            f"Run with:\n"
-            f"  cd {cwd} && {' '.join(process.args)}\n\n"
-        )
 
 
 class IreeXFailCompileRunException(Exception):

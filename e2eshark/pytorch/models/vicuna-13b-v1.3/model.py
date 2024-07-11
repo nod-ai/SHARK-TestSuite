@@ -4,10 +4,9 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-import sys, argparse
+import sys
 import torch
-import torch.nn as nn
-import torch_mlir
+import torch.nn
 from transformers import LlamaForCausalLM, AutoTokenizer
 
 # import from e2eshark/tools to allow running in current dir, for run through
@@ -45,7 +44,7 @@ model_response = model.generate(
     temperature=1.0,
 )
 print("Prompt:", prompt)
-print("Response:", tokenizer.decode(model_response[0]))
+print("Response:", tokenizer.decode(model_response[0]).encode("utf-8"))
 print("Input:", E2ESHARK_CHECK["input"])
 print("Output:", E2ESHARK_CHECK["output"])
 # For geneartive AI models, input is int and should be kept that way for

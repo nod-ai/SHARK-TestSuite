@@ -67,7 +67,7 @@ Tests are run using the [pytest](https://docs.pytest.org/en/stable/) framework.
 A [`conftest.py`](conftest.py) file collects test cases from subdirectories,
 wrapping each directory matching the format described above to one test case
 per test configuration. Test configurations are defined in JSON config files
-like [`configs/config_onnx_cpu_llvm_sync.json`](./configs/config_onnx_cpu_llvm_sync.json).
+like [`configs/onnx_cpu_llvm_sync.json`](./configs/onnx_cpu_llvm_sync.json).
 
 ### Common venv setup with deps
 
@@ -109,10 +109,10 @@ $ pytest iree_tests -n auto
 Run tests using custom config files:
 
 ```bash
-$ pytest iree_tests --config-files ./iree_tests/configs/config_gpu_vulkan.json
+$ pytest iree_tests --config-files ./iree_tests/configs/gpu_vulkan.json
 
 # OR set an environment variable
-$ export IREE_TEST_CONFIG_FILES=/iree/config_cpu_llvm_sync.json;/iree/config_gpu_vulkan.json
+$ export IREE_TEST_CONFIG_FILES=/iree/cpu_llvm_sync.json;/iree/gpu_vulkan.json
 $ pytest iree_tests
 ```
 
@@ -120,14 +120,14 @@ Run ONNX tests on CPU and print all errors:
 
 ```bash
 $ pytest iree_tests/onnx -n auto --ignore-xfails \
-    --config-files ./iree_tests/configs/config_onnx_cpu_llvm_sync.json
+    --config-files ./iree_tests/configs/onnx_cpu_llvm_sync.json
 ```
 
 Run ONNX compilation tests only and print all errors:
 
 ```bash
 $ pytest iree_tests/onnx -n auto --ignore-xfails --skip-all-runs \
-    --config-files ./iree_tests/configs/config_onnx_cpu_llvm_sync.json
+    --config-files ./iree_tests/configs/onnx_cpu_llvm_sync.json
 ```
 
 ### Updating expected failure lists
@@ -151,7 +151,7 @@ To update these lists using the results of a test run:
     ```bash
     $ pytest iree_tests/onnx \
       --report-log=/tmp/onnx_cpu_logs.json \
-      --config-files=config_onnx_cpu.json \
+      --config-files=onnx_cpu.json \
       ...
     ```
 
@@ -160,7 +160,7 @@ To update these lists using the results of a test run:
     ```bash
     $ python iree_tests/update_config_xfails.py \
       --log-file=/tmp/onnx_cpu_logs.json \
-      --config-file=config_onnx_cpu.json
+      --config-file=onnx_cpu.json
     ```
 
 You can also update the config JSON files manually. The log output on its own
@@ -333,15 +333,29 @@ python ./iree_tests/onnx/import_tests.py
 > [!WARNING]
 > UNDER CONSTRUCTION - this will change!
 
-1. Setup venv for the [e2eshark/](/e2eshark/) directory by following that README
+1. Setup venv for the [e2eshark/](/e2eshark/) directory by following that README:
+
+    ```bash
+    e2eshark$ python -m venv .venv
+    e2eshark$ source .venv/bin/activate
+    e2eshark$ python -m pip install -r requirements.txt
+    e2eshark$ python -m pip install -e [PATH TO SHARK-Turbine REPO]/models
+    ```
+
+    Notes:
+
+    * You may need to downgrade numpy:
+
+        ```bash
+        pip uninstall numpy
+        pip install numpy<2.0
+        ```
 
 2. Run a test from e2eshark to generate artifact files:
 
     ```bash
     e2eshark$ python run.py \
       --cachedir ${CACHE_DIR} \
-      -c ${TORCH_MLIR_BUILD_DIR} \
-      -i ${IREE_BUILD_DIR} \
       --tests pytorch/models/resnet50 \
       --mode turbine
 
@@ -361,7 +375,7 @@ python ./iree_tests/onnx/import_tests.py
    into `iree_tests/`:
 
    ```bash
-   iree_tests$ python ./pytorch/models/export_from_e2eshark.py resnet50
+   iree_tests$ python ./pytorch/models/import_from_e2eshark.py --model=resnet50
    iree_tests$ ls ./pytorch/models/resnet50
 
    opt-125M.mlirbc  splats.irpa
@@ -383,7 +397,7 @@ python ./iree_tests/onnx/import_tests.py
 
 #### Generating model test cases from turbine/tank
 
-As seen in iree_tests/pytorch/models, there are some models with the "-tank" suffix.
+As seen in [`iree_tests/pytorch/models`](./pytorch/models/), there are some models with the "-tank" suffix.
 This refers to tests that were generated using the normal turbine flow.
 For custom models, such as sd, sdxl, or stateless_llama, you can clone the turbine repo
 and follow the setup instructions there (https://github.com/nod-ai/SHARK-Turbine).
@@ -398,6 +412,25 @@ so those are saved when running the flow. (example runner:
 Then, run the runner with the appropriate command line args (vmfb path, device flags).
 You should have all the artifacts needed to add to this TestSuite at that point.
 Make sure to follow to follow appendix instructions to convert between different file types for weights and mlir.
+
+### SHARK Tank models
+
+These test cases are exported from https://github.com/nod-ai/sharktank.
+
+## Steps to add test cases
+
+* Follow instructions in https://github.com/nod-ai/sharktank/blob/main/docs/model_cookbook.md
+* Convert the exported `.mlir` to `.mlirbc`:
+
+    ```bash
+    iree-ir-tool cp file.mlir --emit-bytecode -o file.mlirbc
+    ```
+
+* Create a test_cases.json file with parameters, inputs, and outputs
+  * Parameters can come from Hugging Face by using URL from "download file"
+  * TODO: inputs and outputs should be exportable from sharktank/shortfin
+    (or a script here - need to run the tokenizer and optionally populate the
+    KV cache for some models)
 
 ## Appendix
 
