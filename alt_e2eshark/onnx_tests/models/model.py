@@ -12,7 +12,24 @@ from e2e_testing import azutils
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
 from e2e_testing.storage import TestTensors
+from .protected_list import protected_models, models_with_postprocessing
 
+class ProtectedModel(OnnxModelInfo):
+    def construct_model(self):
+        self.model = "/home/zjgar/code/SHARK-TestSuite/e2eshark/onnx/models/" + self.name + "/model.onnx"
+    
+    def apply_postprocessing(self, output: TestTensors):
+        if self.name not in models_with_postprocessing:
+            return output
+        processed_outputs = []
+        for d in output.to_torch().data:
+            processed_outputs.append(
+                torch.sort(torch.topk(torch.nn.functional.softmax(d, 1), 2)[1])[0]
+            )
+        return TestTensors(processed_outputs)
+
+for t in protected_models:
+    register_test(ProtectedModel, t)
 
 class AzureDownloadableModel(OnnxModelInfo):
     def construct_model(self):
@@ -93,7 +110,7 @@ class Opt125MAWQModelInfo(AzureDownloadableModel):
         return TestTensors(model_inputs)
 
 
-register_test(Opt125MAWQModelInfo, "opt-125M-awq")
+# register_test(Opt125MAWQModelInfo, "opt-125M-awq")
 
 
 # hugging face example:

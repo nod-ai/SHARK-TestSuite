@@ -7,7 +7,7 @@ import numpy, torch, sys
 import onnxruntime
 from onnx import TensorProto
 import onnx
-from onnx.helper import make_model, make_node, make_graph, make_tensor_value_info
+from onnx.helper import make_model, make_node, make_graph, make_tensor_value_info, make_tensor
 import os
 
 from e2e_testing.framework import OnnxModelInfo
@@ -45,6 +45,76 @@ class AddModel(OnnxModelInfo):
 
 
 register_test(AddModel, "add_test")
+
+class PadModel(OnnxModelInfo):
+    def construct_model(self):
+        X = make_tensor_value_info("X", TensorProto.FLOAT, [4, 5])
+        Y = make_tensor_value_info("Y", TensorProto.INT32, [4, 5])
+        Z = make_tensor_value_info("Z", TensorProto.FLOAT, [1, 1, 4, 5])
+        W = make_tensor_value_info("W", TensorProto.FLOAT, [3, 4, 5])
+        XP = make_tensor_value_info("XP", TensorProto.INT64, [4])
+        XV = make_tensor_value_info("XV", TensorProto.FLOAT, [])
+        YV = make_tensor_value_info("YV", TensorProto.INT32, [])
+        ZP = make_tensor_value_info("ZP", TensorProto.INT64, [8])
+
+        XO = make_tensor_value_info("XO", TensorProto.FLOAT, [-1, -1])
+        YO = make_tensor_value_info("YO", TensorProto.INT32, [-1, -1])
+        ZO = make_tensor_value_info("ZO", TensorProto.FLOAT, [-1, -1, -1, -1])
+        # constantNode = make_node(op_type="Constant", inputs=[], outputs=["XP"], value_ints=[2,1,3,4])
+        # padnodeX = make_node("Pad", ["X","XP","XV"], ["XO"])
+        # padnodeY = make_node(op_type="Pad", inputs=["Y","XP","YV"], outputs=["YO"])
+        constantNodeZ = make_node(op_type="Constant", inputs=[], outputs=["ZP"], value_ints=[0,0,2,1,0,0,4,3])
+        padnodeZ = make_node(op_type="Pad", inputs=["Z","ZP"], outputs=["ZO"], mode="edge")
+        # padgraph = make_graph([constantNode, padnodeX], "main", [X, XV], [XO])
+        padgraph = make_graph([constantNodeZ, padnodeZ], "main", [Z], [ZO])
+        onnx_model = make_model(padgraph)
+        onnx_model.opset_import[0].version = 19
+
+        onnx.save(onnx_model, self.model)
+
+register_test(PadModel, "pad_test")
+
+class ResizeModel(OnnxModelInfo):
+    def construct_model(self):
+        X = make_tensor_value_info("X", TensorProto.FLOAT, [1,21,65,65])
+        C0 = make_tensor_value_info("C0", TensorProto.FLOAT, [4])
+        C1 = make_tensor_value_info("C1", TensorProto.FLOAT, [8])
+        Y = make_tensor_value_info("Y", TensorProto.FLOAT, [1, 21, 513, 513])
+        C0T = make_tensor("C0T",TensorProto.FLOAT, [4], [1.000000e+00, 1.000000e+00, 7.89230776, 7.89230776])
+        C1T = make_tensor("C1T",TensorProto.FLOAT, [8], [0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00, 1.000000e+00])
+
+        const_node0 = make_node(
+            op_type="Constant",
+            inputs=[],
+            outputs=["C0"],
+            value=C0T,
+        )
+
+        const_node1 = make_node(
+            op_type="Constant",
+            inputs=[],
+            outputs=["C1"],
+            value=C1T,
+        )
+
+        resize_node = make_node(
+            op_type="Resize",
+            inputs=["X","C1","C0"],
+            outputs=["Y"],
+            mode="linear",
+            exclude_outside=0,
+            coordinate_transformation_mode="half_pixel",
+            cubic_coeff_a=-0.75,
+            extrapolation_value=0.0,
+            nearest_mode="round_prefer_floor",
+        )
+
+        graph = make_graph([const_node0, const_node1, resize_node],"main",[X],[Y])
+        onnx_model = make_model(graph)
+        onnx_model.opset_import[0].version = 19
+        onnx.save(onnx_model, self.model)
+
+register_test(ResizeModel, "resize_test")
 
 
 class ConcatModel(OnnxModelInfo):

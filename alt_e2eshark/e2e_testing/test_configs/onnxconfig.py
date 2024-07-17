@@ -14,10 +14,8 @@ from typing import Tuple
 
 REDUCE_TO_LINALG_PIPELINE = [
     "torch-lower-to-backend-contract",
-    "func.func(cse, canonicalize)",
     "torch-backend-to-linalg-on-tensors-backend-pipeline",
 ]
-
 
 class OnnxTestConfig(TestConfig):
 

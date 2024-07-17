@@ -91,6 +91,8 @@ def pack_tensor(modelinput):
     dtype = modelinput.dtype
     if dtype == torch.int64:
         bytearr = struct.pack("%sq" % len(mylist), *mylist)
+    elif dtype == torch.int32:
+        bytearr = struct.pack("%sl" % len(mylist), *mylist)
     elif dtype == torch.float32 or dtype == torch.float:
         bytearr = struct.pack("%sf" % len(mylist), *mylist)
     elif dtype == torch.bfloat16 or dtype == torch.float16:

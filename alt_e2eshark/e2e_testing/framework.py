@@ -15,15 +15,24 @@ Module = TypeVar("Module")
 
 
 def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg):
+    '''A convenience function for generating sample inputs for an onnxruntime node'''
+    print(node)
     if node.type == "tensor(float)":
-        return numpy.random.randn(*node.shape).astype(numpy.float32)
-    if node.type == "tensor(int)":
+        if len(node.shape) == 0:
+            return numpy.array(numpy.random.randn()).astype(numpy.float32)
+        return numpy.abs(numpy.random.randn(*node.shape).astype(numpy.float32))
+    if node.type == "tensor(int)" or node.type == "tensor(int32)":
+        if len(node.shape) == 0:
+            return numpy.array(numpy.random.randint(0, 10000, size=[])).astype(numpy.int32)
         return numpy.random.randint(0, 10000, size=node.shape).astype(numpy.int32)
+    if node.type == "tensor(int64)":
+        return numpy.random.randint(0, 5, size=node.shape).astype(numpy.int64)
     if node.type == "tensor(bool)":
         return numpy.random.randint(0, 2, size=node.shape).astype(bool)
 
 
 def get_sample_inputs_for_onnx_model(model_path):
+    '''A convenience function for generating sample inputs for an onnx model'''
     s = onnxruntime.InferenceSession(model_path, None)
     inputs = s.get_inputs()
     sample_inputs = TestTensors(
@@ -35,10 +44,11 @@ def get_sample_inputs_for_onnx_model(model_path):
 class OnnxModelInfo:
     """Stores information about an onnx test: the filepath to model.onnx, how to construct/download it, and how to construct sample inputs for a test run."""
 
-    def __init__(self, name: str, onnx_model_path: str, cache_dir: str):
+    def __init__(self, name: str, onnx_model_path: str, cache_dir: str, opset_version: Optional[int] = None):
         self.name = name
         self.model = onnx_model_path + "model.onnx"
         self.cache_dir = cache_dir
+        self.opset_version = opset_version
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""

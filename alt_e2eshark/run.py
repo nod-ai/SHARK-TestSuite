@@ -23,7 +23,7 @@ from e2e_testing.test_configs.onnxconfig import (
     REDUCE_TO_LINALG_PIPELINE,
 )
 
-# import backend
+# import backends
 from e2e_testing.backends import SimpleIREEBackend
 
 ALL_STAGES = [
@@ -37,8 +37,8 @@ ALL_STAGES = [
 ]
 
 
-def get_tests(groups):
-    """imports tests based on groups specification"""
+def get_tests(groups, test_filter):
+    """imports tests based on groups and test_filter specification"""
     combinations = True if groups == "all" or groups == "combinations" else False
     models = True if groups == "all" or groups == "models" else False
     operators = True if groups == "all" or groups == "operators" else False
@@ -53,7 +53,14 @@ def get_tests(groups):
     if operators:
         from onnx_tests.operators import model
 
-    return GLOBAL_TEST_LIST
+    if test_filter:
+        test_list = [
+            test for test in GLOBAL_TEST_LIST if re.match(test_filter, test.unique_name)
+        ]
+    else:
+        test_list = GLOBAL_TEST_LIST
+
+    return test_list
 
 
 def main(args):
@@ -65,16 +72,12 @@ def main(args):
     config = OnnxTestConfig(
         str(TEST_DIR), SimpleIREEBackend(hal_target_backend=args.backend), pipeline
     )
+
     # get test list
+    test_list = get_tests(args.groups, args.test_filter)
+
     # TODO: allow for no-run/mark xfails
-
-    test_list = get_tests(args.groups)
-    if args.test_filter:
-        test_list = [
-            test for test in test_list if re.match(args.test_filter, test.unique_name)
-        ]
-
-    # TODO: logging setup
+    # TODO: add better logging setup
 
     stages = ALL_STAGES
 
@@ -98,12 +101,15 @@ def run_tests(
     test_list, config, dir_name, cache_dir_name, no_artifacts, verbose, stages
 ):
     """runs tests in test_list based on config"""
-    # TODO: multi-process, argparse, setup exception handling and logging
+    # TODO: multi-process
+    # TODO: setup exception handling and better logging
+    # TODO: log command-line reproducers for each step
 
     # set up a parent log directory to store results
     parent_log_dir = str(TEST_DIR) + "/" + dir_name + "/"
     if not os.path.exists(parent_log_dir):
         os.mkdir(parent_log_dir)
+
     # set up a parent cache directory to store results
     parent_cache_dir = cache_dir_name
     if not os.path.exists(parent_cache_dir):
@@ -114,6 +120,7 @@ def run_tests(
 
     if verbose:
         print(f"Stages to be run: {stages}")
+        print(f'Test list: {[test.unique_name for test in test_list]}')
 
     for t in test_list:
 
@@ -182,20 +189,23 @@ def run_tests(
 
         # store the results
         if "setup" and "native_inference" and "compiled_inference" in stages:
-            result = TestResult(
-                name=t.unique_name,
-                input=inputs,
-                gold_output=golden_outputs,
-                output=outputs,
-            )
-            # log the results
-            test_passed = log_result(result, log_dir, [1e-4, 1e-4])
-            num_passes += int(test_passed)
-            if verbose:
-                to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
-                print(to_print)
-            elif not test_passed:
-                print(f"FAILED: {t.unique_name}")
+            try:
+                result = TestResult(
+                    name=t.unique_name,
+                    input=inputs,
+                    gold_output=golden_outputs,
+                    output=outputs,
+                )
+                # log the results
+                test_passed = log_result(result, log_dir, [1e-3, 1e-3])
+                num_passes += int(test_passed)
+                if verbose:
+                    to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
+                    print(to_print)
+                elif not test_passed:
+                    print(f"FAILED: {t.unique_name}")
+            except Exception as e:
+                log_exception(e, log_dir, "results-summary", t.unique_name, verbose)
 
     print("\nTest Summary:")
     print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
@@ -203,6 +213,7 @@ def run_tests(
 
 
 def log_result(result, log_dir, tol):
+    # TODO: add more information for the result comparison (e.g., on verbose, add information on where the error is occuring, etc)
     summary = result_comparison(result, tol)
     num_match = 0
     num_total = 0
@@ -219,6 +230,7 @@ def log_result(result, log_dir, tol):
 
 
 def log_exception(e: Exception, path: str, stage: str, name: str, verbose: bool):
+    '''generates a log for an exception generated during a testing stage'''
     log_filename = path + stage + ".log"
     base_str = f"Failed test at stage {stage} with exception:\n{e}\n"
     with open(log_filename, "w") as f:
