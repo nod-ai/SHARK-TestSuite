@@ -15,6 +15,10 @@ from e2e_testing.storage import TestTensors
 from .protected_list import protected_models, models_with_postprocessing
 
 class ProtectedModel(OnnxModelInfo):
+    def __init__(self, name: str, onnx_model_path: str, cache_dir: str):
+        opset_version = 19
+        super().__init__(name, onnx_model_path, cache_dir, opset_version)
+
     def construct_model(self):
         self.model = "/home/zjgar/code/SHARK-TestSuite/e2eshark/onnx/models/" + self.name + "/model.onnx"
     

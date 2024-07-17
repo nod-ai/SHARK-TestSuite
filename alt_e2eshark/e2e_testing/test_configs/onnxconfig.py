@@ -32,6 +32,10 @@ class OnnxTestConfig(TestConfig):
 
     def mlir_import(self, model_info: OnnxModelInfo, *, save_to: str = None):
         model = onnx.load(model_info.model)
+        if model_info.opset_version:
+            model = onnx.version_converter.convert_version(
+                model, model_info.opset_version
+            )
         shaped_model = onnx.shape_inference.infer_shapes(model, data_prop=True)
         func_name = shaped_model.graph.name
         context = Context()
