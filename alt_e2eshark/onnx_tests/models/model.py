@@ -14,14 +14,24 @@ from e2e_testing.registry import register_test
 from e2e_testing.storage import TestTensors
 from .protected_list import protected_models, models_with_postprocessing
 
-class ProtectedModel(OnnxModelInfo):
+class AzureDownloadableModel(OnnxModelInfo):
     def __init__(self, name: str, onnx_model_path: str, cache_dir: str):
         opset_version = 19
         super().__init__(name, onnx_model_path, cache_dir, opset_version)
 
     def construct_model(self):
-        self.model = "/home/zjgar/code/SHARK-TestSuite/e2eshark/onnx/models/" + self.name + "/model.onnx"
-    
+        # try to retrieve from cache_dir
+        # if that fails, try to download and setup from azure
+        # TODO: fix az storage zip files to not store internal file structure
+        unzipped_path = (
+            self.model.rstrip("model.nx") + "onnx/models/" + self.name + "/model.onnx"
+        )
+        if not os.path.exists(unzipped_path):
+            azutils.pre_test_onnx_model_azure_download(
+                self.name, self.cache_dir, self.model
+            )
+        self.model = unzipped_path
+
     def apply_postprocessing(self, output: TestTensors):
         if self.name not in models_with_postprocessing:
             return output
@@ -33,21 +43,7 @@ class ProtectedModel(OnnxModelInfo):
         return TestTensors(processed_outputs)
 
 for t in protected_models:
-    register_test(ProtectedModel, t)
-
-class AzureDownloadableModel(OnnxModelInfo):
-    def construct_model(self):
-        # try to retrieve from cache_dir
-        # if that fails, try to download and setup from azure
-        # TODO: fix az storage zip files to not store internal file structure
-        unzipped_path = (
-            self.model.rstrip("model.onnx") + "onnx/models/" + self.name + "/model.onnx"
-        )
-        if not os.path.exists(unzipped_path):
-            azutils.pre_test_onnx_model_azure_download(
-                self.name, self.cache_dir, self.model
-            )
-        self.model = unzipped_path
+    register_test(AzureDownloadableModel, t)
 
 
 register_test(AzureDownloadableModel, "RAFT_vaiq_int8")

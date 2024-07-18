@@ -13,10 +13,29 @@ from e2e_testing.storage import TestTensors
 
 Module = TypeVar("Module")
 
+def dtype_from_ort_node(node):
+    typestr=node.type
+    if typestr[0:6] != "tensor":
+        raise TypeError(f'node: {node} has invalid typestr {typestr}')
+    dtypestr = typestr[7:-1]
+    if dtypestr == "float":
+        return torch.float
+    elif dtypestr == "int" or dtypestr == "int32":
+        return torch.int32
+    elif dtypestr == "int64":
+        return torch.int64
+    elif dtypestr == "int8":
+        return torch.int8
+    elif dtypestr == "uint8":
+        return torch.uint8
+    elif dtypestr == "bool":
+        return torch.bool
+    else:
+        raise TypeError(f'Could not parse dtypestr = {dtypestr}')
+
 
 def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg):
     '''A convenience function for generating sample inputs for an onnxruntime node'''
-    print(node)
     if node.type == "tensor(float)":
         if len(node.shape) == 0:
             return numpy.array(numpy.random.randn()).astype(numpy.float32)
@@ -40,6 +59,18 @@ def get_sample_inputs_for_onnx_model(model_path):
     )
     return sample_inputs
 
+def get_signature_for_onnx_model(model_path, *, from_inputs: bool = True):
+    s = onnxruntime.InferenceSession(model_path, None)
+    if from_inputs:
+        nodes = s.get_inputs()
+    else: # taking from outputs
+        nodes = s.get_outputs()
+    shapes = []
+    dtypes = []
+    for i in nodes:
+        shapes.append(i.shape)
+        dtypes.append(dtype_from_ort_node(i))
+    return shapes, dtypes
 
 class OnnxModelInfo:
     """Stores information about an onnx test: the filepath to model.onnx, how to construct/download it, and how to construct sample inputs for a test run."""
@@ -77,6 +108,23 @@ class OnnxModelInfo:
         if not os.path.exists(self.model):
             self.construct_model()
         return get_sample_inputs_for_onnx_model(self.model)
+    
+    def get_signature(self, *, from_inputs=True):
+        if not os.path.exists(self.model):
+            self.construct_model()
+        return get_signature_for_onnx_model(self.model, from_inputs=from_inputs)
+    
+    def load_inputs(self, dir_path):
+        shapes, dtypes = self.get_signature(from_inputs=True)
+        return TestTensors.load_from(shapes, dtypes, dir_path, "input")
+
+    def load_outputs(self, dir_path):
+        shapes, dtypes = self.get_signature(from_inputs=False)
+        return TestTensors.load_from(shapes, dtypes, dir_path, "output")
+
+    def load_golden_outputs(self, dir_path):
+        shapes, dtypes = self.get_signature(from_inputs=False)
+        return TestTensors.load_from(shapes, dtypes, dir_path, "golden_output")
 
     def apply_postprocessing(self, output: TestTensors):
         """can be overridden to define post-processing methods for individual models"""

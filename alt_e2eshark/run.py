@@ -94,11 +94,12 @@ def main(args):
         args.no_artifacts,
         args.verbose,
         stages,
+        args.load_inputs
     )
 
 
 def run_tests(
-    test_list, config, dir_name, cache_dir_name, no_artifacts, verbose, stages
+    test_list, config, dir_name, cache_dir_name, no_artifacts, verbose, stages, load_inputs
 ):
     """runs tests in test_list based on config"""
     # TODO: multi-process
@@ -136,6 +137,7 @@ def run_tests(
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
+            # TODO: enable loading output/goldoutput bin files, vmfb, and mlir files if already present
 
             # set up test
             curr_stage = "setup"
@@ -143,8 +145,11 @@ def run_tests(
                 # build an instance of the test class
                 inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
                 # generate inputs from the test instance
-                inputs = inst.construct_inputs()
-                inputs.save_to(log_dir + "input")
+                if load_inputs:
+                    inputs = inst.load_inputs(log_dir)
+                else:
+                    inputs = inst.construct_inputs()
+                    inputs.save_to(log_dir + "input")
 
             # run native inference
             curr_stage = "native_inference"
@@ -288,6 +293,12 @@ def _get_argparse():
         nargs="*",
         choices=ALL_STAGES,
         help="Manually specify which test stages to skip.",
+    )
+    parser.add_argument(
+        "--load-inputs",
+        action="store_true",
+        default=False,
+        help="If true, will try to load inputs from bin files.",
     )
     # parser.add_argument(
     #     "--runfrom",

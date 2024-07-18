@@ -40,4 +40,3 @@ def node_output_name(model, n: int, op_name: str):
 
 model = load()
 modify_model(model, node_output_name(model, 2, "Conv"))
-import os

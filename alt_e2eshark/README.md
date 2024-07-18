@@ -28,27 +28,9 @@
  The target backend can be any IREE supported backend: llvm-cpu, amd-aie etc.
 
 ## Contents
- The contents are as below. Substitute 'Framework' by one of: pytorch, tensoflow, onnx
- - requirements.txt : 'pip install -r requirements.txt' to install needed additional 
-                       packages not already in your venv or conda. If you have a venv or conda 
-                       environment for building torch mlir or iree, you can install 
-                       this on top of that. Also, peridically, run this step to keep packages current. 
-                       Sometimes you may need to force installation: 'pip install --force -r requirements.txt'
- - run.py : Run 'python run.py --help' to learn about the script. This is the script to 
-            run a specific test, all tests in a framework, all frameworks as per choice of a user
- - Framework/operators: This has operator level tests. Example: pytorch/operators/conv2d
- - Framework/combinations: This has small tests testing combination of operators such as 
-                           pytorch/combinations/mlp testing a multi-layer perceptron which 
-                           has torch.linear followed by torch.relu and optionally repeated a few times
- - Framework/models: This has full model test. Since this is full model test, you may need 
-                     necesary permsisions to download a model such as for llama2 you will 
-                     need hugging face token. You can either run 'huggingface-cli login' and 
-                     enter the HF token before launching the run.py or set an environment variable 
-                     named HF_TOKEN or provide it as "HF_TOKEN='token' python run.py 'options'"
- - gold/passed.txt : This has list of tests that are passing as of today. If your check-in increases
-                     passing tests, please update this. After your changes in torch MLIR or IREE, 
-                     run all the tests upto inference and make sure that your are passing at least 
-                     at the level of gold/passed.txt
+ The contents are as below.
+ - quick_requirements.txt : `pip install -r quick_requirements.txt` to install packages for getting started immediately. This is mostly useful if you aren't trying to test local builds of IREE or torch-mlir.
+ - run.py : Run `python run.py --help` to learn about the script. This is the script to run tests.
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
  cause of any failure. You can specify -r 'your dir name' to the run.py to name your test run directory 
@@ -67,7 +49,7 @@ By default, a nightly build of torch_mlir and IREE is installed when you run:
 python -m venv test_suite.venv /
 source test_suite.venv/bin/activate /
 pip install --upgrade pip /
-pip install -r ./requirements.txt
+pip install -r ./quick_requirements.txt
 ```
 
 Therefore, you are not required to have a local build of either torch mlir or iree.
@@ -75,8 +57,8 @@ Therefore, you are not required to have a local build of either torch mlir or ir
 However, if you want to test a local change in either torch mlir or iree, you can install local python packages to your venv as follows. 
 
 To install a local build of torch-mlir to your venv (this is written assuming the user is running a linux terminal):
-
-1. Make sure your venv is activated with 
+0. Build torch-mlir with python bindings. 
+1. Make sure your venv is activated with (note: this might need to be the same venv that you built torch-mlir with) 
 ```bash
 source my_venv_directory/bin/activate
 ```
@@ -90,13 +72,19 @@ TORCH_MLIR_CMAKE_BUILD_DIR=build/ TORCH_MLIR_CMAKE_ALREADY_BUILT=1 python setup.
 ```
 4. install the wheel to your venv with:
 ```bash
-pip install dist/torch_mlir-0.0.1-cp310-cp310-linux_x86_64.whl
+pip install dist/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
 ```
-(be sure the name of the wheel matches the one your previous script generated).
+(the name might differ based on python versioning, OS, etc).
 
-If you re-build torch-mlir, you will need to repeat this process, so it is beneficial to debug torch-mlir failures using command line scripts first (with torch-mlir-opt), and once an issue is resolved, reinstall the local python and re-run the e2e test again. 
+If you re-build torch-mlir, you will need to repeat this process, so it is beneficial to debug torch-mlir failures using command line scripts first (with torch-mlir-opt), and once an issue is resolved, rebuild the wheel for torch-mlir, reinstall with
+```bash
+pip install --no-deps pip install dist/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
+```
+Then re-run the e2e test again. 
 
-TODO: local build of iree -> python packages. 
+TODO: add instructions for setting up local iree-compiler and iree-runtime. I believe you can just build iree with python bindings and then modify your python path with ```source /iree-build-dir/.env && export PYTHONPATH```, but this needs to be verified.
+
+TODO: add a `dev_requirements.txt` that includes azure/onnxruntime/whatever else is needed.
 
 ## Adding a test
 
