@@ -220,9 +220,6 @@ def download_file(remote_file: str, test_dir: Path, cache_dir: Optional[Path]):
     If cache_dir is set, downloads there instead, creating a symlink from
     test_dir/file_name to cache_dir/file_name.
     """
-
-    print(f"  Downloading '{remote_file}'")
-
     if "blob.core.windows.net" in remote_file:
         download_azure_remote_file(remote_file, test_dir, cache_dir)
     elif "huggingface" in remote_file:
