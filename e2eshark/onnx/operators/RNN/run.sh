@@ -1,3 +1,0 @@
- PYTHONPATH="/home/azureuser/torch-mlir/build/tools/torch-mlir/python_packages/torch_mlir" HF_TOKEN=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 python run.py --torchmlirbuild ~/torch-mlir/build --ireebuild ~/iree-build --cachedir ~/.cache/huggingface --tests pytorch/models/deit-small-distilled-patch16-224 -r test-onnx --tolerance .001 .001 --mode onnx --report
-
- PYTHONPATH="/home/azureuser/torch-mlir/build/tools/torch-mlir/python_packages/torch_mlir" HF_TOKEN=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 python ./run.py --torchmlirbuild ~/torch-mlir/build --ireebuild ~/iree-build --mode onnx --tests onnx/operators/LSTM --verbose --cachedir /tmp/ --verbose --torchtolinalg
