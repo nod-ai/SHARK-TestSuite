@@ -66,7 +66,7 @@ class OnnxTestConfig(TestConfig):
                 pm1 = PassManager.parse(self.pass_pipeline)
                 pm1.run(mlir_module.operation)
             # log modified IR
-            if save_to:
+            if save_to and self.pass_pipeline:
                 with open(save_to + "model.modified.mlir", "w") as f:
                     f.write(str(mlir_module))
         return mlir_module

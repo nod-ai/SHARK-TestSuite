@@ -36,6 +36,11 @@ def dtype_from_ort_node(node):
 
 def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg):
     '''A convenience function for generating sample inputs for an onnxruntime node'''
+    for dim in node.shape:
+        if not isinstance(dim, int):
+            raise TypeError(f"input node '{node.name}' has a dim='{dim}', with invalid type: {type(dim)}\nexpected type: int.\nIf your model has dim_params, consider fixing them or setting custom inputs for this test.")
+        if dim <= 0:
+            raise ValueError(f"input node '{node.name}' has a non-positive dim: {dim}. Consider setting cutsom inputs for this test.")
     if node.type == "tensor(float)":
         if len(node.shape) == 0:
             return numpy.array(numpy.random.randn()).astype(numpy.float32)

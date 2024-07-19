@@ -16,21 +16,42 @@ from .protected_list import protected_models, models_with_postprocessing
 
 class AzureDownloadableModel(OnnxModelInfo):
     def __init__(self, name: str, onnx_model_path: str, cache_dir: str):
-        opset_version = 19
+        opset_version = 21
         super().__init__(name, onnx_model_path, cache_dir, opset_version)
 
     def construct_model(self):
-        # try to retrieve from cache_dir
-        # if that fails, try to download and setup from azure
-        # TODO: fix az storage zip files to not store internal file structure
-        unzipped_path = (
-            self.model.rstrip("model.nx") + "onnx/models/" + self.name + "/model.onnx"
-        )
-        if not os.path.exists(unzipped_path):
+        # try to find a .onnx file in the test-run dir
+        # if that fails, check for zip file in cache
+        # if that fails, try to download and setup from azure, then search again for a .onnx file
+
+        # TODO: make the zip file structure more uniform so we don't need to search for extracted files
+        model_dir = self.model.rstrip("model.nx")
+
+        def find_models(model_dir):
+            # search for a .onnx file in the ./test-run/testname/ dir
+            found_models = []
+            for root, dirs, files in os.walk(model_dir):
+                for name in files:
+                    if name[-5:] == ".onnx":  
+                        found_models.append(os.path.abspath(os.path.join(root, name)))
+            return found_models
+
+        found_models = find_models(model_dir) 
+
+        if len(found_models) == 0:
             azutils.pre_test_onnx_model_azure_download(
                 self.name, self.cache_dir, self.model
             )
-        self.model = unzipped_path
+            found_models = find_models(model_dir)
+        if len(found_models) == 1:
+            self.model = found_models[0]
+            return
+        if len(found_models) > 1:
+            print(f'Found multiple model.onnx files: {found_models}')
+            print(f'Picking the first model found to use: {found_models[0]}')
+            self.model = found_models[0]
+            return
+        raise OSError(f"No onnx model could be found, downloaded, or extracted to {model_dir}")
 
     def apply_postprocessing(self, output: TestTensors):
         if self.name not in models_with_postprocessing:
@@ -110,7 +131,7 @@ class Opt125MAWQModelInfo(AzureDownloadableModel):
         return TestTensors(model_inputs)
 
 
-# register_test(Opt125MAWQModelInfo, "opt-125M-awq")
+register_test(Opt125MAWQModelInfo, "opt-125M-awq")
 
 
 # hugging face example:
