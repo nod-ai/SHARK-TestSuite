@@ -29,7 +29,7 @@
 
 ## Contents
  The contents are as below.
- - quick_requirements.txt : `pip install -r quick_requirements.txt` to install packages for getting started immediately. This is mostly useful if you aren't trying to test local builds of IREE or torch-mlir.
+ - requirements.txt : `pip install -r requirements.txt` to install packages for getting started immediately. This is mostly useful if you aren't trying to test local builds of IREE or torch-mlir.
  - run.py : Run `python run.py --help` to learn about the script. This is the script to run tests.
  
  The logs are created as .log files in the test-run sub directory. Examine the logs to find and fix 
@@ -41,7 +41,7 @@
  will be downloaded. The downloaded data can be large, so set it to other than your home, 
  preferably with 100 GB or more free space.
 
-## Setting up
+## Setting up (Quick Start)
 
 By default, a nightly build of torch_mlir and IREE is installed when you run:
 
@@ -49,42 +49,39 @@ By default, a nightly build of torch_mlir and IREE is installed when you run:
 python -m venv test_suite.venv /
 source test_suite.venv/bin/activate /
 pip install --upgrade pip /
-pip install -r ./quick_requirements.txt
+pip install -r ./requirements.txt
 ```
 
 Therefore, you are not required to have a local build of either torch mlir or iree.
 
-However, if you want to test a local change in either torch mlir or iree, you can install local python packages to your venv as follows. 
+## Setting up (using local build of torch-mlir or iree)
 
-To install a local build of torch-mlir to your venv (this is written assuming the user is running a linux terminal):
-0. Build torch-mlir with python bindings. 
-1. Make sure your venv is activated with (note: this might need to be the same venv that you built torch-mlir with) 
-```bash
-source my_venv_directory/bin/activate
-```
-2. change directory to your torch-mlir repository
-```bash
-cd /path/to/torch-mlir
-```
-3. run the following command to build a python wheel for your torch-mlir build (note: this assumes your build directory is under the source directory with the name "build/")
-```bash
-TORCH_MLIR_CMAKE_BUILD_DIR=build/ TORCH_MLIR_CMAKE_ALREADY_BUILT=1 python setup.py bdist_wheel
-```
-4. install the wheel to your venv with:
-```bash
-pip install dist/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
-```
-(the name might differ based on python versioning, OS, etc).
+If you want to use a custom build of torch-mlir or iree, you need to build those projects with python bindings enabled. 
 
-If you re-build torch-mlir, you will need to repeat this process, so it is beneficial to debug torch-mlir failures using command line scripts first (with torch-mlir-opt), and once an issue is resolved, rebuild the wheel for torch-mlir, reinstall with
+If you already installed `requirements.txt` to your venv, you can uninstall whatever package you want to replace, then activate the appropriate `.env` file for the project you want to use. For example,
+
 ```bash
-pip install --no-deps pip install dist/torch_mlir-0.0.1-cp311-cp311-linux_x86_64.whl
+# if starting with dev_requirements, this line is uneccessary:
+pip uninstall iree-compiler iree-runtime
+# set up python to find iree compiler and iree runtime
+source /path/to/iree-build/.env && export PYTHONPATH
 ```
-Then re-run the e2e test again. 
 
-TODO: add instructions for setting up local iree-compiler and iree-runtime. I believe you can just build iree with python bindings and then modify your python path with ```source /iree-build-dir/.env && export PYTHONPATH```, but this needs to be verified.
+If you installed `dev_requirements.txt`, you won't need to uninstall iree-compiler, iree-runtime, or torch-mlir, since these aren't included there.
 
-TODO: add a `dev_requirements.txt` that includes azure/onnxruntime/whatever else is needed.
+Unfortunately, the `.env` files in torch-mlir and iree completely replace the pythonpath instead of adding to it. So if you want to use a local build of both torch-mlir and iree, you could do something like:
+
+```bash
+export IREE_BUILD_DIR="<path to iree build dir>"
+export TORCH_MLIR_BUILD_DIR="<path to torch-mlir build dir>"
+source ${IREE_BUILD_DIR}/.env && export PYTHONPATH="${TORCH_MLIR_BUILD_DIR}/tools/torch-mlir/python_packages/torch_mlir/:${PYTHONPATH}"
+```
+
+If you are just a torch-mlir developer and don't want a custom IREE build, you can either make an `.env` file for torch-mlir with `torch-mlir/build_tools/write_env_file.sh`and use that to set your python path, or just use:
+
+```bash
+export PYTHONPATH="${TORCH_MLIR_BUILD_DIR}/tools/torch-mlir/python_packages/torch_mlir/"
+```
 
 ## Adding a test
 
