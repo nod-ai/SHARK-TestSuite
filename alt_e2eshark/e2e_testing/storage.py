@@ -9,15 +9,6 @@ import struct
 import torch
 from typing import Tuple, Optional
 
-
-def load_torch_save(filename):
-    with open(filename, "rb") as f:
-        bindata = f.read()
-    buf = io.BytesIO(bindata)
-    loaded = torch.load(buf)
-    return loaded
-
-
 def get_shape_string(torch_tensor):
     input_shape = list(torch_tensor.shape)
     input_shape_string = "x".join([str(item) for item in input_shape])
@@ -64,12 +55,13 @@ def unpack_bytearray(barray, num_elem, dtype):
     elif dtype == torch.bool:
         num_array = struct.unpack("?" * num_elem, barray)
     else:
-        print("In unpackBytearray, found an unsupported data type", dtype)
+        raise NotImplementedError(f"In unpack_bytearray, found an unsupported data type {dtype}")
     rettensor = torch.tensor(num_array, dtype=dtype)
     return rettensor
 
 
 def load_raw_binary_as_torch_tensor(binaryfile, shape, dtype):
+    '''given a shape and torch dtype, this will load a torch tensor from the specified binaryfile'''
     # Read the whole files as bytes
     with open(binaryfile, "rb") as f:
         binarydata = f.read()
@@ -87,6 +79,7 @@ def load_raw_binary_as_torch_tensor(binaryfile, shape, dtype):
 
 
 def pack_tensor(modelinput):
+    """stores a torch.Tensor into a binary file"""
     mylist = modelinput.flatten().tolist()
     dtype = modelinput.dtype
     if dtype == torch.int64:
@@ -108,11 +101,12 @@ def pack_tensor(modelinput):
     elif dtype == torch.bool:
         bytearr = struct.pack("%s?" % len(mylist), *mylist)
     else:
-        print("In packTensor, found an unsupported data type", dtype)
+        raise NotImplementedError(f"In pack_tensor, found an unsupported data type {dtype}")
     return bytearr
 
 
 def write_inference_input_bin_file(modelinput, modelinputbinfilename):
+    """Stores a modelinput to a specified binary file."""
     with open(modelinputbinfilename, "wb") as f:
         bytearr = pack_tensor(modelinput)
         f.write(bytearr)

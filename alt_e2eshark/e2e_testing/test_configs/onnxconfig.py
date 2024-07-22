@@ -18,7 +18,7 @@ REDUCE_TO_LINALG_PIPELINE = [
 ]
 
 class OnnxTestConfig(TestConfig):
-
+    '''This is the basic testing configuration for onnx models. This should be initialized with a specific backend, and uses torch-mlir to import the onnx model to torch-onnx MLIR, and apply torch-mlir pre-proccessing passes if desired.'''
     def __init__(
         self, log_dir: str, backend: BackendBase, torch_mlir_pipeline: Tuple[str, ...]
     ):

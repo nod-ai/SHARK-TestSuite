@@ -29,7 +29,7 @@ from iree import runtime as ireert
 
 
 class SimpleIREEBackend(BackendBase):
-
+    '''This backend uses iree to compile and run MLIR modules for a specified hal_target_backend'''
     def __init__(self, *, hal_target_backend="llvm-cpu"):
         self.hal_target_backend = hal_target_backend
 

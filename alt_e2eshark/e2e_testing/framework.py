@@ -14,24 +14,24 @@ from e2e_testing.storage import TestTensors
 Module = TypeVar("Module")
 
 def dtype_from_ort_node(node):
+    '''infers a torch dtype from an ort node type of the form "tensor(dtype)"'''
     typestr=node.type
     if typestr[0:6] != "tensor":
         raise TypeError(f'node: {node} has invalid typestr {typestr}')
     dtypestr = typestr[7:-1]
     if dtypestr == "float":
         return torch.float
-    elif dtypestr == "int" or dtypestr == "int32":
+    if dtypestr == "int" or dtypestr == "int32":
         return torch.int32
-    elif dtypestr == "int64":
+    if dtypestr == "int64":
         return torch.int64
-    elif dtypestr == "int8":
+    if dtypestr == "int8":
         return torch.int8
-    elif dtypestr == "uint8":
+    if dtypestr == "uint8":
         return torch.uint8
-    elif dtypestr == "bool":
+    if dtypestr == "bool":
         return torch.bool
-    else:
-        raise TypeError(f'Could not parse dtypestr = {dtypestr}')
+    raise NotImplementedError(f'Unhandled dtype string found: {dtypestr}')
 
 
 def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg):
@@ -50,6 +50,7 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
         return rng.integers(0, 5, size=node.shape, dtype=numpy.int64)
     if node.type == "tensor(bool)":
         return rng.integers(0, 2, size=node.shape, dtype=bool)
+    raise NotImplementedError(f"Found an unhandled dtype: {node.type}.")
 
 
 def get_sample_inputs_for_onnx_model(model_path):
@@ -62,6 +63,7 @@ def get_sample_inputs_for_onnx_model(model_path):
     return sample_inputs
 
 def get_signature_for_onnx_model(model_path, *, from_inputs: bool = True):
+    '''A convenience funtion for retrieving the input or output shapes and dtypes'''
     s = onnxruntime.InferenceSession(model_path, None)
     if from_inputs:
         nodes = s.get_inputs()
@@ -110,28 +112,37 @@ class OnnxModelInfo:
         if not os.path.exists(self.model):
             self.construct_model()
         return get_sample_inputs_for_onnx_model(self.model)
-    
-    def get_signature(self, *, from_inputs=True):
-        if not os.path.exists(self.model):
-            self.construct_model()
-        return get_signature_for_onnx_model(self.model, from_inputs=from_inputs)
-    
-    def load_inputs(self, dir_path):
-        shapes, dtypes = self.get_signature(from_inputs=True)
-        return TestTensors.load_from(shapes, dtypes, dir_path, "input")
-
-    def load_outputs(self, dir_path):
-        shapes, dtypes = self.get_signature(from_inputs=False)
-        return TestTensors.load_from(shapes, dtypes, dir_path, "output")
-
-    def load_golden_outputs(self, dir_path):
-        shapes, dtypes = self.get_signature(from_inputs=False)
-        return TestTensors.load_from(shapes, dtypes, dir_path, "golden_output")
 
     def apply_postprocessing(self, output: TestTensors):
         """can be overridden to define post-processing methods for individual models"""
         return output
 
+    # the following helper methods aren't meant to be overriden
+
+    def get_signature(self, *, from_inputs=True):
+        '''Returns the input or output signature of self.model'''
+        if not os.path.exists(self.model):
+            self.construct_model()
+        return get_signature_for_onnx_model(self.model, from_inputs=from_inputs)
+    
+    def load_inputs(self, dir_path):
+        '''computes the input signature of the onnx model and loads inputs from bin files'''
+        shapes, dtypes = self.get_signature(from_inputs=True)
+        try:
+            return TestTensors.load_from(shapes, dtypes, dir_path, "input")
+        except FileNotFoundError:
+            print("\tWarning: bin files missing. Generating new inputs. Please re-run this test without --load-inputs to save input bin files.")
+            return self.construct_inputs()
+
+    def load_outputs(self, dir_path):
+        '''computes the input signature of the onnx model and loads outputs from bin files'''
+        shapes, dtypes = self.get_signature(from_inputs=False)
+        return TestTensors.load_from(shapes, dtypes, dir_path, "output")
+
+    def load_golden_outputs(self, dir_path):
+        '''computes the input signature of the onnx model and loads golden outputs from bin files'''
+        shapes, dtypes = self.get_signature(from_inputs=False)
+        return TestTensors.load_from(shapes, dtypes, dir_path, "golden_output")
 
 TestModel = Union[OnnxModelInfo, torch.nn.Module]
 
@@ -160,11 +171,13 @@ class TestConfig(abc.ABC):
 
 
 class Test(NamedTuple):
+    '''Used to store the name and TestInfo constructor for a registered test'''
     unique_name: str
     model_constructor: Callable[[], TestModel]
 
 
 class TestResult(NamedTuple):
+    '''Used to store associated input and output tensors from a test'''
     name: str
     input: TestTensors
     gold_output: TestTensors
@@ -172,6 +185,7 @@ class TestResult(NamedTuple):
 
 
 def result_comparison(test_result: TestResult, tol):
+    '''compares the output and gold_output stored in a TestResult instance with specified tolerance'''
     output = test_result.output.to_torch().data
     gold = test_result.gold_output.to_torch().data
     if len(output) != len(gold):
