@@ -81,7 +81,7 @@ jobs:
           pip install -f https://iree.dev/pip-release-links.html --upgrade \
           -r ../iree-turbine/iree-requirements.txt
           pip install -e ../iree-turbine[testing]
-          pip install --no-compile --pre --upgrade -e models -r models/requirements.txt
+          pip install --no-compile --pre --upgrade -e ../SHARK-Turbine/models -r ../SHARK-Turbine/models/requirements.txt
         working-directory: ./test-suite
 
       - name: Run Turbine Mode
