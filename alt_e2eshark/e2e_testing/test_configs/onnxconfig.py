@@ -53,20 +53,22 @@ class OnnxTestConfig(TestConfig):
         return m, func_name
 
     def apply_torch_mlir_passes(self, mlir_module, *, save_to: str = None):
+        # if the pass pipeline is empty, return the original module
+        if not self.pass_pipeline:
+            return mlir_module
         # convert imported torch-onnx ir to torch
-        pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
+        onnx_to_torch_pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
         with mlir_module.context as ctx:
-            pm0 = PassManager.parse(pipeline)
+            pm0 = PassManager.parse(onnx_to_torch_pipeline)
             pm0.run(mlir_module.operation)
             # log torch-mlir IR
             if save_to:
                 with open(save_to + "model.torch.mlir", "w") as f:
                     f.write(str(mlir_module))
-            if self.pass_pipeline:
-                pm1 = PassManager.parse(self.pass_pipeline)
-                pm1.run(mlir_module.operation)
+            pm1 = PassManager.parse(self.pass_pipeline)
+            pm1.run(mlir_module.operation)
             # log modified IR
-            if save_to and self.pass_pipeline:
+            if save_to:
                 with open(save_to + "model.modified.mlir", "w") as f:
                     f.write(str(mlir_module))
         return mlir_module

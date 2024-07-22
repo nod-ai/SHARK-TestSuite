@@ -37,7 +37,6 @@ class SimpleIREEBackend(BackendBase):
         # compile to a vmfb for llvm-cpu
         b = ireec.tools.compile_str(
             str(module),
-            input_type="torch",
             target_backends=[self.hal_target_backend],
             extra_args=["--iree-input-demote-i64-to-i32"],
         )
