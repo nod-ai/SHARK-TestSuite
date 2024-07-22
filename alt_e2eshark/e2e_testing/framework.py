@@ -41,18 +41,15 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
             raise TypeError(f"input node '{node.name}' has a dim='{dim}', with invalid type: {type(dim)}\nexpected type: int.\nIf your model has dim_params, consider fixing them or setting custom inputs for this test.")
         if dim <= 0:
             raise ValueError(f"input node '{node.name}' has a non-positive dim: {dim}. Consider setting cutsom inputs for this test.")
+    rng = numpy.random.default_rng(42)
     if node.type == "tensor(float)":
-        if len(node.shape) == 0:
-            return numpy.array(numpy.random.randn()).astype(numpy.float32)
-        return numpy.abs(numpy.random.randn(*node.shape).astype(numpy.float32))
+        return rng.random(node.shape).astype(numpy.float32)
     if node.type == "tensor(int)" or node.type == "tensor(int32)":
-        if len(node.shape) == 0:
-            return numpy.array(numpy.random.randint(0, 10000, size=[])).astype(numpy.int32)
-        return numpy.random.randint(0, 10000, size=node.shape).astype(numpy.int32)
+        return rng.integers(0, 10000, size=node.shape, dtype=numpy.int32)
     if node.type == "tensor(int64)":
-        return numpy.random.randint(0, 5, size=node.shape).astype(numpy.int64)
+        return rng.integers(0, 5, size=node.shape, dtype=numpy.int64)
     if node.type == "tensor(bool)":
-        return numpy.random.randint(0, 2, size=node.shape).astype(bool)
+        return rng.integers(0, 2, size=node.shape, dtype=bool)
 
 
 def get_sample_inputs_for_onnx_model(model_path):
