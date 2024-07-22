@@ -104,7 +104,7 @@ class OnnxModelInfo:
 
     def construct_model(self):
         """a method to be overwritten. To make a new test, define a subclass with an override for this method"""
-        raise Exception(
+        raise NotImplementedError(
             f"Model path {self.model} does not exist and no construct_model method is defined."
         )
 
@@ -178,7 +178,7 @@ def result_comparison(test_result: TestResult, tol):
     output = test_result.output.to_torch().data
     gold = test_result.gold_output.to_torch().data
     if len(output) != len(gold):
-        raise Exception(
+        raise ValueError(
             f"num outputs: {len(output)} doesn't match num golden: {len(gold)} for test {test_result.name}"
         )
     match = []

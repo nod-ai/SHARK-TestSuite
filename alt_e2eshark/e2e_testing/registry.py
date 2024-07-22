@@ -13,7 +13,7 @@ _SEEN_NAMES = set()
 def register_test(test_class: type, test_name: str):
     # Ensure that there are no duplicate names in the global test registry.
     if test_name in _SEEN_NAMES:
-        raise Exception(
+        raise ValueError(
             f"Duplicate test name: '{test_name}'. Please make sure that the function wrapped by `register_test` has a unique name."
         )
     _SEEN_NAMES.add(test_name)
