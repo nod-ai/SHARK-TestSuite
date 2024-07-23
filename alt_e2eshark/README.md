@@ -11,24 +11,23 @@
  The test suite is organized starting with a framework name: pytorch, tensorflow, onnx. 
  For each framework category, multiple modes are tested. 
 
- - pytroch : starting model is a pytorch model
- - tensorflow : stating model is a tensorflow model (planned for later)
- - onnx : starting model is an onnx model generated using onnx python API or a an existing onnx model (zipped)
- 
- Following, upto three, modes are supported based upon what is possible for a framework:
-
- - direct: Framework -> Framework graph (e.g. Torch Fx) -> Torch MLIR -> Compiled artefact -> Run target backend
- - onnx: Framework -> ONNX -> Import as Torch ONNX in Torch MLIR -> Torch MLIR -> Compiled artefact -> Run target backend
- - ort: Framework -> ONNX -> Load in IREE ONNX Runtime EP -> Compiled artefact -> Run target backend (planned for later)
-
- If Framework is 'onnx', then mode 'direct' will mean same as 'onnx'. For onnx/operators and onnx/combinations,  
- the onnx model should be created using ONNX Python APIs. For onnx/models, a prebuilt onnx model should be checked 
- in as a zip file.
+ - pytorch : starting model is a pytorch model (planned for later)
+ - tensorflow : starting model is a tensorflow model (planned for later)
+ - onnx : starting model is an onnx model generated using onnx python API or an existing onnx model
  
  The target backend can be any IREE supported backend: llvm-cpu, amd-aie etc.
 
 ## Contents
  The contents are as below.
+ - e2e_testing/azutils.py : util functions for interfacing with azure
+ - e2e_testing/backends.py : where test backends are defined. Add other backends here.
+ - e2e_testing/framework.py : contains two types of classes: framework-specific base classes for storing model info, and generic classes for testing infrastructure.
+ - e2e_testing/onnx_utils.py : onnx related util functions. These either infer information from an onnx model or modify an onnx model.
+ - e2e_testing/registry.py : this contains the GLOBAL_TEST_REGISTRY, which gets updated when importing files with instances of `register_test(TestInfoClass, 'testname')`.
+ - e2e_testing/storage.py : contains helper functions and classes for managing the storage of tensors.
+ - e2e_testing/test_configs/onnxconfig.py : defines the onnx frontend test config. Other configs (e.g. pytorch, tensorflow) should be created in sibling files.
+ - onnx_tests/ : contains files that define OnnxModelInfo child classes, which customize model/input generation for various kinds of tests. Individual tests are also registered here together with their corresponding OnnxModelInfo child class.
+ - dev_requirements.txt : `pip install -r dev_requirements.txt` to install additional packages if you are using local builds of torch-mlir and iree.
  - requirements.txt : `pip install -r requirements.txt` to install packages for getting started immediately. This is mostly useful if you aren't trying to test local builds of IREE or torch-mlir.
  - run.py : Run `python run.py --help` to learn about the script. This is the script to run tests.
  
