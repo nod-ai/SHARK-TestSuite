@@ -257,14 +257,14 @@ def _get_argparse():
     parser.add_argument(
         "-d",
         "--device",
-        choices=["local-task","local-sync","vulkan"],
+        choices=["local-task","local-sync","vulkan","hip","cuda"],
         default="local-task",
         help="specifies the device for runtime config",
     )
     parser.add_argument(
         "-b",
         "--backend",
-        choices=["llvm-cpu", "amd-aie", "rocm", "vulkan"],
+        choices=["llvm-cpu", "amd-aie", "rocm", "cuda", "vmvx", "metal-spirv", "vulkan-spirv"],
         default="llvm-cpu",
         help="specifies the iree-hal-target-backend for compile phase",
     )
