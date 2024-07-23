@@ -30,7 +30,8 @@ from iree import runtime as ireert
 
 class SimpleIREEBackend(BackendBase):
     '''This backend uses iree to compile and run MLIR modules for a specified hal_target_backend'''
-    def __init__(self, *, hal_target_backend="llvm-cpu"):
+    def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu"):
+        self.device = device
         self.hal_target_backend = hal_target_backend
 
     def compile(self, module, *, save_to: str = None):
@@ -47,7 +48,7 @@ class SimpleIREEBackend(BackendBase):
         return b
 
     def load(self, artifact, *, func_name="main"):
-        config = ireert.Config("local-task")
+        config = ireert.Config(self.device)
         ctx = ireert.SystemContext(config=config)
         vm_module = ireert.VmModule.copy_buffer(ctx.instance, artifact)
         ctx.add_vm_module(vm_module)

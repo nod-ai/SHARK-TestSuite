@@ -70,7 +70,7 @@ def main(args):
         raise NotImplementedError("only onnx frontend supported now")
     pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
     config = OnnxTestConfig(
-        str(TEST_DIR), SimpleIREEBackend(hal_target_backend=args.backend), pipeline
+        str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend), pipeline
     )
 
     # get test list
@@ -255,11 +255,18 @@ def _get_argparse():
 
     # test config related arguments:
     parser.add_argument(
+        "-d",
+        "--device",
+        choices=["local-task","local-sync","vulkan"],
+        default="local-task",
+        help="specifies the device for runtime config",
+    )
+    parser.add_argument(
         "-b",
         "--backend",
         choices=["llvm-cpu", "amd-aie", "rocm", "vulkan"],
         default="llvm-cpu",
-        help="Target backend i.e. hardware to run on",
+        help="specifies the iree-hal-target-backend for compile phase",
     )
     parser.add_argument(
         "-f",
