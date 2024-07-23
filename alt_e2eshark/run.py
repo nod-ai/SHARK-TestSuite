@@ -112,7 +112,7 @@ def run_tests(
         os.mkdir(parent_log_dir)
 
     # set up a parent cache directory to store results
-    parent_cache_dir = cache_dir_name
+    parent_cache_dir = cache_dir_name.rstrip("/") + "/"
     if not os.path.exists(parent_cache_dir):
         os.mkdir(parent_cache_dir)
 
