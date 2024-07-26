@@ -5,11 +5,16 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 from onnx import TensorProto, numpy_helper
 import os
+import onnx
 
 from e2e_testing.storage import TestTensors
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
 from site import getsitepackages
+
+### IMPORTANT: ###
+# These node tests are added primarily to help debugging torch-mlir conversions on a *case-by-case* basis.
+# Please consider looking into SHARK-TestSuite/iree_tests/onnx for a much more robust and efficient alternative to running e2e node tests through iree.
 
 
 def get_tensor_from_pb(inputpb):
@@ -17,7 +22,7 @@ def get_tensor_from_pb(inputpb):
     with open(inputpb, "rb") as f:
         proto.ParseFromString(f.read())
     t = numpy_helper.to_array(proto)
-    return TestTensors((t,))
+    return t
 
 
 onnx_node_tests_dir = getsitepackages()[0] + "/onnx/backend/test/data/node/"
@@ -31,12 +36,24 @@ class NodeTest(OnnxModelInfo):
         self.model = onnx_node_tests_dir + self.name + "/model.onnx"
 
     def construct_inputs(self):
-        inputpb = onnx_node_tests_dir + self.name + "/test_data_set_0/input_0.pb"
-        return get_tensor_from_pb(inputpb)
+        model = onnx.load(self.model)
+        inputs = model.graph.input
+        num_inputs = len(inputs)
+        input_list = []
+        for i in range(num_inputs):
+            inputpb = f"{onnx_node_tests_dir}{self.name}/test_data_set_0/input_{i}.pb"
+            input_list.append(get_tensor_from_pb(inputpb))
+        return TestTensors(input_list)
 
     def forward(self, input):
-        outputpb = onnx_node_tests_dir + self.name + "/test_data_set_0/output_0.pb"
-        return get_tensor_from_pb(outputpb)
+        model = onnx.load(self.model)
+        outputs = model.graph.output
+        num_outputs = len(outputs)
+        output_list = []
+        for i in range(num_outputs):
+            outputpb = f"{onnx_node_tests_dir}{self.name}/test_data_set_0/output_{i}.pb"
+            output_list.append(get_tensor_from_pb(outputpb))
+        return TestTensors(output_list)
 
 
 for n in names:
