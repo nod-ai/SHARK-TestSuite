@@ -7,6 +7,7 @@ from onnx import TensorProto, numpy_helper
 import os
 import onnx
 
+from pathlib import Path
 from e2e_testing.storage import TestTensors
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
@@ -25,7 +26,10 @@ def get_tensor_from_pb(inputpb):
     return t
 
 
-onnx_node_tests_dir = getsitepackages()[0] + "/onnx/backend/test/data/node/"
+base_dir = getsitepackages()[0]
+# you can also get the node tests from the git submodule instead by uncommenting:
+# base_dir = str(Path(__file__).parents[3]) + "/third_party/onnx"
+onnx_node_tests_dir = base_dir + "/onnx/backend/test/data/node/"
 
 names = os.listdir(onnx_node_tests_dir) if os.path.exists(onnx_node_tests_dir) else []
 
