@@ -26,10 +26,10 @@ def pre_test_onnx_model_azure_download(name, cache_dir, model_path):
     # for the testList download all the onnx/models in cache_path
     download_and_setup_onnxmodel(cache_dir, name)
 
-    model_dir = model_path.rstrip("model.onnx")
+    model_dir = str(Path(model_path).parent)
     # if the the model exists for the test in the test dir, do nothing.
     # if it doesn't exist in the test directory but exists in cache dir, simply unzip cached model
-    dest_file = cache_dir + "model.onnx.zip"
+    dest_file = str(Path(cache_dir).joinpath("model.onnx.zip"))
     print(f"Unzipping - {dest_file}...","\t")
     # model_file_path_cache may not exist for models which were not correctly downloaded,
     # skip unzipping such model files, only extract existing models

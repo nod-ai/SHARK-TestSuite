@@ -66,6 +66,19 @@ def get_tests(groups, test_filter):
 
 def main(args):
     """Sets up config and test list based on CL args, then runs the tests"""
+
+    # set-up cache directory. Tries to get from env. var.
+    CACHE_DIR = os.getenv('CACHE_DIR')
+    cache_dir = args.cachedir
+    if not CACHE_DIR and not cache_dir:
+        raise RuntimeError("No CACHE_DIR environment variable set, and no --cachedir arg provided.")
+    if cache_dir:
+        # if a --cachedir arg is provided, use it for the tests and update the env variable.
+        cache_dir = cache_dir.rstrip("/")
+        os.environ['CACHE_DIR'] = cache_dir
+    else:
+        cache_dir = CACHE_DIR.rstrip("/")
+
     # setup config
     if args.framework != "onnx":
         raise NotImplementedError("only onnx frontend supported now")
@@ -87,16 +100,6 @@ def main(args):
     if args.skip_stages:
         stages = [s for s in stages if s not in args.skip_stages]
     
-    # set-up cache directory. Tries to get from env. var.
-    CACHE_DIR = os.getenv('CACHE_DIR')
-    cache_dir = args.cachedir
-    if not CACHE_DIR and not cache_dir:
-        raise RuntimeError("No CACHE_DIR environment variable set, and no --cachedir arg provided.")
-    if cache_dir:
-        # if a --cachedir arg is provided, use it for the tests and update the env variable.
-        os.environ['CACHE_DIR'] = cache_dir
-    else:
-        cache_dir = CACHE_DIR
 
     run_tests(
         test_list,
@@ -111,7 +114,7 @@ def main(args):
 
 
 def run_tests(
-    test_list, config, dir_name, cache_dir_name, no_artifacts, verbose, stages, load_inputs
+    test_list, config, dir_name, parent_cache_dir, no_artifacts, verbose, stages, load_inputs
 ):
     """runs tests in test_list based on config"""
     # TODO: multi-process
@@ -124,7 +127,6 @@ def run_tests(
         os.mkdir(parent_log_dir)
 
     # set up a parent cache directory to store results
-    parent_cache_dir = cache_dir_name.rstrip("/") + "/"
     if not os.path.exists(parent_cache_dir):
         os.mkdir(parent_cache_dir)
 
@@ -145,7 +147,7 @@ def run_tests(
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         # set cache directory for the individual test
-        cache_dir = parent_cache_dir + t.unique_name + "/"
+        cache_dir = parent_cache_dir + "/" + t.unique_name + "/"
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
@@ -155,7 +157,7 @@ def run_tests(
             curr_stage = "setup"
             if curr_stage in stages:
                 # build an instance of the test class
-                inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
+                inst = t.model_constructor(t.unique_name, log_dir)
                 # generate inputs from the test instance
                 if load_inputs:
                     inputs = inst.load_inputs(log_dir)
@@ -361,11 +363,10 @@ def _get_argparse():
         type=float,
     )
 
-    # logging
+    # logging/ caching
     parser.add_argument(
         "--cachedir",
-        help="Please select a dir with large free space to cache all torch, hf, turbine_tank model data",
-        required=True,
+        help="Please select a dir with large free space to cache all downloadable model data",
     )
     parser.add_argument(
         "-v",
