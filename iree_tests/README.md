@@ -1,5 +1,39 @@
 # IREE Tests
 
+## Quickstart instructions
+
+```
+#!/bin/bash
+set -e
+
+cd ~/SHARK-TestSuite/
+
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install required packages
+pip install -r iree_tests/requirements.txt
+pip install ./common_tools/
+
+# Optional: Install IREE compiler and runtime if you don't want to use a local copy
+# pip install --find-links https://iree.dev/pip-release-links.html iree-compiler iree-runtime --upgrade
+
+# Install Git LFS
+git lfs install
+
+# Optional: Download large remote files required for certain tests
+# python download_remote_files.py
+
+# Run a simple test to verify setup
+pytest iree_tests/simple
+
+echo "Setup complete! You can now run IREE tests."
+echo "Example: pytest iree_tests -n auto"
+```
+
+## About
+
 This directory contains generated test suites for running through IREE's
 compiler and runtime tools.
 
