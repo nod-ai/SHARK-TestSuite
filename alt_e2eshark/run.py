@@ -4,6 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -85,12 +86,23 @@ def main(args):
         stages = args.stages
     if args.skip_stages:
         stages = [s for s in stages if s not in args.skip_stages]
+    
+    # set-up cache directory. Tries to get from env. var.
+    CACHE_DIR = os.getenv('CACHE_DIR')
+    cache_dir = args.cachedir
+    if not CACHE_DIR and not cache_dir:
+        raise RuntimeError("No CACHE_DIR environment variable set, and no --cachedir arg provided.")
+    if cache_dir:
+        # if a --cachedir arg is provided, use it for the tests and update the env variable.
+        os.environ['CACHE_DIR'] = cache_dir
+    else:
+        cache_dir = CACHE_DIR
 
     run_tests(
         test_list,
         config,
         args.rundirectory,
-        args.cachedir,
+        cache_dir,
         args.no_artifacts,
         args.verbose,
         stages,
