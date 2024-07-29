@@ -27,7 +27,7 @@ class OnnxModelInfo:
         opset_version: Optional[int] = None,
     ):
         self.name = name
-        self.model = onnx_model_path + "model.onnx"
+        self.model = str(Path(onnx_model_path).joinpath("model.onnx"))
         self.opset_version = opset_version
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
@@ -103,7 +103,7 @@ class SiblingModel(OnnxModelInfo):
 
     def construct_model(self):
         run_dir = Path(self.model).parents[1]
-        og_model_path = str(run_dir.joinpath(self.og_name).joinpath('model.onnx'))
+        og_model_path = str(run_dir.joinpath(self.og_name))
         inst = self.og_mic(self.og_name, og_model_path)
         if not os.path.exists(inst.model):
             inst.construct_model()
