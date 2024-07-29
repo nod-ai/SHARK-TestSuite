@@ -74,10 +74,9 @@ def main(args):
         raise RuntimeError("No CACHE_DIR environment variable set, and no --cachedir arg provided.")
     if cache_dir:
         # if a --cachedir arg is provided, use it for the tests and update the env variable.
-        cache_dir = cache_dir.rstrip("/")
         os.environ['CACHE_DIR'] = cache_dir
     else:
-        cache_dir = CACHE_DIR.rstrip("/")
+        cache_dir = CACHE_DIR
 
     # setup config
     if args.framework != "onnx":
