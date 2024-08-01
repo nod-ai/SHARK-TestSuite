@@ -65,6 +65,7 @@ jobs:
             -r ./test-onnx \
             --report \
             --cachedir ~/sai/test-suite-ci-cache \
+            --testsfile ./ci-list.txt
             --mode onnx \
             -f onnx pytorch \
             -g models \
