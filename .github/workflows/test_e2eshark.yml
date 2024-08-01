@@ -64,7 +64,7 @@ jobs:
           HF_TOKEN=${{ secrets.HF_TOKEN }} AZ_PRIVATE_CONNECTION=${{ secrets.AZ_PRIVATE_CONNECTION }} python3.11 ./run.py \
             -r ./test-onnx \
             --report \
-            --cachedir ~/sai/test-suite-ci-cache \
+            --cachedir /groups/aig_sharks/test-suite-ci-cache \
             --testsfile ./ci-list.txt
             --mode onnx \
             -f onnx pytorch \
@@ -93,7 +93,7 @@ jobs:
           HF_TOKEN=${{ secrets.HF_TOKEN }} python3.11 ./run.py \
           -r ./test-turbine \
           --report \
-          --cachedir ~/sai/test-suite-ci-cache \
+          --cachedir /groups/aig_sharks/test-suite-ci-cache \
           --mode turbine \
           -g models \
           --cleanup \
