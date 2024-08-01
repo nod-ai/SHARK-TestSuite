@@ -20,17 +20,27 @@ from e2e_testing.framework import *
 # import frontend test configs:
 from e2e_testing.test_configs.onnxconfig import (
     OnnxTestConfig,
+    OnnxEpTestConfig,
     REDUCE_TO_LINALG_PIPELINE,
 )
 
 # import backends
-from e2e_testing.backends import SimpleIREEBackend
+from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend
 
-ALL_STAGES = [
+IREE_STAGES = [
     "setup",
     "native_inference",
     "mlir_import",
     "torch_mlir",
+    "compilation",
+    "compiled_inference",
+    "post-processing",
+]
+
+ORT_STAGES = [
+    "setup",
+    "shape_infer",
+    "native_inference",
     "compilation",
     "compiled_inference",
     "post-processing",
@@ -66,20 +76,28 @@ def get_tests(groups, test_filter):
 def main(args):
     """Sets up config and test list based on CL args, then runs the tests"""
     # setup config
-    if args.framework != "onnx":
+    if args.framework == "onnx":
+        pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
+        config = OnnxTestConfig(
+            str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend), pipeline
+        )
+
+        # get test list
+        test_list = get_tests(args.groups, args.test_filter)
+
+        # TODO: allow for no-run/mark xfails
+        # TODO: add better logging setup
+
+        stages = IREE_STAGES
+
+    elif args.framework == "onnx-ep":
+        config = OnnxEpTestConfig(
+            str(TEST_DIR), OnnxrtIreeEpBackend(device=args.device, hal_target_backend=args.backend))
+        # get test list
+        test_list = get_tests(args.groups, args.test_filter)
+        stages = ORT_STAGES
+    else:
         raise NotImplementedError("only onnx frontend supported now")
-    pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
-    config = OnnxTestConfig(
-        str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend), pipeline
-    )
-
-    # get test list
-    test_list = get_tests(args.groups, args.test_filter)
-
-    # TODO: allow for no-run/mark xfails
-    # TODO: add better logging setup
-
-    stages = ALL_STAGES
 
     if args.stages:
         stages = args.stages
@@ -150,6 +168,11 @@ def run_tests(
                 else:
                     inputs = inst.construct_inputs()
                     inputs.save_to(log_dir + "input")
+
+            # run native inference
+            curr_stage = "shape_infer"
+            if curr_stage in stages:
+                inst = config.infer_shape(inst)
 
             # run native inference
             curr_stage = "native_inference"
@@ -271,7 +294,7 @@ def _get_argparse():
     parser.add_argument(
         "-f",
         "--framework",
-        choices=["pytorch", "onnx", "tensorflow"],
+        choices=["pytorch", "onnx", "onnx-ep", "tensorflow"],
         default="onnx",
         help="Run tests for given framework(s)",
     )
@@ -292,13 +315,13 @@ def _get_argparse():
     parser.add_argument(
         "--stages",
         nargs="*",
-        choices=ALL_STAGES,
+        choices=IREE_STAGES,
         help="Manually specify which test stages to run.",
     )
     parser.add_argument(
         "--skip-stages",
         nargs="*",
-        choices=ALL_STAGES,
+        choices=IREE_STAGES,
         help="Manually specify which test stages to skip.",
     )
     parser.add_argument(

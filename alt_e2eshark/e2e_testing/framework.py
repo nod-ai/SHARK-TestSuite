@@ -3,7 +3,7 @@
 # Licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-import onnxruntime
+import onnxruntime as ort
 import torch
 import abc
 import os
@@ -97,24 +97,26 @@ TestModel = Union[OnnxModelInfo, torch.nn.Module]
 
 CompiledArtifact = TypeVar("CompiledArtifact")
 
+ModelArtifact = Union[OnnxModelInfo, Module]
+CompiledOutput = Union[CompiledArtifact, ort.InferenceSession]
 
 class TestConfig(abc.ABC):
 
-    @abc.abstractmethod
     def mlir_import(self, program: TestModel, *, save_to: str) -> Module:
         """imports the test model to an MLIR Module"""
-
-    @abc.abstractmethod
-    def compile(self, mlir_module: Module, *, save_to: str) -> CompiledArtifact:
-        """converts the test program to a compiled artifact"""
         pass
 
     @abc.abstractmethod
+    def compile(self, module: ModelArtifact, *, save_to: str) -> CompiledOutput:
+        """converts the test program to a compiled artifact"""
+        pass
+
     def apply_torch_mlir_passes(self, mlir_module: Module, *, save_to: str) -> Module:
         """applies a (possibly empty) pass pipeline internal to self to provided mlir module"""
+        pass
 
     @abc.abstractmethod
-    def run(self, artifact: CompiledArtifact, input: TestTensors) -> TestTensors:
+    def run(self, artifact: CompiledOutput, input: TestTensors) -> TestTensors:
         """runs the input through the compiled artifact"""
         pass
 

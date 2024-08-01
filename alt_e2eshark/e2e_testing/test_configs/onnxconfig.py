@@ -17,6 +17,35 @@ REDUCE_TO_LINALG_PIPELINE = [
     "torch-backend-to-linalg-on-tensors-backend-pipeline",
 ]
 
+
+class OnnxEpTestConfig(TestConfig):
+    '''This is the basic testing configuration for onnx models'''
+    def __init__(self, log_dir: str, backend: BackendBase):
+        super().__init__()
+        self.log_dir = log_dir
+        self.backend = backend
+
+    def infer_shape(self, model_info: OnnxModelInfo, *, save_to: str = None):
+        model = onnx.load(model_info.model)
+        if model_info.opset_version:
+            model = onnx.version_converter.convert_version(
+                model, model_info.opset_version
+            )
+        shaped_model = onnx.shape_inference.infer_shapes(model, data_prop=True)
+        # log imported IR
+        if save_to:
+            onnx.save(shaped_model, save_to + "model.onnx")
+        model_info.model = shaped_model
+        return model_info
+
+    def compile(self, model_info, *, save_to: str = None):
+        return self.backend.compile(model_info, save_to=save_to)
+
+    def run(self, session, inputs):
+        func = self.backend.load(session)
+        return func(inputs)
+
+
 class OnnxTestConfig(TestConfig):
     '''This is the basic testing configuration for onnx models. This should be initialized with a specific backend, and uses torch-mlir to import the onnx model to torch-onnx MLIR, and apply torch-mlir pre-proccessing passes if desired.'''
     def __init__(
