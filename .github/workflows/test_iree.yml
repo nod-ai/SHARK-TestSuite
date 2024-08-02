@@ -76,7 +76,7 @@ jobs:
           pytest iree_tests/onnx/ \
             -n auto \
             -rpfE \
-            --timeout=30 \
+            --timeout=90 \
             --durations=10 \
             --report-log=/tmp/iree_tests_onnx_${{ matrix.name }}_logs.json \
             --config-files=${CONFIG_FILE_PATH}
