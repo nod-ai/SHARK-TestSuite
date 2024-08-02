@@ -1465,6 +1465,9 @@ def main():
         shutil.move(run_dir + "/statusreport.md", mode_path + "/statusreport.md")
         shutil.move(run_dir + "/summaryreport.md", mode_path + "/summaryreport.md")
         shutil.move(run_dir + "/timereport.md", mode_path + "/timereport.md")
+    
+    if args.ci:
+        shutil.move("/groups/aig_sharks/actions-runner-nod/_work/_temp", "/home/esaimana/tmp", copy_function = shutil.copytree) 
 
     # When all processes are done, print
     print("\nCompleted run of e2e shark tests")
