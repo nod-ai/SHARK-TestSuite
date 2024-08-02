@@ -15,7 +15,5 @@
       "sharktank/llama/open-llama-3b-v2-f16",
       "sharktank/punet/int8",
     ],
-    "expected_run_failures": [
-      "sharktank/punet/fp16",
-    ]
+    "expected_run_failures": []
 }
