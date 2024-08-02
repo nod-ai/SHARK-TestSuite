@@ -83,7 +83,9 @@ jobs:
         working-directory: ./test-suite
 
       - name: Setup turbine python venv
+        if: always()
         run: |
+          watch -n 1 rocm-smi
           source ${E2E_VENV_DIR}/bin/activate
           pip install -f https://iree.dev/pip-release-links.html --upgrade \
           -r ../iree-turbine/iree-requirements.txt
