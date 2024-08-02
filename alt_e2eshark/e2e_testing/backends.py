@@ -5,19 +5,18 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import abc
 import onnxruntime as ort
-from typing import TypeVar, Union
+from typing import TypeVar
 from e2e_testing.storage import TestTensors
+from e2e_testing.framework import CompiledOutput, ModelArtifact
+from onnx import ModelProto
 
-CompiledArtifact = TypeVar("CompiledArtifact")
 Invoker = TypeVar("Invoker")
-
-CompiledOutput = Union[CompiledArtifact, ort.InferenceSession]
 
 
 class BackendBase(abc.ABC):
 
     @abc.abstractmethod
-    def compile(self, module) -> CompiledOutput:
+    def compile(self, module: ModelArtifact) -> CompiledOutput:
         """specifies how to compile an MLIR Module"""
 
     @abc.abstractmethod
@@ -69,27 +68,39 @@ class SimpleIREEBackend(BackendBase):
 
 class OnnxrtIreeEpBackend(BackendBase):
     '''This backend uses onnxrt iree-ep to compile and run onnx models for a specified hal_target_backend'''
-    def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu"):
+    def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", providers=["IreeExecutionProvider"], inter_op_num_threads=None, intra_op_num_threads=None):
+        # may need the device and target_backend for the future (e.g., when IREE-EP has support for specifying)
         self.device = device
         self.hal_target_backend = hal_target_backend
-        self.providers=["IreeExecutionProvider"]
+
+        self.providers=providers
+        # TODO: have more session options be optionally configurable by init args
         self.sess_opt = ort.SessionOptions()
         self.sess_opt.execution_mode  = ort.ExecutionMode.ORT_PARALLEL
-        #  sess_opt.inter_op_num_threads = 14
-        #  sess_opt.intra_op_num_threads = 4
+        if inter_op_num_threads:
+            self.sess_opt.inter_op_num_threads = inter_op_num_threads
+        if intra_op_num_threads:
+            self.sess_opt.intra_op_num_threads = intra_op_num_threads
         #  sess_opt.log_verbosity_level = 0
 
-    def compile(self, module, *, save_to: str = None):
+    def compile(self, model: ModelProto, *, save_to: str = None) -> ort.InferenceSession:
         session = ort.InferenceSession(
-                   module.model,
+                   model.SerializeToString(),
                    self.sess_opt,
                    providers=self.providers,
                )
+        # can't save an onnx runtime session
         return session
 
-    def load(self, session, *, func_name=None):
-        def func(x):
-            output = session.run(None, {input_name: x})
-            return TestTensors((output.to_host(),))
+    def load(self, session: ort.InferenceSession, *, func_name=None) -> Invoker:
+        def func(x: TestTensors):
+            data = x.to_numpy().data
+            session_inputs = session.get_inputs()
+            session_outputs = session.get_outputs()
+            model_output = session.run(
+                [output.name for output in session_outputs],
+                {session_inputs[i].name: data[i] for i in range(len(session_inputs))},
+            )
+            return TestTensors(model_output)
 
         return func

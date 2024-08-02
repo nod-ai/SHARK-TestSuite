@@ -93,26 +93,27 @@ class OnnxModelInfo:
         return TestTensors.load_from(shapes, dtypes, dir_path, "golden_output")
 
 
-TestModel = Union[OnnxModelInfo, torch.nn.Module]
-
+# TODO: extend TestModel to a union, or make TestModel a base class when supporting other frontends
+TestModel = OnnxModelInfo 
 CompiledArtifact = TypeVar("CompiledArtifact")
-
-ModelArtifact = Union[OnnxModelInfo, Module]
+ModelArtifact = Union[Module, onnx.ModelProto]
 CompiledOutput = Union[CompiledArtifact, ort.InferenceSession]
 
 class TestConfig(abc.ABC):
 
-    def mlir_import(self, program: TestModel, *, save_to: str) -> Module:
-        """imports the test model to an MLIR Module"""
+    @abc.abstractmethod
+    def import_model(self, program: TestModel, *, save_to: str) -> Tuple[ModelArtifact, str | None]:
+        """imports the test model to model artifact (e.g., loads the onnx model )"""
+        pass
+
+    @abc.abstractmethod
+    def preprocess_model(self, model_artifact: ModelArtifact, *, save_to: str) -> ModelArtifact:
+        """applies preprocessing to model_artifact."""
         pass
 
     @abc.abstractmethod
     def compile(self, module: ModelArtifact, *, save_to: str) -> CompiledOutput:
         """converts the test program to a compiled artifact"""
-        pass
-
-    def apply_torch_mlir_passes(self, mlir_module: Module, *, save_to: str) -> Module:
-        """applies a (possibly empty) pass pipeline internal to self to provided mlir module"""
         pass
 
     @abc.abstractmethod
