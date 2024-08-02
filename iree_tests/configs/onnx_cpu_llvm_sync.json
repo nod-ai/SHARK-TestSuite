@@ -13,6 +13,7 @@
     "onnx/node/generated/test_group_normalization_epsilon",
     "onnx/node/generated/test_group_normalization_example",
     "onnx/node/generated/test_group_normalization_example_expanded",
+    "onnx/node/generated/test_group_normalization_epsilon_expanded",
   ],
   "skip_run_tests": [],
   "expected_compile_failures": [
