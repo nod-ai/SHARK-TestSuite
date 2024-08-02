@@ -79,6 +79,7 @@ jobs:
             --postprocess \
             --ci \
             -v
+          cp -r /groups/aig_sharks/actions-runner-nod/_work/_temp /home/esaimana
         working-directory: ./test-suite
 
       - name: Setup turbine python venv
