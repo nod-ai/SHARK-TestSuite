@@ -10,11 +10,10 @@
     "onnx/node/generated/test_dequantizelinear",
     "onnx/node/generated/test_einsum_inner_prod",
     "onnx/node/generated/test_slice_default_axes",
-  ],
-  "skip_run_tests": [
     "onnx/node/generated/test_group_normalization_epsilon",
     "onnx/node/generated/test_group_normalization_example",
   ],
+  "skip_run_tests": [],
   "expected_compile_failures": [
     "onnx/node/generated/test_adagrad",
     "onnx/node/generated/test_adagrad_multiple",
