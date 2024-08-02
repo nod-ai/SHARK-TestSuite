@@ -70,7 +70,7 @@ jobs:
             -r ./test-onnx \
             --report \
             --cachedir /groups/aig_sharks/test-suite-ci-cache \
-            --testsfile ./ci-list.txt
+            --testsfile ./ci-list.txt \
             --mode onnx \
             -f onnx pytorch \
             -g models \
@@ -79,13 +79,10 @@ jobs:
             --postprocess \
             --ci \
             -v
-          cp -r /groups/aig_sharks/actions-runner-nod/_work/_temp /home/esaimana
         working-directory: ./test-suite
 
       - name: Setup turbine python venv
-        if: always()
         run: |
-          for ((;;)) { date ; sleep 1 ; }
           source ${E2E_VENV_DIR}/bin/activate
           pip install -f https://iree.dev/pip-release-links.html --upgrade \
           -r ../iree-turbine/iree-requirements.txt
