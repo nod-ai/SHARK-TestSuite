@@ -18,7 +18,7 @@ class ImageClassificationModel(SiblingModel):
             )
         return TestTensors(processed_outputs)
 
-# this will run resnet50_vaiq_int8 without pos-processing
+# this will run resnet50_vaiq_int8 without post-processing
 register_test(AzureDownloadableModel, "resnet50_vaiq_int8")
 
 # this will run the same model, but with post-processing

@@ -90,7 +90,7 @@ def main(args):
         config = OnnxEpTestConfig(
             str(TEST_DIR), OnnxrtIreeEpBackend(device=args.device, hal_target_backend=args.backend))
     else:
-        raise NotImplementedError("only onnx frontend supported now")
+        raise NotImplementedError(f"unsupported mode: {args.mode}")
 
     # get test list
     test_list = get_tests(args.groups, args.test_filter)
@@ -108,7 +108,6 @@ def main(args):
         test_list,
         config,
         args.rundirectory,
-        cache_dir,
         args.no_artifacts,
         args.verbose,
         stages,
@@ -117,7 +116,7 @@ def main(args):
 
 
 def run_tests(
-    test_list: List[Test], config: TestConfig, dir_name: str, cache_dir_name: str, no_artifacts: bool, verbose: bool, stages: List[str], load_inputs: bool
+    test_list: List[Test], config: TestConfig, dir_name: str, no_artifacts: bool, verbose: bool, stages: List[str], load_inputs: bool
 ):
     """runs tests in test_list based on config"""
     # TODO: multi-process
@@ -128,10 +127,6 @@ def run_tests(
     parent_log_dir = str(TEST_DIR) + "/" + dir_name + "/"
     if not os.path.exists(parent_log_dir):
         os.mkdir(parent_log_dir)
-
-    # set up a parent cache directory to store results
-    if not os.path.exists(parent_cache_dir):
-        os.mkdir(parent_cache_dir)
 
     num_passes = 0
     warnings.filterwarnings("ignore")
@@ -149,8 +144,6 @@ def run_tests(
         log_dir = parent_log_dir + t.unique_name + "/"
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
-        # set cache directory for the individual test
-        cache_dir = parent_cache_dir + "/" + t.unique_name + "/"
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
@@ -160,7 +153,7 @@ def run_tests(
             curr_stage = "setup"
             if curr_stage in stages:
                 # build an instance of the test info class
-                inst = t.model_constructor(t.unique_name, log_dir, cache_dir)
+                inst = t.model_constructor(t.unique_name, log_dir)
                 # generate inputs from the test info instance
                 if load_inputs:
                     inputs = inst.load_inputs(log_dir)
