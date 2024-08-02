@@ -12,6 +12,7 @@
     "onnx/node/generated/test_slice_default_axes",
     "onnx/node/generated/test_group_normalization_epsilon",
     "onnx/node/generated/test_group_normalization_example",
+    "onnx/node/generated/test_group_normalization_example_expanded",
   ],
   "skip_run_tests": [],
   "expected_compile_failures": [
