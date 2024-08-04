@@ -17,7 +17,7 @@ jobs:
     env:
       E2E_VENV_DIR: ${{ github.workspace }}/test-suite_venv
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      AZ_PRIVATE_CONNECTION: ${{ secrets.AZ_PRIVATE_CONNECTION }}
+      AZ_PRIVATE_CONNECTION: ${{ secrets.ONNXPRIVATESTORAGE_AZ_PRIVATE_CONNECTION }}
     steps:
       - name: Checkout Test Suite
         uses: actions/checkout@v2
@@ -59,9 +59,6 @@ jobs:
 
       - name: Run Onnx Mode
         run: |
-          echo $AZ_PRIVATE_CONNECTION
-          echo $HF_TOKEN
-          echo $E2E_VENV_DIR
           source ${E2E_VENV_DIR}/bin/activate
           pip list
           cd e2eshark
