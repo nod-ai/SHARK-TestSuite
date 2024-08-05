@@ -58,15 +58,15 @@ def convert_proto_etype(etype):
     if etype == onnx.TensorProto.FLOAT:
         return "f32"
     if etype == onnx.TensorProto.UINT8:
-        return "ui8"
+        return "i8"
     if etype == onnx.TensorProto.INT8:
-        return "si8"
+        return "i8"
     if etype == onnx.TensorProto.UINT16:
-        return "ui16"
+        return "i16"
     if etype == onnx.TensorProto.INT16:
-        return "si16"
+        return "i16"
     if etype == onnx.TensorProto.INT32:
-        return "si32"
+        return "i32"
     if etype == onnx.TensorProto.INT64:
         return "i64"
     if etype == onnx.TensorProto.BOOL:
@@ -76,9 +76,9 @@ def convert_proto_etype(etype):
     if etype == onnx.TensorProto.DOUBLE:
         return "f64"
     if etype == onnx.TensorProto.UINT32:
-        return "ui32"
+        return "i32"
     if etype == onnx.TensorProto.UINT64:
-        return "ui64"
+        return "i64"
     if etype == onnx.TensorProto.COMPLEX64:
         return "complex<f32>"
     if etype == onnx.TensorProto.COMPLEX128:
@@ -94,7 +94,7 @@ def convert_proto_etype(etype):
     if etype == onnx.TensorProto.FLOAT8E5M2FNUZ:
         return "f8e5m2fnuz"
     if etype == onnx.TensorProto.UINT4:
-        return "ui4"
+        return "i4"
     if etype == onnx.TensorProto.INT4:
         return "i4"
     return ""
