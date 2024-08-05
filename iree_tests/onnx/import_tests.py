@@ -13,13 +13,13 @@ import shutil
 import subprocess
 import numpy as np
 import sys
-from import_tests_utils import get_shape_string, write_io_bin
+from import_tests_utils import get_io_proto_type, write_io_bin
 
 THIS_DIR = Path(__file__).parent
 REPO_ROOT = THIS_DIR.parent.parent
 
 # The ONNX repo under third_party has test suite sources and generated files.
-ONNX_REPO_ROOT = REPO_ROOT / "third_party/onnx"
+ONNX_REPO_ROOT = Path("/home/rsuderman/Repos/onnx")
 ONNX_REPO_GENERATED_TESTS_ROOT = ONNX_REPO_ROOT / "onnx/backend/test/data"
 NODE_TESTS_ROOT = ONNX_REPO_GENERATED_TESTS_ROOT / "node"
 
@@ -52,66 +52,6 @@ def convert_io_proto(proto_filename, type_proto):
         else:
             print(f"Unsupported proto type: {type_proto}")
             return None
-
-
-def convert_proto_etype(etype):
-    if etype == onnx.TensorProto.FLOAT:
-        return "f32"
-    if etype == onnx.TensorProto.UINT8:
-        return "i8"
-    if etype == onnx.TensorProto.INT8:
-        return "i8"
-    if etype == onnx.TensorProto.UINT16:
-        return "i16"
-    if etype == onnx.TensorProto.INT16:
-        return "i16"
-    if etype == onnx.TensorProto.INT32:
-        return "i32"
-    if etype == onnx.TensorProto.INT64:
-        return "i64"
-    if etype == onnx.TensorProto.BOOL:
-        return "i1"
-    if etype == onnx.TensorProto.FLOAT16:
-        return "f16"
-    if etype == onnx.TensorProto.DOUBLE:
-        return "f64"
-    if etype == onnx.TensorProto.UINT32:
-        return "i32"
-    if etype == onnx.TensorProto.UINT64:
-        return "i64"
-    if etype == onnx.TensorProto.COMPLEX64:
-        return "complex<f32>"
-    if etype == onnx.TensorProto.COMPLEX128:
-        return "complex<f64>"
-    if etype == onnx.TensorProto.BFLOAT16:
-        return "bf16"
-    if etype == onnx.TensorProto.FLOAT8E4M3FN:
-        return "f8e4m3fn"
-    if etype == onnx.TensorProto.FLOAT8E4M3FNUZ:
-        return "f8e4m3fnuz"
-    if etype == onnx.TensorProto.FLOAT8E5M2:
-        return "f8e5m2"
-    if etype == onnx.TensorProto.FLOAT8E5M2FNUZ:
-        return "f8e5m2fnuz"
-    if etype == onnx.TensorProto.UINT4:
-        return "i4"
-    if etype == onnx.TensorProto.INT4:
-        return "i4"
-    return ""
-
-
-def get_io_proto_type(type_proto):
-    if type_proto.HasField("tensor_type"):
-        tensor_type = type_proto.tensor_type
-        shape = tensor_type.shape
-        shape = "x".join([str(d.dim_value) for d in shape.dim])
-        dtype = convert_proto_etype(tensor_type.elem_type)
-        if shape == "":
-            return dtype
-        return f"{shape}x{dtype}"
-    else:
-        print(f"Unsupported proto type: {type_proto}")
-        return None
 
 
 def import_onnx_files_with_cleanup(test_dir_path):
