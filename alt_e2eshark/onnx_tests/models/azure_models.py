@@ -9,11 +9,14 @@ from e2e_testing import azutils
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.registry import register_test
 
-CACHE_DIR = Path(os.getenv('CACHE_DIR'))
+CACHE_DIR = os.getenv('CACHE_DIR')
+
 class AzureDownloadableModel(OnnxModelInfo):
     def __init__(self, name: str, onnx_model_path: str):
         opset_version = 21
-        self.cache_dir = str(CACHE_DIR.joinpath(name))
+        if not CACHE_DIR:
+            raise RuntimeError("Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files.")
+        self.cache_dir = os.path.join(CACHE_DIR, name)
         super().__init__(name, onnx_model_path, opset_version)
 
     def construct_model(self):

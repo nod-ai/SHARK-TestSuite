@@ -68,17 +68,6 @@ def get_tests(groups, test_filter):
 def main(args):
     """Sets up config and test list based on CL args, then runs the tests"""
 
-    # set-up cache directory. Tries to get from env. var.
-    CACHE_DIR = os.getenv('CACHE_DIR')
-    cache_dir = args.cachedir
-    if not CACHE_DIR and not cache_dir:
-        raise RuntimeError("No CACHE_DIR environment variable set, and no --cachedir arg provided.")
-    if cache_dir:
-        # if a --cachedir arg is provided, use it for the tests and update the env variable.
-        os.environ['CACHE_DIR'] = cache_dir
-    else:
-        cache_dir = CACHE_DIR
-
     # setup config
     if args.mode == "onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
@@ -354,11 +343,7 @@ def _get_argparse():
         type=float,
     )
 
-    # logging/ caching
-    parser.add_argument(
-        "--cachedir",
-        help="Please select a dir with large free space to cache all downloadable model data",
-    )
+    # logging
     parser.add_argument(
         "-v",
         "--verbose",
