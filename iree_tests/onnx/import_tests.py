@@ -19,7 +19,7 @@ THIS_DIR = Path(__file__).parent
 REPO_ROOT = THIS_DIR.parent.parent
 
 # The ONNX repo under third_party has test suite sources and generated files.
-ONNX_REPO_ROOT = Path("/home/rsuderman/Repos/onnx")
+ONNX_REPO_ROOT = REPO_ROOT / "third_party/onnx"
 ONNX_REPO_GENERATED_TESTS_ROOT = ONNX_REPO_ROOT / "onnx/backend/test/data"
 NODE_TESTS_ROOT = ONNX_REPO_GENERATED_TESTS_ROOT / "node"
 
