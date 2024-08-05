@@ -19,7 +19,7 @@ THIS_DIR = Path(__file__).parent
 REPO_ROOT = THIS_DIR.parent.parent
 
 # The ONNX repo under third_party has test suite sources and generated files.
-ONNX_REPO_ROOT = REPO_ROOT / "third_party/onnx"
+ONNX_REPO_ROOT = Path("/home/rsuderman/Repos/onnx")
 ONNX_REPO_GENERATED_TESTS_ROOT = ONNX_REPO_ROOT / "onnx/backend/test/data"
 NODE_TESTS_ROOT = ONNX_REPO_GENERATED_TESTS_ROOT / "node"
 
@@ -106,6 +106,8 @@ def get_io_proto_type(type_proto):
         shape = tensor_type.shape
         shape = "x".join([str(d.dim_value) for d in shape.dim])
         dtype = convert_proto_etype(tensor_type.elem_type)
+        if shape == "":
+            return dtype
         return f"{shape}x{dtype}"
     else:
         print(f"Unsupported proto type: {type_proto}")
@@ -198,7 +200,7 @@ def import_onnx_files(test_dir_path, imported_dir_path):
     for i in range(len(test_inputs)):
         test_input = test_inputs[i]
         t = convert_io_proto(test_input, model.graph.input[i].type)
-        ty = get_io_proto_type(model.graph.output[0].type)
+        ty = get_io_proto_type(model.graph.input[i].type)
         if t is None:
             return False
         input_path = (imported_dir_path / test_input.stem).with_suffix(".npy")
@@ -209,7 +211,7 @@ def import_onnx_files(test_dir_path, imported_dir_path):
     for i in range(len(test_outputs)):
         test_output = test_outputs[i]
         t = convert_io_proto(test_output, model.graph.output[i].type)
-        ty = get_io_proto_type(model.graph.output[0].type)
+        ty = get_io_proto_type(model.graph.output[i].type)
         if t is None:
             return False
         output_path = (imported_dir_path / test_output.stem).with_suffix(".npy")
