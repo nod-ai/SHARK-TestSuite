@@ -54,6 +54,64 @@ def convert_io_proto(proto_filename, type_proto):
             return None
 
 
+def convert_proto_etype(etype):
+    if etype == onnx.TensorProto.FLOAT:
+        return "f32"
+    if etype == onnx.TensorProto.UINT8:
+        return "ui8"
+    if etype == onnx.TensorProto.INT8:
+        return "si8"
+    if etype == onnx.TensorProto.UINT16:
+        return "ui16"
+    if etype == onnx.TensorProto.INT16:
+        return "si16"
+    if etype == onnx.TensorProto.INT32:
+        return "si32"
+    if etype == onnx.TensorProto.INT64:
+        return "i64"
+    if etype == onnx.TensorProto.BOOL:
+        return "i1"
+    if etype == onnx.TensorProto.FLOAT16:
+        return "f16"
+    if etype == onnx.TensorProto.DOUBLE:
+        return "f64"
+    if etype == onnx.TensorProto.UINT32:
+        return "ui32"
+    if etype == onnx.TensorProto.UINT64:
+        return "ui64"
+    if etype == onnx.TensorProto.COMPLEX64:
+        return "complex<f32>"
+    if etype == onnx.TensorProto.COMPLEX128:
+        return "complex<f64>"
+    if etype == onnx.TensorProto.BFLOAT16:
+        return "bf16"
+    if etype == onnx.TensorProto.FLOAT8E4M3FN:
+        return "f8e4m3fn"
+    if etype == onnx.TensorProto.FLOAT8E4M3FNUZ:
+        return "f8e4m3fnuz"
+    if etype == onnx.TensorProto.FLOAT8E5M2:
+        return "f8e5m2"
+    if etype == onnx.TensorProto.FLOAT8E5M2FNUZ:
+        return "f8e5m2fnuz"
+    if etype == onnx.TensorProto.UINT4:
+        return "ui4"
+    if etype == onnx.TensorProto.INT4:
+        return "i4"
+    return ""
+
+
+def get_io_proto_type(type_proto):
+    if type_proto.HasField("tensor_type"):
+        tensor_type = type_proto.tensor_type
+        shape = tensor_type.shape
+        shape = "x".join([str(d.dim_value) for d in shape.dim])
+        dtype = convert_proto_etype(tensor_type.elem_type)
+        return f"{shape}x{dtype}"
+    else:
+        print(f"Unsupported proto type: {type_proto}")
+        return None
+
+
 def import_onnx_files_with_cleanup(test_dir_path):
     test_name = test_dir_path.name
     imported_dir_path = Path(GENERATED_FILES_OUTPUT_ROOT) / test_name
@@ -140,32 +198,26 @@ def import_onnx_files(test_dir_path, imported_dir_path):
     for i in range(len(test_inputs)):
         test_input = test_inputs[i]
         t = convert_io_proto(test_input, model.graph.input[i].type)
+        ty = get_io_proto_type(model.graph.output[0].type)
         if t is None:
             return False
         input_path = (imported_dir_path / test_input.stem).with_suffix(".npy")
         np.save(input_path, t)  # Only for ref, actual comparison with .bin
-        ss = get_shape_string(t)
         input_path_bin = (imported_dir_path / test_input.stem).with_suffix(".bin")
         write_io_bin(t, input_path_bin)
-        test_data_flagfile_lines.append(
-            f"--input={ss}=@{input_path_bin.name}\n"
-        )
+        test_data_flagfile_lines.append(f"--input={ty}=@{input_path_bin.name}\n")
     for i in range(len(test_outputs)):
         test_output = test_outputs[i]
         t = convert_io_proto(test_output, model.graph.output[i].type)
+        ty = get_io_proto_type(model.graph.output[0].type)
         if t is None:
             return False
         output_path = (imported_dir_path / test_output.stem).with_suffix(".npy")
         np.save(output_path, t)  # Only for ref, actual comparison with .bin
-        ss = get_shape_string(t)
-        # required for signless output comparision
-        if "xsi" in ss or "xui" in ss:
-            ss = ss.replace("xsi", "xi")
-            ss = ss.replace("xui", "xi")
         output_path_bin = (imported_dir_path / test_output.stem).with_suffix(".bin")
         write_io_bin(t, output_path_bin)
         test_data_flagfile_lines.append(
-            f"--expected_output={ss}=@{output_path_bin.name}\n"
+            f"--expected_output={ty}=@{output_path_bin.name}\n"
         )
 
     with open(test_data_flagfile_path, "wt") as f:
@@ -197,9 +249,7 @@ if __name__ == "__main__":
     passed_imports = []
     failed_imports = []
     with Pool(args.jobs) as pool:
-        results = pool.imap_unordered(
-            import_onnx_files_with_cleanup, test_dir_paths
-        )
+        results = pool.imap_unordered(import_onnx_files_with_cleanup, test_dir_paths)
         for result in results:
             if result[1]:
                 passed_imports.append(result[0])

@@ -31,9 +31,7 @@ def get_shape_string(torchtensor):
     if dtype in dtype_map:
         inputshapestring += f"x{dtype_map[dtype][0]}"
     else:
-        print(
-            f"WARNING: unsupported data type in get_shape_string() : '{dtype}'"
-        )
+        print(f"WARNING: unsupported data type in get_shape_string() : '{dtype}'")
     return inputshapestring
 
 
