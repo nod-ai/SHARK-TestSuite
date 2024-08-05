@@ -4,7 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import torch
-from e2e_testing.framework import OnnxModelInfo, SiblingModel
+from ..helper_classes import SiblingModel, get_sibling_constructor
 from e2e_testing.registry import register_test
 from e2e_testing.storage import TestTensors
 from .azure_models import AzureDownloadableModel
@@ -19,8 +19,8 @@ class ImageClassificationModel(SiblingModel):
         return TestTensors(processed_outputs)
 
 # this will run resnet50_vaiq_int8 without post-processing
-register_test(AzureDownloadableModel, "resnet50_vaiq_int8")
+register_test(AzureDownloadableModel, "ResNet50_vaiq")
 
 # this will run the same model, but with post-processing
-constructor = lambda *args, **kwargs : ImageClassificationModel(AzureDownloadableModel, "resnet50_vaiq_int8", *args, **kwargs)
-register_test(constructor, "resnet50_vaiq_int8_pp")
+constructor = get_sibling_constructor(ImageClassificationModel, AzureDownloadableModel, "ResNet50_vaiq")
+register_test(constructor, "ResNet50_vaiq_pp")

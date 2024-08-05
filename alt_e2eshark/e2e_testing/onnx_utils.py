@@ -104,3 +104,9 @@ def node_output_name(model: onnx.ModelProto, n: int, op_name: str) -> str:
     if not node:
         raise ValueError(f"Could not find {n} nodes of type {op_name} in {model}")
     return node.output[0]
+
+def node_name_from_back(model: onnx.ModelProto, n: int) -> str:
+    """returns the name of the node appearing 'n' nodes from the back"""
+    nde = model.graph.node[-n]
+    return nde.output[0]
+

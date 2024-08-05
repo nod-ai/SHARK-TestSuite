@@ -9,7 +9,7 @@ import urllib
 from pathlib import Path
 from PIL import Image
 from torchvision import transforms
-from e2e_testing.framework import SiblingModel
+from ..helper_classes import SiblingModel, get_sibling_constructor
 from e2e_testing.registry import register_test
 from e2e_testing.storage import TestTensors
 from .azure_models import AzureDownloadableModel
@@ -82,5 +82,5 @@ class DeeplabModel(SiblingModel):
 register_test(AzureDownloadableModel, "deeplabv3")
 
 # sibling test with all the bells & whistles
-constructor = lambda *args, **kwargs : DeeplabModel(AzureDownloadableModel, "deeplabv3", *args, **kwargs)
+constructor = get_sibling_constructor(DeeplabModel, AzureDownloadableModel, "deeplabv3")
 register_test(constructor, "deeplabv3_real_with_pp")
