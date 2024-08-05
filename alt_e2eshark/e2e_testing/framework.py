@@ -29,13 +29,15 @@ class OnnxModelInfo:
         self.name = name
         self.model = os.path.join(onnx_model_path, "model.onnx")
         self.opset_version = opset_version
+        self.sess_options = ort.SessionOptions()
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
         input = input.to_numpy().data
         if not os.path.exists(self.model):
             self.construct_model()
-        session = onnxruntime.InferenceSession(self.model, None)
+        self.update_sess_options()
+        session = ort.InferenceSession(self.model, self.sess_options)
         session_inputs = session.get_inputs()
         session_outputs = session.get_outputs()
 
@@ -45,6 +47,13 @@ class OnnxModelInfo:
         )
 
         return TestTensors(model_output)
+
+    def update_sess_options(self):
+        """Can be overridden to modify session options (self.sess_options) for gold inference.
+        It is sometimes useful to disable all optimizations, which can be done with:
+        self.sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+        """
+        pass
 
     def construct_model(self):
         """a method to be overwritten. To make a new test, define a subclass with an override for this method"""
