@@ -5,14 +5,14 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import os
 import onnx
+import onnxruntime
 from onnx.helper import make_node, make_graph, make_model
 from pathlib import Path
 from e2e_testing import azutils
 from e2e_testing.framework import OnnxModelInfo
 from e2e_testing.onnx_utils import (
     modify_model_output,
-    node_output_name,
-    node_name_from_back,
+    find_node,
 )
 
 """This file contains several helpful child classes of OnnxModelInfo."""
@@ -26,6 +26,9 @@ class AzureDownloadableModel(OnnxModelInfo):
             raise RuntimeError("Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files.")
         self.cache_dir = os.path.join(parent_cache_dir, name)
         super().__init__(name, onnx_model_path, opset_version)
+    
+    # def update_sess_options(self):
+    #     self.sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
 
     def construct_model(self):
         # try to find a .onnx file in the test-run dir
@@ -122,13 +125,15 @@ class TruncatedModel(SiblingModel):
             self.sibling_inst.construct_model()
         og_model = onnx.load(self.sibling_inst.model)
         inf_model = onnx.shape_inference.infer_shapes(og_model, data_prop=True)
-        output_name = (
-            node_name_from_back(inf_model, self.n)
+        output_node = (
+            -self.n
             if self.op_type == ""
-            else node_output_name(inf_model, self.n, self.op_type)
+            else find_node(inf_model, self.n, self.op_type)
         )
-        new_model = modify_model_output(inf_model, output_name)
+        new_model = modify_model_output(inf_model, output_node)
         onnx.save(new_model, self.model)
+        from e2e_testing.onnx_utils import get_op_frequency
+        print(get_op_frequency(self.model))
 
 
 def get_trucated_constructor(truncated_class, og_constructor, og_name):
