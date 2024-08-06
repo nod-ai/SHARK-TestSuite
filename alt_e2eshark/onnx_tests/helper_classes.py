@@ -200,6 +200,7 @@ class BuildAModel(OnnxModelInfo):
         self.node_list = []
         self.input_vi = []
         self.output_vi = []
+        self.initializers = None
         self.construct_model()
 
     def construct_nodes(self):
@@ -210,6 +211,10 @@ class BuildAModel(OnnxModelInfo):
         """Needs to be overridden. Update self.input_vi and self.output_vi with the lists of input and output value infos"""
         raise NotImplementedError("Please implement a construct_i_o_value_info method.")
 
+    def construct_initializers(self):
+        """Can be overridden. Use to define self.initializers as a list of TensorProtos."""
+        pass
+
     def get_app_node(self):
         """Convenience function for defining a lambda that appends a new node to self.node_list"""
         return lambda op_type, inputs, outputs, **kwargs: self.node_list.append(
@@ -219,6 +224,7 @@ class BuildAModel(OnnxModelInfo):
     def construct_model(self):
         self.construct_nodes()
         self.construct_i_o_value_info()
-        graph = make_graph(self.node_list, "main", self.input_vi, self.output_vi)
+        self.construct_initializers()
+        graph = make_graph(self.node_list, "main", self.input_vi, self.output_vi, self.initializers)
         model = make_model(graph)
         onnx.save(model, self.model)

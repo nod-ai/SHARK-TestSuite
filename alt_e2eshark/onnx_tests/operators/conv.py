@@ -7,7 +7,7 @@ from onnx import TensorProto
 from onnx.helper import make_tensor_value_info, make_tensor
 
 from ..helper_classes import BuildAModel
-from e2e_testing.registry import register_with_name
+from e2e_testing.registry import register_with_name, register_test
 
 class QConvModelBase(BuildAModel):
     def __init__(self, specs, *args, **kwargs):
@@ -97,3 +97,31 @@ class QConvAsymmetricPads(QConvModelBase):
 class QConvGrouped(QConvModelBase):
     def __init__(self, *args, **kwargs):
         super().__init__(grouped_specs, *args, **kwargs)
+
+
+class QConv1DModel(BuildAModel):
+    def update_sess_options(self):
+        import onnxruntime
+        self.sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+
+    def construct_nodes(self):
+        app_node = self.get_app_node()
+        app_node("QuantizeLinear", ["X", "Scale", "ZP"], ["QX"])
+        app_node("DequantizeLinear", ["QX", "Scale", "ZP"], ["DQX"])
+        app_node("DequantizeLinear", ["QW", "Scale", "ZP"], ["DQW"])
+        app_node("Conv", ["DQX","DQW"], ["Y"], group=1, kernel_shape = [5], pads = [2, 2])
+        app_node("QuantizeLinear", ["Y", "Scale", "ZP"], ["QY"])
+        app_node("DequantizeLinear", ["QY", "Scale", "ZP"], ["DQY"])
+    
+    def construct_i_o_value_info(self):
+        self.input_vi = [make_tensor_value_info("X", TensorProto.FLOAT, [1,1,256])]
+        self.output_vi = [make_tensor_value_info("DQY", TensorProto.FLOAT, [1,1,256])]
+    
+    def construct_initializers(self):
+        self.initializers = [
+            make_tensor("Scale", TensorProto.FLOAT, [], [0.025]),
+            make_tensor("ZP", TensorProto.INT8, [], [2]),
+            make_tensor("QW", TensorProto.INT8, [1,1,5], [-20, 15, 100, 27, -1]),
+        ]
+
+register_test(QConv1DModel, "qconv1d_basic")
