@@ -99,6 +99,9 @@ def get_op_frequency(model_path):
 def modify_model_output(model: onnx.ModelProto, final_node_key: int) -> onnx.ModelProto:
     """A helper function to change the output of an onnx model to a new output."""
 
+    if final_node_key < 0:
+        final_node_key += len(model.graph.node)
+
     final_node = model.graph.node[final_node_key]
 
     # clear old outputs
