@@ -74,8 +74,8 @@ class OnnxModelInfo:
             self.construct_model()
         self.update_opset_version_and_overwrite()
         self.update_dim_param_dict()
-        print(self.get_signature())
-        print(get_op_frequency(self.model))
+        # print(self.get_signature())
+        # print(get_op_frequency(self.model))
         return get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict)
 
     def apply_postprocessing(self, output: TestTensors):

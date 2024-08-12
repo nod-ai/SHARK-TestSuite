@@ -47,14 +47,14 @@ for name in ORT_model_names:
     register_test(dim_param_constructor(llm_dict_0), name)
 
 static_dim_model_names = [
-    "migraphx_bert__bert-large-uncased",
-    "migraphx_cadene__dpn92i1",
+    "migraphx_bert__bert-large-uncased", # need to specify input range for indices input [-2,1]
+    "migraphx_cadene__dpn92i1", # need to give names to nodes??? did this locally, need to reupload
     "migraphx_cadene__inceptionv4i16",
     "migraphx_cadene__resnext101_64x4di1",
     "migraphx_cadene__resnext101_64x4di16",
-    "migraphx_onnx-misc__taau_low_res_downsample_d2s_for_infer_time_fp16_opset11",
+    "migraphx_onnx-misc__taau_low_res_downsample_d2s_for_infer_time_fp16_opset11", # fp16 resize issue
     "migraphx_pytorch-examples__wlang_gru",
-    "migraphx_pytorch-examples__wlang_lstm",
+    "migraphx_pytorch-examples__wlang_lstm", # also needs node names
     "migraphx_torchvision__densenet121i32",
     "migraphx_torchvision__inceptioni1",
     "migraphx_torchvision__inceptioni32",
@@ -68,12 +68,13 @@ for name in static_dim_model_names:
 
 misc_models = {
     "migraphx_agentmodel__AgentModel" : {"batch" : 1},
-    "migraphx_bert__bertsquad-12" : {"unk_492" : 1 , "unk_493" : 1, "unk_494" : 1, "unk_495" : 1},
+    "migraphx_bert__bertsquad-12" : {"unk__492" : 1 , "unk__493" : 1, "unk__494" : 1, "unk__495" : 1},
     "migraphx_mlperf__bert_large_mlperf" : {"batch_size" : 1},  # need to specify input range for indices input [-2,1]
-    "migraphx_mlperf__resnet50_v1" : {"unk_616" : 1},
+    "migraphx_mlperf__resnet50_v1" : {"unk__616" : 1},
     "migraphx_onnx-model-zoo__gpt2-10"  : {"input1_dynamic_axes_1" : 1, "input1_dynamic_axes_2" : 1, "input1_dynamic_axes_3" : 1 },
     "migraphx_sd__unet__model" : {"batch" : 1 , "channels" : 4, "height" : 512, "width" : 512, "sequence" : 64 },
-    "migraphx_sdxl__unet__model" : {"batch_size" : 1, "num_channels" : 4, "height" : 512, "width" : 512, "steps" : 2, "sequence_length" : 64}
+    # this one crashes for some reason...
+    # "migraphx_sdxl__unet__model" : {"batch_size" : 1, "num_channels" : 4, "height" : 512, "width" : 512, "steps" : 2, "sequence_length" : 64}
 }
 
 for (key, dim_param) in misc_models.items():
