@@ -73,7 +73,7 @@ def main(args):
     if args.mode == "onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = OnnxTestConfig(
-            str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend), pipeline
+            str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend, extra_args=args.iree_compile_args), pipeline
         )
     elif args.mode == "ort-ep":
         # TODO: allow specifying provider explicitly from cl args.
@@ -124,6 +124,8 @@ def run_tests(
     if verbose:
         print(f"Stages to be run: {stages}")
         print(f'Test list: {[test.unique_name for test in test_list]}')
+
+    status_dict = dict()
 
     for t in test_list:
 
@@ -198,6 +200,7 @@ def run_tests(
                 inst.save_processed_output(outputs, log_dir, "output")
 
         except Exception as e:
+            status_dict[inst.name] = curr_stage
             log_exception(e, log_dir, curr_stage, t.unique_name, verbose)
             continue
 
@@ -212,17 +215,33 @@ def run_tests(
                 )
                 # log the results
                 test_passed = log_result(result, log_dir, [1e-3, 1e-3])
-                num_passes += int(test_passed)
-                if verbose:
-                    to_print = "\tPASS" if test_passed else "\tFAILED (Numerics)"
-                    print(to_print)
-                elif not test_passed:
-                    print(f"FAILED: {t.unique_name}")
+                if test_passed:
+                    status_dict[inst.name] = "PASS"
+                else:
+                    status_dict[inst.name] = "Numerics"
             except Exception as e:
+                status_dict[inst.name] = "results-summary"
                 log_exception(e, log_dir, "results-summary", t.unique_name, verbose)
+        
+        if verbose:
+            if status_dict[inst.name] == "PASS":
+                print(f"\tPASSED")
+            else:
+                print(f"\tFAILED ({status_dict[inst.name]})")
 
     print("\nTest Summary:")
-    print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
+    stages.append("results-summary")
+    stages.append("Numerics")
+    stages.append("PASS")
+    stages.reverse()
+    counts = {s : 0 for s in stages}
+    for (key, value) in status_dict.items():
+        counts[value] += 1
+    results_str = "number of tests exited in each stage:\n"
+    for (key, value) in counts.items():
+        results_str += f"\t{key} : {value}\n"
+    results_str += f"\ttotal : {len(test_list)}"
+    print(results_str)
     print(f"results stored in {parent_log_dir}")
 
 
@@ -266,9 +285,8 @@ def _get_argparse():
     parser.add_argument(
         "-d",
         "--device",
-        choices=["local-task","local-sync","vulkan","hip","cuda"],
         default="local-task",
-        help="specifies the device for runtime config",
+        help="specifies the device for runtime config. E.g. local-task, local-sync, vulkan, hip, cuda",
     )
     parser.add_argument(
         "-b",
@@ -276,6 +294,13 @@ def _get_argparse():
         choices=["llvm-cpu", "amd-aie", "rocm", "cuda", "vmvx", "metal-spirv", "vulkan-spirv"],
         default="llvm-cpu",
         help="specifies the iree-hal-target-backend for compile phase",
+    )
+    parser.add_argument(
+        "-ica",
+        "--iree-compile-args",
+        nargs="*",
+        default = None,
+        help="Manually specify extra args for iree-compile.",
     )
     # parser.add_argument(
     #     "-f",
