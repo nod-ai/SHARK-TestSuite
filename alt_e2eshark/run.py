@@ -28,6 +28,7 @@ from e2e_testing.test_configs.onnxconfig import (
 
 # import backends
 from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend
+from utils.report import generate_report
 
 ALL_STAGES = [
     "setup",
@@ -93,30 +94,33 @@ def main(args):
     if args.skip_stages:
         stages = [s for s in stages if s not in args.skip_stages]
     
+    parent_log_dir = os.path.join(TEST_DIR, args.rundirectory)
 
-    run_tests(
+    status_dict = run_tests(
         test_list,
         config,
-        args.rundirectory,
+        parent_log_dir,
         args.no_artifacts,
         args.verbose,
         stages,
         args.load_inputs
     )
 
+    if args.report:
+        generate_report(args, stages, test_list, status_dict)
+
 
 def run_tests(
-    test_list: List[Test], config: TestConfig, dir_name: str, no_artifacts: bool, verbose: bool, stages: List[str], load_inputs: bool
-):
-    """runs tests in test_list based on config"""
+    test_list: List[Test], config: TestConfig, parent_log_dir: str, no_artifacts: bool, verbose: bool, stages: List[str], load_inputs: bool
+) -> Dict[str, str]:
+    """runs tests in test_list based on config. Returns a dictionary containing the test statuses."""
     # TODO: multi-process
     # TODO: setup exception handling and better logging
     # TODO: log command-line reproducers for each step
 
     # set up a parent log directory to store results
-    parent_log_dir = str(TEST_DIR) + "/" + dir_name + "/"
     if not os.path.exists(parent_log_dir):
-        os.mkdir(parent_log_dir)
+        os.makedirs(parent_log_dir)
 
     num_passes = 0
     warnings.filterwarnings("ignore")
@@ -133,9 +137,9 @@ def run_tests(
             print(f"running test {t.unique_name}...")
 
         # set log directory for the individual test
-        log_dir = parent_log_dir + t.unique_name + "/"
+        log_dir = os.path.join(parent_log_dir, t.unique_name)
         if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
+            os.makedirs(log_dir)
 
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
@@ -217,6 +221,7 @@ def run_tests(
                 test_passed = log_result(result, log_dir, [1e-3, 1e-3])
                 if test_passed:
                     status_dict[inst.name] = "PASS"
+                    num_passes+=1
                 else:
                     status_dict[inst.name] = "Numerics"
             except Exception as e:
@@ -230,19 +235,10 @@ def run_tests(
                 print(f"\tFAILED ({status_dict[inst.name]})")
 
     print("\nTest Summary:")
-    stages.append("results-summary")
-    stages.append("Numerics")
-    stages.append("PASS")
-    stages.reverse()
-    counts = {s : 0 for s in stages}
-    for (key, value) in status_dict.items():
-        counts[value] += 1
-    results_str = "number of tests exited in each stage:\n"
-    for (key, value) in counts.items():
-        results_str += f"\t{key} : {value}\n"
-    results_str += f"\ttotal : {len(test_list)}"
-    print(results_str)
+    print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
     print(f"results stored in {parent_log_dir}")
+    status_dict = dict(sorted(status_dict.items(), key=lambda item : item[0].lower()))
+    return status_dict
 
 
 def log_result(result, log_dir, tol):
@@ -395,6 +391,17 @@ def _get_argparse():
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        default=False,
+        help="Generate test report summary",
+    )
+    parser.add_argument(
+        "--report-file",
+        default="report.md",
+        help="output filename for the report summary.",
+    )
     # parser.add_argument(
     #     "-d",
     #     "--todtype",
@@ -414,18 +421,6 @@ def _get_argparse():
     #     action="store_true",
     #     default=False,
     #     help="Skip running of tests. Useful for generating test summary after the run",
-    # )
-    # parser.add_argument(
-    #     "--report",
-    #     action="store_true",
-    #     default=False,
-    #     help="Generate test report summary",
-    # )
-    # parser.add_argument(
-    #     "--reportformat",
-    #     choices=["pipe", "github", "html", "csv"],
-    #     default="pipe",
-    #     help="Format of the test report summary file. It takes subset of tablefmt value of python tabulate",
     # )
     # parser.add_argument(
     #     "--uploadtestsfile",
