@@ -72,7 +72,6 @@ class OnnxModelInfo:
         """can be overridden to generate specific inputs, but a default is provided for convenience"""
         if not os.path.exists(self.model):
             self.construct_model()
-        self.update_opset_version_and_overwrite()
         self.update_dim_param_dict()
         # print(self.get_signature())
         # print(get_op_frequency(self.model))
