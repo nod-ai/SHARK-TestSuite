@@ -4,6 +4,7 @@ import onnxruntime
 import torch
 from e2e_testing.storage import TestTensors
 from typing import Optional
+from pathlib import Path
 
 
 def dtype_from_ort_node(node):
@@ -62,7 +63,9 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
 
 def get_sample_inputs_for_onnx_model(model_path, dim_param_dict = None):
     """A convenience function for generating sample inputs for an onnx model"""
-    s = onnxruntime.InferenceSession(model_path, None)
+    opt = onnxruntime.SessionOptions()
+    opt.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+    s = onnxruntime.InferenceSession(model_path, opt)
     inputs = s.get_inputs()
     sample_inputs = TestTensors(
         tuple([generate_input_from_node(node, dim_param_dict) for node in inputs])
@@ -85,8 +88,13 @@ def get_signature_for_onnx_model(model_path, *, from_inputs: bool = True, dim_pa
     return shapes, dtypes
 
 
-def get_op_frequency(model_path):
-    model = onnx.load(model_path)
+def get_op_frequency(model_or_path):
+    if isinstance(model_or_path, str) or isinstance(model_or_path, Path):
+        model = onnx.load(model_or_path)
+    elif isinstance(model_or_path, onnx.ModelProto):
+        model = model_or_path
+    else:
+        raise TypeError(f'Input argument must be a path, string, or onnx model.')
     op_freq = dict()
     for n in model.graph.node:
         if n.op_type in op_freq:
@@ -154,6 +162,12 @@ def find_minimal_graph(graph: onnx.GraphProto, top_key: int):
 
 def find_node(model: onnx.ModelProto, n: int, op_name: str) -> onnx.NodeProto:
     """returns the output names for the nth node in the onnx model with op_type given by op_name"""
+    op_freq = get_op_frequency(model)
+    N = op_freq[op_name]
+    if n > N-1 or n < -N:
+        raise ValueError(f"There are {N} nodes with op name {op_name} in model. Provided index {n} is OOB.\n{op_freq}")
+    if n < 0:
+        n += N
     match_counter = 0
     key = -1
     for nde in model.graph.node:
@@ -164,6 +178,4 @@ def find_node(model: onnx.ModelProto, n: int, op_name: str) -> onnx.NodeProto:
             node = nde
             break
         match_counter += 1
-    if not node:
-        raise ValueError(f"Could not find {n} nodes of type {op_name} in {model}")
     return key

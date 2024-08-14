@@ -32,11 +32,11 @@ from utils.report import generate_report
 
 ALL_STAGES = [
     "setup",
-    "construct_inputs",
-    "native_inference",
     "import_model",
     "preprocessing",
     "compilation",
+    "construct_inputs",
+    "native_inference",
     "compiled_inference",
     "postprocessing",
 ]
@@ -150,29 +150,15 @@ def run_tests(
             if curr_stage in stages:
                 # build an instance of the test info class
                 inst = t.model_constructor(t.unique_name, log_dir)
-                # generate inputs from the test info instance
+                # this is highly onnx specific. 
+                # TODO: Figure out how to factor this out of run.py
                 if not os.path.exists(inst.model):
                     inst.construct_model()
             
-            # get inputs from inst
-            curr_stage = "construct_inputs"
-            if curr_stage in stages:
-                if load_inputs:
-                    inputs = inst.load_inputs(log_dir)
-                else:
-                    inputs = inst.construct_inputs()
-                    inputs.save_to(log_dir + "input")
-
-            # run native inference
-            curr_stage = "native_inference"
-            if curr_stage in stages:
-                golden_outputs_raw = inst.forward(inputs)
-                golden_outputs_raw.save_to(log_dir + "golden_output")
-
+            artifact_save_to = None if no_artifacts else log_dir
             # generate mlir from the instance using the config
             curr_stage = "import_model"
             if curr_stage in stages:
-                artifact_save_to = None if no_artifacts else log_dir
                 model_artifact, func_name = config.import_model(
                     inst, save_to=artifact_save_to
                 )
@@ -184,10 +170,25 @@ def run_tests(
                     model_artifact, save_to=artifact_save_to
                 )
 
+            # get inputs from inst
+            curr_stage = "construct_inputs"
+            if curr_stage in stages:
+                if load_inputs:
+                    inputs = inst.load_inputs(log_dir)
+                else:
+                    inputs = inst.construct_inputs()
+                    inputs.save_to(log_dir + "input")
+
             # compile mlir_module using config (calls backend compile)
             curr_stage = "compilation"
             if curr_stage in stages:
                 compiled_artifact = config.compile(model_artifact, save_to=artifact_save_to)
+
+            # run native inference
+            curr_stage = "native_inference"
+            if curr_stage in stages:
+                golden_outputs_raw = inst.forward(inputs)
+                golden_outputs_raw.save_to(log_dir + "golden_output")
 
             # run inference with the compiled module
             curr_stage = "compiled_inference"
