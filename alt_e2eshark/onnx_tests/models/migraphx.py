@@ -53,13 +53,13 @@ def dim_param_constructor(dim_param_dict):
                 self.name == "migraphx_sd__unet__model"
                 or self.name == "migraphx_sdxl__unet__model"
             ):
-                print("here")
                 # trying to update opset version seems to cause a crash or other issues.
                 self.opset_version = None
                 # even with the following, ort fails to allocate memory with default session options:
                 self.sess_options.add_session_config_entry(
                     "use_device_allocator_for_initializers", "1"
                 )
+            self.update_opset_version_and_overwrite()
 
         def update_dim_param_dict(self):
             self.dim_param_dict = dim_param_dict
@@ -100,7 +100,7 @@ static_dim_model_names = [
 ]
 
 for name in static_dim_model_names:
-    register_test(AzureDownloadableModel, name)
+    register_test(dim_param_constructor(None), name)
 
 misc_models = {
     "migraphx_agentmodel__AgentModel": {"batch": 1},
