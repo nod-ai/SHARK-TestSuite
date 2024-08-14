@@ -34,21 +34,26 @@ class SimpleIREEBackend(BackendBase):
         self.device = device
         self.hal_target_backend = hal_target_backend
         if extra_args:
-            self.extra_args = extra_args
+            self.extra_args = []
+            for a in extra_args:
+                if a[0:2] == "--":
+                    self.extra_args.append(a)
+                else:
+                    self.extra_args.append("--" + a)
         elif hal_target_backend == "rocm":
             # some extra args for Mi300x - some of these may not work for other chips
             self.extra_args = [
                 "--iree-rocm-target-chip=gfx942",
                 # "--iree-global-opt-propagate-transposes=true",
-                "--iree-opt-outer-dim-concat=true",
-                "--iree-opt-const-eval=false",
-                "--iree-rocm-waves-per-eu=2",
-                "--iree-llvmgpu-enable-prefetch",
+                # "--iree-opt-outer-dim-concat=true",
+                # "--iree-opt-const-eval=false",
+                # "--iree-rocm-waves-per-eu=2",
+                # "--iree-llvmgpu-enable-prefetch",
                 # "--iree-flow-enable-aggressive-fusion",
                 # "--iree-flow-enable-fuse-horizontal-contractions=true",
-                "--iree-opt-aggressively-propagate-transposes=true",
-                "--iree-codegen-llvmgpu-use-vector-distribution=true",
-                "--iree-preprocessing-pass-pipeline=builtin.module(util.func(iree-preprocessing-pad-to-intrinsics{pad-target-type=conv}))",
+                # "--iree-opt-aggressively-propagate-transposes=true",
+                # "--iree-codegen-llvmgpu-use-vector-distribution=true",
+                # "--iree-preprocessing-pass-pipeline=builtin.module(util.func(iree-preprocessing-pad-to-intrinsics{pad-target-type=conv}))",
                 # maybe add iree-preprocessing-transpose-convolution-pipeline to preprocessing pipeline.
             ]
         elif hal_target_backend == "llvm-cpu":

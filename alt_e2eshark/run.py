@@ -296,7 +296,7 @@ def _get_argparse():
         "--iree-compile-args",
         nargs="*",
         default = None,
-        help="Manually specify extra args for iree-compile.",
+        help="Manually specify a space-seperated list of extra args for iree-compile. Do not put `--` before the args.",
     )
     # parser.add_argument(
     #     "-f",
