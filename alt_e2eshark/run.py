@@ -137,7 +137,7 @@ def run_tests(
             print(f"running test {t.unique_name}...")
 
         # set log directory for the individual test
-        log_dir = os.path.join(parent_log_dir, t.unique_name)
+        log_dir = os.path.join(parent_log_dir, t.unique_name) + "/"
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
