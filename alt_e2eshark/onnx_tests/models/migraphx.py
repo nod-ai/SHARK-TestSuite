@@ -132,3 +132,25 @@ misc_models = {
 
 for key, dim_param in misc_models.items():
     register_test(dim_param_constructor(dim_param), key)
+
+
+### -------------------------------- ###
+#        Truncated Model Tests         #
+### -------------------------------- ###
+
+# some smaller repros for failed to legalize cmd.stream.dispatch:
+
+need_repro_dict = {
+    "migraphx_ORT__bert_base_cased_1" : ["cased" , 4, "MatMul"],
+    "migraphx_ORT__bert_base_uncased_1" : ["uncased", 1, "Transpose"],
+    "migraphx_ORT__distilgpt2_1" : ["gpt", 3, "Add"],
+    "migraphx_ORT__onnx_models__distilgpt2_1_fp16_gpu" : ["gptf16", 3, "Add"],
+    "migraphx_onnx-model-zoo__gpt2-10" : ["gpt2_10", 0, "NonZero"],
+}
+
+from ..helper_classes import TruncatedModel, get_trucated_constructor
+
+trunc_const = lambda key : get_trucated_constructor(TruncatedModel, dim_param_constructor(llm_dict_0), key)
+
+for (key, value) in need_repro_dict.items():
+    register_test(trunc_const(key)(value[1], value[2]), f"mi_trunc_{value[0]}_{value[1]}_{value[2]}")

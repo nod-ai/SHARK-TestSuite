@@ -205,7 +205,7 @@ def run_tests(
                 inst.save_processed_output(outputs, log_dir, "output")
 
         except Exception as e:
-            status_dict[inst.name] = curr_stage
+            status_dict[t.unique_name] = curr_stage
             log_exception(e, log_dir, curr_stage, t.unique_name, verbose)
             continue
 
