@@ -40,7 +40,7 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
                 continue
         if not isinstance(dim, int):
             raise TypeError(
-                f"input node '{node.name}' has a dim='{dim}', with invalid type: {type(dim)}\nexpected type: int.\nIf your model has dim_params, consider fixing them or setting custom inputs for this test."
+                f"input node '{node.name}' has dims={node.shape}. Node dim '{dim}' has invalid type: {type(dim)}\nexpected type: int.\nIf your model has dim_params, consider fixing them or setting custom inputs for this test."
             )
         if dim <= 0:
             raise ValueError(

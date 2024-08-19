@@ -170,6 +170,11 @@ def run_tests(
                     model_artifact, save_to=artifact_save_to
                 )
 
+            # compile mlir_module using config (calls backend compile)
+            curr_stage = "compilation"
+            if curr_stage in stages:
+                compiled_artifact = config.compile(model_artifact, save_to=artifact_save_to)
+
             # get inputs from inst
             curr_stage = "construct_inputs"
             if curr_stage in stages:
@@ -178,11 +183,6 @@ def run_tests(
                 else:
                     inputs = inst.construct_inputs()
                     inputs.save_to(log_dir + "input")
-
-            # compile mlir_module using config (calls backend compile)
-            curr_stage = "compilation"
-            if curr_stage in stages:
-                compiled_artifact = config.compile(model_artifact, save_to=artifact_save_to)
 
             # run native inference
             curr_stage = "native_inference"
@@ -221,19 +221,19 @@ def run_tests(
                 # log the results
                 test_passed = log_result(result, log_dir, [1e-3, 1e-3])
                 if test_passed:
-                    status_dict[inst.name] = "PASS"
+                    status_dict[t.unique_name] = "PASS"
                     num_passes+=1
                 else:
-                    status_dict[inst.name] = "Numerics"
+                    status_dict[t.unique_name] = "Numerics"
             except Exception as e:
                 status_dict[inst.name] = "results-summary"
                 log_exception(e, log_dir, "results-summary", t.unique_name, verbose)
         
         if verbose:
-            if status_dict[inst.name] == "PASS":
+            if t.unique_name not in status_dict.keys() or status_dict[t.unique_name] == "PASS":
                 print(f"\tPASSED")
             else:
-                print(f"\tFAILED ({status_dict[inst.name]})")
+                print(f"\tFAILED ({status_dict[t.unique_name]})")
 
     print("\nTest Summary:")
     print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
