@@ -28,6 +28,7 @@ from e2e_testing.test_configs.onnxconfig import (
 
 # import backends
 from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend
+from e2e_testing.storage import load_test_txt_file, load_json_dict
 from utils.report import generate_report
 
 ALL_STAGES = [
@@ -41,7 +42,7 @@ ALL_STAGES = [
     "postprocessing",
 ]
 
-def get_tests(groups, test_filter):
+def get_tests(groups, test_filter, testsfile):
     """imports tests based on groups and test_filter specification"""
     combinations = True if groups == "all" or groups == "combinations" else False
     models = True if groups == "all" or groups == "models" else False
@@ -57,12 +58,18 @@ def get_tests(groups, test_filter):
     if operators:
         from onnx_tests.operators import model
 
+    pre_test_list = GLOBAL_TEST_LIST
+
+    if testsfile:
+        test_names = load_test_txt_file(testsfile)
+        pre_test_list = [t for t in GLOBAL_TEST_LIST if t.unique_name in test_names]
+
     if test_filter:
         test_list = [
-            test for test in GLOBAL_TEST_LIST if re.match(test_filter, test.unique_name)
+            test for test in pre_test_list if re.match(test_filter, test.unique_name)
         ]
     else:
-        test_list = GLOBAL_TEST_LIST
+        test_list = pre_test_list
 
     return test_list
 
@@ -84,7 +91,7 @@ def main(args):
         raise NotImplementedError(f"unsupported mode: {args.mode}")
 
     # get test list
-    test_list = get_tests(args.groups, args.test_filter)
+    test_list = get_tests(args.groups, args.test_filter, args.testsfile)
 
     #setup test stages
     stages = ALL_STAGES
@@ -359,10 +366,10 @@ def _get_argparse():
         "--test-filter",
         help="Run given specific test(s) only",
     )
-    # parser.add_argument(
-    #     "--testsfile",
-    #     help="A file with lists of tests (starting with framework name) to run",
-    # )
+    parser.add_argument(
+        "--testsfile",
+        help="A file with lists of test names to run",
+    )
 
     # test tolerance
     parser.add_argument(
