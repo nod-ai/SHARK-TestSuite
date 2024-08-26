@@ -29,7 +29,7 @@ from e2e_testing.test_configs.onnxconfig import (
 # import backends
 from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend
 from e2e_testing.storage import load_test_txt_file, load_json_dict
-from utils.report import generate_report
+from utils.report import generate_report, save_dict
 
 ALL_STAGES = [
     "setup",
@@ -114,7 +114,9 @@ def main(args):
     )
 
     if args.report:
-        generate_report(args, stages, test_list, status_dict)
+        generate_report(args, stages, status_dict)
+        json_save_to = str(Path(args.report_file).parent.joinpath(Path(args.report_file).stem + ".json"))
+        save_dict(status_dict, json_save_to)
 
 
 def run_tests(
@@ -181,6 +183,21 @@ def run_tests(
             curr_stage = "compilation"
             if curr_stage in stages:
                 compiled_artifact = config.compile(model_artifact, save_to=artifact_save_to)
+
+            # get inputs from inst
+            curr_stage = "construct_inputs"
+            if curr_stage in stages:
+                if load_inputs:
+                    inputs = inst.load_inputs(log_dir)
+                else:
+                    inputs = inst.construct_inputs()
+                    inputs.save_to(log_dir + "input")
+
+            # run native inference
+            curr_stage = "native_inference"
+            if curr_stage in stages:
+                golden_outputs_raw = inst.forward(inputs)
+                golden_outputs_raw.save_to(log_dir + "golden_output")
 
             # get inputs from inst
             curr_stage = "construct_inputs"
