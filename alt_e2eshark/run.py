@@ -108,7 +108,7 @@ def main(args):
 
     if args.report:
         generate_report(args, stages, status_dict)
-        json_save_to = Path(args.report_file).stem + ".json"
+        json_save_to = str(Path(args.report_file).parent.joinpath(Path(args.report_file).stem + ".json"))
         save_dict(status_dict, json_save_to)
 
 
