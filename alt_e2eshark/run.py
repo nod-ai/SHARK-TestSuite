@@ -11,7 +11,7 @@ from pathlib import Path
 import argparse
 import re
 import logging
-from typing import List
+from typing import List, Literal, Optional
 
 # append alt_e2eshark dir to path to allow importing without explicit pythonpath management
 TEST_DIR = str(Path(__file__).parent)
@@ -42,7 +42,7 @@ ALL_STAGES = [
     "postprocessing",
 ]
 
-def get_tests(groups, test_filter, testsfile):
+def get_tests(groups: Literal["all", "combinations", "operators"], test_filter: Optional[str], testsfile: Optional[str]) -> List[str]:
     """imports tests based on groups and test_filter specification"""
     combinations = True if groups == "all" or groups == "combinations" else False
     models = True if groups == "all" or groups == "models" else False
