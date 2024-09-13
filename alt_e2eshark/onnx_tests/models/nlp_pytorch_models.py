@@ -18,6 +18,7 @@ def dim_param_constructor(dim_param_dict):
     class AzureWithDimParams(AzureDownloadableModel):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
+            print(f"Opset: {self.opset_version}")
             self.update_opset_version_and_overwrite()
 
         def update_dim_param_dict(self):
@@ -26,7 +27,22 @@ def dim_param_constructor(dim_param_dict):
     return AzureWithDimParams
 
 # Default dimension parameters for NLP models
+
 default_nlp_params = {"batch_size": 1, "seq_len": 128}
+dim_aliases = [
+    {'seq_len', 'sequence_length'},
+]
+for alias_set in dim_aliases:
+    found = set(alias_set).intersection(default_nlp_params.keys())
+    if len(found) > 1:
+        # check if the values are the same
+        val = default_nlp_params[next(iter(found))]
+        if not all(default_nlp_params[alias] == val for alias in found):
+            raise ValueError(f"Multiple aliases for the same dimension have different values: {found}")
+    
+    aliases = alias_set - found
+    for alias in aliases:
+        default_nlp_params[alias] = default_nlp_params[next(iter(found))]
 
 # Register models with default parameters
 for model_name in model_names:
