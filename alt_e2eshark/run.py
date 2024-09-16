@@ -21,13 +21,14 @@ from e2e_testing.framework import *
 
 # import frontend test configs:
 from e2e_testing.test_configs.onnxconfig import (
+    CLOnnxTestConfig,
     OnnxTestConfig,
     OnnxEpTestConfig,
     REDUCE_TO_LINALG_PIPELINE,
 )
 
 # import backends
-from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend
+from e2e_testing.backends import SimpleIREEBackend, OnnxrtIreeEpBackend, CLIREEBackend
 from e2e_testing.storage import load_test_txt_file, load_json_dict
 from utils.report import generate_report, save_dict
 
@@ -82,6 +83,11 @@ def main(args):
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = OnnxTestConfig(
             str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend, extra_args=args.iree_compile_args), pipeline
+        )
+    elif args.mode == "cl-onnx-iree":
+        pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
+        config = CLOnnxTestConfig(
+            str(TEST_DIR), CLIREEBackend(device=args.device, hal_target_backend=args.backend, extra_args=args.iree_compile_args), pipeline
         )
     elif args.mode == "ort-ep":
         # TODO: allow specifying provider explicitly from cl args.
@@ -333,7 +339,7 @@ def _get_argparse():
     parser.add_argument(
         "-m",
         "--mode",
-        choices=["onnx-iree", "ort-ep"],
+        choices=["onnx-iree", "cl-onnx-iree", "ort-ep"],
         default="onnx-iree",
         help="onnx-iree=onnx->torch-mlir->IREE, ort=onnx->run with custom ORT EP inference session",
     )
