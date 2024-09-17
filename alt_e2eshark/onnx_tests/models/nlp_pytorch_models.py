@@ -18,8 +18,9 @@ def dim_param_constructor(dim_param_dict):
     class AzureWithDimParams(AzureDownloadableModel):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            print(f"Opset: {self.opset_version}")
-            self.update_opset_version_and_overwrite()
+            # TODO: check opset versions
+            # print(f"Opset: {self.opset_version}")
+            # self.update_opset_version_and_overwrite()
 
         def update_dim_param_dict(self):
             self.dim_param_dict = dim_param_dict
