@@ -145,14 +145,6 @@ class CLIREEBackend(BackendBase):
             return script
         return func
             
-            
-            
-
-            
-
-        
-
-    
 
 class OnnxrtIreeEpBackend(BackendBase):
     '''This backend uses onnxrt iree-ep to compile and run onnx models for a specified hal_target_backend'''
