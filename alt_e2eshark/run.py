@@ -137,7 +137,6 @@ def run_tests(
     if not os.path.exists(parent_log_dir):
         os.makedirs(parent_log_dir)
 
-    num_passes = 0
     warnings.filterwarnings("ignore")
 
     if verbose:
@@ -252,7 +251,6 @@ def run_tests(
                 test_passed = log_result(result, log_dir, [1e-3, 1e-3])
                 if test_passed:
                     status_dict[t.unique_name] = "PASS"
-                    num_passes+=1
                 else:
                     status_dict[t.unique_name] = "Numerics"
             except Exception as e:
@@ -260,11 +258,16 @@ def run_tests(
                 log_exception(e, log_dir, "results-summary", t.unique_name, verbose)
         
         if verbose:
-            if t.unique_name not in status_dict.keys() or status_dict[t.unique_name] == "PASS":
+            # "PASS" is only recorded if a results-summary is generated
+            # if running a subset of ALL_STAGES, manually indicate "PASS".
+            if t.unique_name not in status_dict.keys():
+                status_dict[t.unique_name] = "PASS"
+            if status_dict[t.unique_name] == "PASS":
                 print(f"\tPASSED")
             else:
                 print(f"\tFAILED ({status_dict[t.unique_name]})")
 
+    num_passes = list(status_dict.values()).count("PASS")
     print("\nTest Summary:")
     print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
     print(f"results stored in {parent_log_dir}")
