@@ -300,9 +300,9 @@ def log_exception(e: Exception, path: str, stage: str, name: str, verbose: bool)
         f.write(base_str)
         if verbose:
             print(f"\tFAILED ({stage})")
+            tb = e.__traceback__
             import traceback
-
-            traceback.print_exception(e, file=f)
+            traceback.print_tb(tb, file=f)
         else:
             print(f"FAILED: {name}")
 

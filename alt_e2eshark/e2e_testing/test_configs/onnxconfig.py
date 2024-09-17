@@ -133,7 +133,7 @@ class CLOnnxTestConfig(TestConfig):
         if not save_to:
             raise ValueError("CLOnnxTestConfig requires saving artifacts")
         # setup a detail subdirectory
-        os.makedirs(os.path.join(save_to, "detail"))
+        os.makedirs(os.path.join(save_to, "detail"), exist_ok=True)
         mlir_file = save_to + "model.torch_onnx.mlir"
         detail_log = os.path.join(save_to, "detail/import_model.detail.log")
         script = "python -m torch_mlir.tools.import_onnx "
@@ -148,7 +148,7 @@ class CLOnnxTestConfig(TestConfig):
                 error_msg += "Error detail:\n\n"
                 with open(detail_log,"r+") as file:
                     error_msg += file.read()
-            raise OSError(error_msg)
+            raise FileNotFoundError(error_msg)
         # store output signatures for loading the outputs of iree-run-module
         self.tensor_info_dict[program.name] = program.get_signature(from_inputs=False)
         return mlir_file, program.name
@@ -170,7 +170,7 @@ class CLOnnxTestConfig(TestConfig):
                 error_msg += "Error detail:\n\n"
                 with open(detail_log,"r+") as file:
                     error_msg += file.read()
-            raise OSError(error_msg)
+            raise FileNotFoundError(error_msg)
         # get linalg ir
         linalg_ir = save_to + "model.modified.mlir"
         script1 = f"torch-mlir-opt -pass-pipeline='{self.pass_pipeline}' {torch_ir} -o {linalg_ir}"
@@ -181,7 +181,7 @@ class CLOnnxTestConfig(TestConfig):
                 error_msg += "Error detail:\n\n"
                 with open(detail_log,"r+") as file:
                     error_msg += file.read()
-            raise OSError(error_msg)
+            raise FileNotFoundError(error_msg)
         return linalg_ir
     
     def compile(self, mlir_module: str, *, save_to: str = None) -> str:
@@ -212,6 +212,6 @@ class CLOnnxTestConfig(TestConfig):
                     error_msg += "Error detail:\n\n"
                     with open(detail_log,"r+") as file:
                         error_msg += file.read()
-                raise OSError(error_msg)
+                raise FileNotFoundError(error_msg)
         return TestTensors.load_from(self.tensor_info_dict[func_name][0], self.tensor_info_dict[func_name][1], run_dir, "output")
 

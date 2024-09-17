@@ -124,7 +124,7 @@ class CLIREEBackend(BackendBase):
                 error_message += "Error Details:\n\n"
                 with open(command_error_dump, "r+") as file:
                     error_message += file.read()
-            raise OSError(error_message)
+            raise FileNotFoundError(error_message)
         return vmfb_path
     
     def load(self, vmfb_path: str, *, func_name=None):
