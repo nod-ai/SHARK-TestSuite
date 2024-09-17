@@ -115,7 +115,7 @@ class CLIREEBackend(BackendBase):
         for arg in self.extra_args:
             arg_string += arg
             arg_string += " "
-        command_error_dump = os.path.join(save_to, "compilation.detail.log")
+        command_error_dump = os.path.join(save_to, "detail/compilation.detail.log")
         script = f"iree-compile {module_path} {arg_string}-o {vmfb_path} 2> {command_error_dump}"
         os.system(script)
         if not os.path.exists(vmfb_path):

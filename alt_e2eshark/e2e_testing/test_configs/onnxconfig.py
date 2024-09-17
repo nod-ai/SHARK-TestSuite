@@ -132,8 +132,10 @@ class CLOnnxTestConfig(TestConfig):
     def import_model(self, program: OnnxModelInfo, *, save_to: str) -> Tuple[str, str]:
         if not save_to:
             raise ValueError("CLOnnxTestConfig requires saving artifacts")
+        # setup a detail subdirectory
+        os.makedirs(os.path.join(save_to, "detail"))
         mlir_file = save_to + "model.torch_onnx.mlir"
-        detail_log = os.path.join(save_to, "import_model.detail.log")
+        detail_log = os.path.join(save_to, "detail/import_model.detail.log")
         script = "python -m torch_mlir.tools.import_onnx "
         script += str(program.model)
         script += " -o "
@@ -157,7 +159,7 @@ class CLOnnxTestConfig(TestConfig):
             return mlir_module
         # convert imported torch-onnx ir to torch
         onnx_to_torch_pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
-        detail_log = os.path.join(save_to, "preprocessing.detail.log")
+        detail_log = os.path.join(save_to, "detail/preprocessing.detail.log")
         # get torch_ir
         torch_ir = save_to + "model.torch.mlir"
         script0 = f"torch-mlir-opt -pass-pipeline='{onnx_to_torch_pipeline}' {mlir_module} -o {torch_ir} 2> {detail_log}"
@@ -188,7 +190,7 @@ class CLOnnxTestConfig(TestConfig):
     def run(self, artifact: str, inputs: TestTensors, *, func_name=None) -> TestTensors:
         #TODO: find a better way to track the test name besides passing it as func_name
         run_dir = Path(artifact).parent
-        detail_log = run_dir.joinpath("compiled_inference.detail.log")
+        detail_log = run_dir.joinpath("detail/compiled_inference.detail.log")
         func = self.backend.load(artifact, func_name=None)
         script = func(inputs)
         num_outputs = len(self.tensor_info_dict[func_name][0])
