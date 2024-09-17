@@ -83,7 +83,7 @@ class OnnxTestConfig(TestConfig):
         imp.import_all()
         # log imported IR
         if save_to:
-            with open(save_to + "model.torch_onnx.mlir", "w") as f:
+            with open(os.path.join(save_to, "model.torch_onnx.mlir"), "w") as f:
                 f.write(str(m))
         return m, func_name
 
@@ -98,13 +98,13 @@ class OnnxTestConfig(TestConfig):
             pm0.run(mlir_module.operation)
             # log torch-mlir IR
             if save_to:
-                with open(save_to + "model.torch.mlir", "w") as f:
+                with open(os.path.join(save_to, "model.torch.mlir"), "w") as f:
                     f.write(str(mlir_module))
             pm1 = PassManager.parse(self.pass_pipeline)
             pm1.run(mlir_module.operation)
             # log modified IR
             if save_to:
-                with open(save_to + "model.modified.mlir", "w") as f:
+                with open(os.path.join(save_to, "model.modified.mlir"), "w") as f:
                     f.write(str(mlir_module))
         return mlir_module
 
@@ -137,15 +137,15 @@ class CLOnnxTestConfig(TestConfig):
         # setup a commands subdirectory
         os.makedirs(os.path.join(save_to, "commands"), exist_ok=True)
         # set file paths
-        mlir_file = save_to + "model.torch_onnx.mlir"
-        detail_log = os.path.join(save_to, "detail/import_model.detail.log")
-        commands_log = os.path.join(save_to, "commands/import_model.commands.log")
+        mlir_file = os.path.join(save_to, "model.torch_onnx.mlir")
+        detail_log = os.path.join(save_to, "detail", "import_model.detail.log")
+        commands_log = os.path.join(save_to, "commands", "import_model.commands.log")
         # get a command line script
         script = "python -m torch_mlir.tools.import_onnx "
         script += str(program.model)
         script += " -o "
         script = script + mlir_file
-        script += f" 2> {detail_log}"
+        script += f" 1> {detail_log} 2>&1"
         # log the command
         with open(commands_log, "w") as file:
             file.write(script)
@@ -176,13 +176,13 @@ class CLOnnxTestConfig(TestConfig):
         # convert imported torch-onnx ir to torch
         onnx_to_torch_pipeline = "builtin.module(func.func(convert-torch-onnx-to-torch))"
         # get paths
-        detail_log = os.path.join(save_to, "detail/preprocessing.detail.log")
-        commands_log = os.path.join(save_to, "commands/preprocessing.commands.log")
-        torch_ir = save_to + "model.torch.mlir"
-        linalg_ir = save_to + "model.modified.mlir"
+        detail_log = os.path.join(save_to, "detail", "preprocessing.detail.log")
+        commands_log = os.path.join(save_to, "commands", "preprocessing.commands.log")
+        torch_ir = os.path.join(save_to, "model.torch.mlir")
+        linalg_ir = os.path.join(save_to, "model.modified.mlir")
         # generate scripts
-        script0 = f"torch-mlir-opt -pass-pipeline='{onnx_to_torch_pipeline}' {mlir_module} -o {torch_ir} 2> {detail_log}"
-        script1 = f"torch-mlir-opt -pass-pipeline='{self.pass_pipeline}' {torch_ir} -o {linalg_ir}"
+        script0 = f"torch-mlir-opt -pass-pipeline='{onnx_to_torch_pipeline}' {mlir_module} -o {torch_ir} 1> {detail_log} 2>&1"
+        script1 = f"torch-mlir-opt -pass-pipeline='{self.pass_pipeline}' {torch_ir} -o {linalg_ir} 1> {detail_log} 2>&1"
         # remove old torch_ir
         Path(torch_ir).unlink(missing_ok=True)
         with open(commands_log, "w") as file:
@@ -216,20 +216,20 @@ class CLOnnxTestConfig(TestConfig):
     def run(self, artifact: str, inputs: TestTensors, *, func_name=None) -> TestTensors:
         run_dir = Path(artifact).parent
         test_name = run_dir.name
-        detail_log = run_dir.joinpath("detail/compiled_inference.detail.log")
-        commands_log = run_dir.joinpath("commands/compiled_inference.commands.log")
+        detail_log = run_dir.joinpath("detail", "compiled_inference.detail.log")
+        commands_log = run_dir.joinpath("commands", "compiled_inference.commands.log")
         func = self.backend.load(artifact, func_name=func_name)
         script = func(inputs)
         num_outputs = len(self.tensor_info_dict[test_name][0])
         output_files = []
         for i in range(num_outputs):
-            output_files.append(f"{run_dir}/output.{i}.bin")
+            output_files.append(os.path.join(run_dir, f"output.{i}.bin"))
             script += f" --output=@'{output_files[i]}'"
             # remove existing output files if they already exist
             # we use the existence of these files to check if the inference succeeded.
             Path(output_files[i]).unlink(missing_ok=True)
         # dump additional error messaging to the detail log.
-        script += f" 2> {detail_log}"
+        script += f" 1> {detail_log} 2>&1"
         with open(commands_log, "w") as file:
             file.write(script)
         os.system(script)

@@ -74,7 +74,7 @@ class SimpleIREEBackend(BackendBase):
         )
         # log the vmfb
         if save_to:
-            with open(save_to + "compiled_model.vmfb", "wb") as f:
+            with open(os.path.join(save_to, "compiled_model.vmfb"), "wb") as f:
                 f.write(b)
         return b
 
@@ -110,14 +110,14 @@ class CLIREEBackend(BackendBase):
                     self.extra_args.append("--" + a)
     
     def compile(self, module_path: str, *, save_to : str = None) -> str:
-        vmfb_path = save_to + "compiled_model.vmfb"
+        vmfb_path = os.path.join(save_to, "compiled_model.vmfb")
         arg_string = f"--iree-hal-target-backends={self.hal_target_backend} "
         for arg in self.extra_args:
             arg_string += arg
             arg_string += " "
-        command_error_dump = os.path.join(save_to, "detail/compilation.detail.log")
-        commands_log = os.path.join(save_to, "commands/compilation.commands.log")
-        script = f"iree-compile {module_path} {arg_string}-o {vmfb_path} 2> {command_error_dump}"
+        command_error_dump = os.path.join(save_to, "detail", "compilation.detail.log")
+        commands_log = os.path.join(save_to, "commands", "compilation.commands.log")
+        script = f"iree-compile {module_path} {arg_string}-o {vmfb_path} 1> {command_error_dump} 2>&1"
         with open(commands_log, "w") as file:
             file.write(script) 
         # remove old vmfb if it exists
