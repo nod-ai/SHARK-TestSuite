@@ -116,7 +116,12 @@ class CLIREEBackend(BackendBase):
             arg_string += arg
             arg_string += " "
         command_error_dump = os.path.join(save_to, "detail/compilation.detail.log")
+        commands_log = os.path.join(save_to, "commands/compilation.commands.log")
         script = f"iree-compile {module_path} {arg_string}-o {vmfb_path} 2> {command_error_dump}"
+        with open(commands_log, "w") as file:
+            file.write(script) 
+        # remove old vmfb if it exists
+        Path(vmfb_path).unlink(missing_ok=True)
         os.system(script)
         if not os.path.exists(vmfb_path):
             error_message = f"failure executing command: \n{script}\n failed to produce a vmfb at {vmfb_path}.\n"
@@ -131,9 +136,9 @@ class CLIREEBackend(BackendBase):
         """A bit hacky. func returns a script that would dump outputs to terminal output. Modified in config.run method"""
         run_dir = Path(vmfb_path).parent
         def func(x: TestTensors) -> str:
-            script = f"iree-run-module --module={vmfb_path} --device={self.device}"
+            script = f"iree-run-module --module='{vmfb_path}' --device={self.device}"
             if func_name:
-                script += " --function={func_name}"
+                script += f" --function='{func_name}'"
             torch_inputs = x.to_torch().data
             for index, input in enumerate(torch_inputs):
                 script += f" --input='{get_shape_string(input)}=@{run_dir}/input.{index}.bin'"
