@@ -132,16 +132,23 @@ class CLOnnxTestConfig(TestConfig):
     def import_model(self, program: OnnxModelInfo, *, save_to: str) -> Tuple[str, str]:
         if not save_to:
             raise ValueError("CLOnnxTestConfig requires saving artifacts")
-        # store output signatures for loading the outputs of iree-run-module
-        self.tensor_info_dict[program.name] = program.get_signature(from_inputs=False)
         mlir_file = save_to + "model.torch_onnx.mlir"
+        detail_log = os.path.join(save_to, "import_model.detail.log")
         script = "python -m torch_mlir.tools.import_onnx "
         script += str(program.model)
         script += " -o "
         script = script + mlir_file
+        script += f" 2> {detail_log}"
         os.system(script)
         if not os.path.exists(mlir_file):
-            raise OSError(f"failure executing command: \n{script}\n failed to produce mlir file {mlir_file}.")
+            error_msg = f"failure executing command: \n{script}\n failed to produce mlir file {mlir_file}.\n"
+            if os.path.exists(detail_log):
+                error_msg += "Error detail:\n\n"
+                with open(detail_log,"r+") as file:
+                    error_msg += file.read()
+            raise OSError(error_msg)
+        # store output signatures for loading the outputs of iree-run-module
+        self.tensor_info_dict[program.name] = program.get_signature(from_inputs=False)
         return mlir_file, program.name
     
     def preprocess_model(self, mlir_module: str, *, save_to: str = None) -> Module:
