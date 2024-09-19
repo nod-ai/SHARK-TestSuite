@@ -40,6 +40,7 @@ ALL_STAGES = [
     "construct_inputs",
     "native_inference",
     "compiled_inference",
+    "benchmark",
     "postprocessing",
 ]
 
@@ -227,6 +228,13 @@ def run_tests(
                 outputs_raw = config.run(compiled_artifact, inputs, func_name=func_name)
                 outputs_raw.save_to(log_dir + "output")
 
+            # benchmark inference time with compiled module
+            mean_time_ms = None
+            curr_stage = "benchmark"
+            if curr_stage in stages:
+                notify_stage()
+                mean_time_ms = config.benchmark(compiled_artifact, inputs, func_name=func_name)
+
             # apply model-specific post-processing:
             curr_stage = "postprocessing"
             if curr_stage in stages:
@@ -269,6 +277,8 @@ def run_tests(
                 print(f"\tPASSED" + " "*30)
             else:
                 print(f"\tFAILED ({status_dict[t.unique_name]})" + " "*20)
+            if mean_time_ms:
+                print(f"mean_inference_time = {mean_time_ms} ms")
 
     num_passes = list(status_dict.values()).count("PASS")
     print("\nTest Summary:")
