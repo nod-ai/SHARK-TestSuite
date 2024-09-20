@@ -65,6 +65,7 @@ def scan_dir_del_mlir_vmfb(dir):
         os.remove(file)
     return removed_files
 
+
 def scan_dir_del_not_logs(dir):
     removed_files = []
     for root, dirs, files in os.walk(dir):
@@ -75,6 +76,7 @@ def scan_dir_del_not_logs(dir):
     for file in removed_files:
         os.remove(file)
     return removed_files
+
 
 def post_test_clean(log_dir, cleanup, verbose):
     match cleanup:
@@ -88,8 +90,3 @@ def post_test_clean(log_dir, cleanup, verbose):
             files = scan_dir_del_not_logs(log_dir)
         case 4:
             shutil.rmtree(Path(log_dir))
-    # if verbose:
-    #     print(f"cleanup level {cleanup} removed: ", end="")
-    #     for f in files:
-    #         print(Path(f).name, end=", ")
-    #     print("")
