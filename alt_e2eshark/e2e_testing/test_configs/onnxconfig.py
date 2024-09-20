@@ -252,7 +252,7 @@ class CLOnnxTestConfig(TestConfig):
         with open(report_json) as contents:
             loaded_dict = json.load(contents) 
         mean_stats = loaded_dict["benchmarks"][-4]
-        if mean_stats["name"] != "BM_main/process_time/real_time_mean":
+        if mean_stats["name"] != f"BM_{func_name}/process_time/real_time_mean":
             raise ValueError("Name of benchmark item is unexpected")
         time = mean_stats["real_time"]
         return time
