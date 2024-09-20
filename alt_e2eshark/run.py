@@ -402,8 +402,8 @@ def _get_argparse():
     )
     parser.add_argument(
         "--cleanup",
-        help="Specify cleanup level: 0 (nothing deleted), 1 (files > 500MB), 2 (.mlir, .vmfb), 3 (everything)",
-        choices=['0','1','2','3'],
+        help="Specify cleanup level: 0 (nothing), 1 (size >= 500M), 2 (.mlir and .vmfb), 3 (all but .log), 4 (everything)",
+        choices=['0','1','2','3','4'],
         default='0',
     )
     parser.add_argument(
