@@ -44,6 +44,17 @@ ALL_STAGES = [
     "postprocessing",
 ]
 
+DEFAULT_STAGES = [
+    "setup",
+    "import_model",
+    "preprocessing",
+    "compilation",
+    "construct_inputs",
+    "native_inference",
+    "compiled_inference",
+    "postprocessing",
+]
+
 def get_tests(groups: Literal["all", "combinations", "operators"], test_filter: Optional[str], testsfile: Optional[str]) -> List[str]:
     """imports tests based on groups and test_filter specification"""
     combinations = True if groups == "all" or groups == "combinations" else False
@@ -103,7 +114,7 @@ def main(args):
     test_list = get_tests(args.groups, args.test_filter, args.testsfile)
 
     #setup test stages
-    stages = ALL_STAGES
+    stages = ALL_STAGES if args.benchmark else DEFAULT_STAGES
 
     if args.stages:
         stages = args.stages
@@ -130,7 +141,7 @@ def main(args):
 
 def run_tests(
     test_list: List[Test], config: TestConfig, parent_log_dir: str, no_artifacts: bool, verbose: bool, stages: List[str], load_inputs: bool
-) -> Dict[str, str]:
+) -> Dict[str, Dict]:
     """runs tests in test_list based on config. Returns a dictionary containing the test statuses."""
     # TODO: multi-process
     # TODO: setup exception handling and better logging
@@ -162,6 +173,7 @@ def run_tests(
         ws = lambda curr_stage : " "*(max(*[len(s) for s in stages]) - len(curr_stage))
         notify_stage = lambda : print(f"\tRunning stage '{curr_stage}'..." + ws(curr_stage), end="\r")
 
+        mean_time_ms = None
         try:
             # TODO: convert staging to an Enum and figure out how to specify staging from args
             # TODO: enable loading output/goldoutput bin files, vmfb, and mlir files if already present
@@ -229,7 +241,6 @@ def run_tests(
                 outputs_raw.save_to(log_dir + "output")
 
             # benchmark inference time with compiled module
-            mean_time_ms = None
             curr_stage = "benchmark"
             if curr_stage in stages:
                 notify_stage()
@@ -245,7 +256,7 @@ def run_tests(
                 inst.save_processed_output(outputs, log_dir, "output")
 
         except Exception as e:
-            status_dict[t.unique_name] = curr_stage
+            status_dict[t.unique_name] = {"exit_status" : curr_stage, "time_ms" : mean_time_ms}
             log_exception(e, log_dir, curr_stage, t.unique_name, verbose)
             continue
 
@@ -261,26 +272,26 @@ def run_tests(
                 # log the results
                 test_passed = log_result(result, log_dir, [1e-3, 1e-3])
                 if test_passed:
-                    status_dict[t.unique_name] = "PASS"
+                    status_dict[t.unique_name] = {"exit_status" : "PASS", "time_ms" : mean_time_ms}
                 else:
-                    status_dict[t.unique_name] = "Numerics"
+                    status_dict[t.unique_name] = {"exit_status" : "Numerics", "time_ms" : mean_time_ms}
             except Exception as e:
-                status_dict[inst.name] = "results-summary"
+                status_dict[inst.name] = {"exit_status" : "results-summary", "time_ms" : mean_time_ms}
                 log_exception(e, log_dir, "results-summary", t.unique_name, verbose)
         
         if verbose:
             # "PASS" is only recorded if a results-summary is generated
             # if running a subset of ALL_STAGES, manually indicate "PASS".
             if t.unique_name not in status_dict.keys():
-                status_dict[t.unique_name] = "PASS"
-            if status_dict[t.unique_name] == "PASS":
+                status_dict[t.unique_name] = {"exit_status": "PASS", "time_ms" : mean_time_ms}
+            if status_dict[t.unique_name]["exit_status"] == "PASS":
                 print(f"\tPASSED" + " "*30)
             else:
-                print(f"\tFAILED ({status_dict[t.unique_name]})" + " "*20)
+                print(f"\tFAILED ({status_dict[t.unique_name]['exit_status']})" + " "*20)
             if mean_time_ms:
                 print(f"mean_inference_time = {mean_time_ms} ms")
 
-    num_passes = list(status_dict.values()).count("PASS")
+    num_passes = [v["exit_status"] for v in status_dict.values()].count("PASS")
     print("\nTest Summary:")
     print(f"\tPASSES: {num_passes}\n\tTOTAL: {len(test_list)}")
     print(f"results stored in {parent_log_dir}")
@@ -383,6 +394,12 @@ def _get_argparse():
         nargs="*",
         choices=ALL_STAGES,
         help="Manually specify which test stages to skip.",
+    )
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        default=False,
+        help="Convenience flag for enabling benchmark stage.",
     )
     parser.add_argument(
         "--load-inputs",
