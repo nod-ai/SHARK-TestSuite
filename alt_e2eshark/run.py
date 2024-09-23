@@ -244,7 +244,8 @@ def run_tests(
             curr_stage = "benchmark"
             if curr_stage in stages:
                 notify_stage()
-                mean_time_ms = config.benchmark(compiled_artifact, inputs, func_name=func_name)
+                # TODO: make repetitions configurable from a command line arg
+                mean_time_ms = config.benchmark(compiled_artifact, inputs, repetitions=5, func_name=func_name)
 
             # apply model-specific post-processing:
             curr_stage = "postprocessing"
@@ -288,8 +289,6 @@ def run_tests(
                 print(f"\tPASSED" + " "*30)
             else:
                 print(f"\tFAILED ({status_dict[t.unique_name]['exit_status']})" + " "*20)
-            if mean_time_ms:
-                print(f"mean_inference_time = {mean_time_ms} ms")
 
     num_passes = [v["exit_status"] for v in status_dict.values()].count("PASS")
     print("\nTest Summary:")

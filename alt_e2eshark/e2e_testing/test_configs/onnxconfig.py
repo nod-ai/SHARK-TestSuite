@@ -232,7 +232,7 @@ class CLOnnxTestConfig(TestConfig):
                 raise FileNotFoundError(error_msg)
         return TestTensors.load_from(self.tensor_info_dict[test_name][0], self.tensor_info_dict[test_name][1], run_dir, "output")
 
-    def benchmark(self, artifact: str, inputs: TestTensors, *, func_name=None) -> float:
+    def benchmark(self, artifact: str, inputs: TestTensors, repetitions: int = 5, *, func_name=None) -> float:
         run_dir = Path(artifact).parent
         detail_log = run_dir.joinpath("detail", "benchmark.detail.log")
         commands_log = run_dir.joinpath("commands", "benchmark.commands.log")
@@ -240,7 +240,7 @@ class CLOnnxTestConfig(TestConfig):
         func = self.backend.load(artifact,func_name=func_name)
         script = func(inputs)
         benchmark_script = "iree-benchmark-module " + script[15:]
-        benchmark_script += f" --benchmark_repetitions=10 --device_allocator=caching --benchmark_out='{report_json}' --benchmark_out_format=json 1> {detail_log} 2>&1"
+        benchmark_script += f" --benchmark_repetitions={repetitions} --device_allocator=caching --benchmark_out='{report_json}' --benchmark_out_format=json 1> {detail_log} 2>&1"
         with open(commands_log, "w") as file:
             file.write(benchmark_script)
         Path(report_json).unlink(missing_ok=True)
