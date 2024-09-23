@@ -246,7 +246,7 @@ def run_tests(
             if curr_stage in stages:
                 notify_stage()
                 # TODO: make repetitions configurable from a command line arg
-                mean_time_ms = config.benchmark(compiled_artifact, inputs, repetitions=5, func_name=func_name)
+                mean_time_ms = config.benchmark(compiled_artifact, inputs, repetitions=3, func_name=func_name)
 
             # apply model-specific post-processing:
             curr_stage = "postprocessing"
