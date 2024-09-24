@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 from onnx import TensorProto
 from onnx.helper import make_tensor_value_info, make_tensor
-import numpy
 
 from ..helper_classes import BuildAModel
 from e2e_testing.registry import register_with_name, register_test
