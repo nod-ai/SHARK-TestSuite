@@ -62,162 +62,35 @@ def create_vectorizer_node(
         weights=params["weights"],
     )
 
-# mode=TF
-class TfIdfVectorizerIDFOnlyBigramModel(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["only_bigram"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
+def create_test_case(test_case, mode):
+    class TFIDFModel(BuildAModel):
+        def construct_i_o_value_info(self):
+            # Input (ValueInfoProto)
+            params = TEST_PARAMS[test_key]
+            X = make_tensor_value_info(
+                "X",
+                TensorProto.INT32,
+                shape=[params["n"], max(params["ngram_indexes"])]
+            )
+            # Output
+            Y = make_tensor_value_info(
+                "Y",
+                TensorProto.FLOAT,
+                shape=[params["n"], max(params["ngram_indexes"]) + 1])
+            self.input_vi = [X]
+            self.output_vi = [Y]
 
-    def construct_nodes(self):
-        params = TEST_PARAMS["only_bigram"]
-        vectorizer_node = create_vectorizer_node(
-            mode="IDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
+        def construct_nodes(self):
+            params = TEST_PARAMS[test_key]
+            vectorizer_node = create_vectorizer_node(
+                mode=mode,
+                params=params,
+            )
+            self.node_list = [vectorizer_node]
 
-class TfIdfVectorizerIDFUnigramBigramModel(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["unigram_bigram"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
+    return TFIDFModel
 
-    def construct_nodes(self):
-        params = TEST_PARAMS["unigram_bigram"]
-        vectorizer_node = create_vectorizer_node(
-            mode="IDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
-
-class TfIdfVectorizerIDFUnigramBigramSkip5Model(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["unigram_bigram_skip5"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
-
-    def construct_nodes(self):
-        params = TEST_PARAMS["unigram_bigram_skip5"]
-        vectorizer_node = create_vectorizer_node(
-            mode="IDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
-
-# mode=TFIDF
-class TfIdfVectorizerTFIDFOnlyBigramModel(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["only_bigram"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output.
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
-
-    def construct_nodes(self):
-        params = TEST_PARAMS["only_bigram"]
-        vectorizer_node = create_vectorizer_node(
-            mode="TFIDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
-
-class TfIdfVectorizerTFIDFUnigramBigramModel(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["unigram_bigram"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output.
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
-
-    def construct_nodes(self):
-        params = TEST_PARAMS["unigram_bigram"]
-        vectorizer_node = create_vectorizer_node(
-            mode="TFIDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
-
-class TfIdfVectorizerTFIDFUnigramBigramSkip5Model(BuildAModel):
-    def construct_i_o_value_info(self):
-        # Input (ValueInfoProto)
-        params = TEST_PARAMS["unigram_bigram_skip5"]
-        X = make_tensor_value_info(
-            "X",
-            TensorProto.INT32,
-            shape=[params["n"], max(params["ngram_indexes"])]
-        )
-        # Output.
-        Y = make_tensor_value_info(
-            "Y",
-            TensorProto.FLOAT,
-            shape=[params["n"], max(params["ngram_indexes"]) + 1])
-        self.input_vi = [X]
-        self.output_vi = [Y]
-
-    def construct_nodes(self):
-        params = TEST_PARAMS["unigram_bigram_skip5"]
-        vectorizer_node = create_vectorizer_node(
-            mode="TFIDF",
-            params=params,
-        )
-        self.node_list = [vectorizer_node]
-
-register_test(TfIdfVectorizerIDFOnlyBigramModel, "tfidfvectorizer_idf_only_bigram")
-register_test(TfIdfVectorizerIDFUnigramBigramModel, "tfidfvectorizer_idf_unigram_bigram")
-register_test(TfIdfVectorizerIDFUnigramBigramSkip5Model, "tfidfvectorizer_idf_unigram_bigram_skip5")
-
-register_test(TfIdfVectorizerTFIDFOnlyBigramModel, "tfidfvectorizer_tfidf_only_bigram")
-register_test(TfIdfVectorizerTFIDFUnigramBigramModel, "tfidfvectorizer_tfidf_unigram_bigram")
-register_test(TfIdfVectorizerTFIDFUnigramBigramSkip5Model, "tfidfvectorizer_tfidf_unigram_bigram_skip5")
+for mode in ["IDF", "TFIDF"]:
+    for test_key in TEST_PARAMS.keys():
+        test_case = create_test_case(test_key, mode)
+        register_test(test_case, f'tfidfvectorizer_{mode.lower()}_{test_key}')
