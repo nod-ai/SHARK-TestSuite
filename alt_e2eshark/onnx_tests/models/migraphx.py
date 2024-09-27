@@ -7,6 +7,10 @@
 from ..helper_classes import AzureDownloadableModel
 from e2e_testing.registry import register_test
 import numpy as np
+import onnxruntime
+from onnxruntime.tools.onnx_model_utils import make_dim_param_fixed, fix_output_shapes
+import onnx
+from pathlib import Path
 
 # TODOs:
 # 1. just update the opset versions and re-upload to azure.
@@ -136,7 +140,7 @@ for (key, value) in need_repro_dict.items():
 
 from ..helper_classes import SiblingModel, get_sibling_constructor
 
-class MakeDimParamStatic(SiblingModel):
+class MiGraphXBenchmarkModel(SiblingModel):
     def construct_model(self):
         og_model = self.model
         super().construct_model()
@@ -144,17 +148,25 @@ class MakeDimParamStatic(SiblingModel):
         self.make_dim_param_static(self.model, og_model)
         self.model=og_model
         self.update_opset_version_and_overwrite()
+        self.apply_ort_basic_optimizations()
     
     def make_dim_param_static(self, load_model, save_model):
-        from onnxruntime.tools.onnx_model_utils import make_dim_param_fixed, fix_output_shapes
-        import onnx
         model = onnx.load(load_model)
         for (p,v) in self.dim_param_dict.items():
             make_dim_param_fixed(model.graph, p, v)
         fix_output_shapes(model)
         onnx.save(model, save_model)
+    
+    def apply_ort_basic_optimizations(self):
+        opt = onnxruntime.SessionOptions()
+        opt.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        optimized_model = str(Path(self.model).parent.joinpath("model.optimized.onnx"))
+        opt.optimized_model_filepath = optimized_model
+        session = onnxruntime.InferenceSession(self.model,opt)
+        self.model = optimized_model
+        del session
 
-sib_const = lambda dims : get_sibling_constructor(MakeDimParamStatic, dim_param_constructor(dims), "migraphx_ORT__bert_large_uncased_1")
+sib_const = lambda dims : get_sibling_constructor(MiGraphXBenchmarkModel, dim_param_constructor(dims), "migraphx_ORT__bert_large_uncased_1")
 
 dim_options = lambda batch, seq : {"batch_size": batch, "seq_len": seq}
 
