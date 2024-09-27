@@ -133,3 +133,35 @@ trunc_const = lambda key : get_trucated_constructor(TruncatedModel, dim_param_co
 
 for (key, value) in need_repro_dict.items():
     register_test(trunc_const(key)(value[1], value[2]), f"mi_trunc_{value[0]}_{value[1]}_{value[2]}")
+
+from ..helper_classes import SiblingModel, get_sibling_constructor
+
+class MakeDimParamStatic(SiblingModel):
+    def construct_model(self):
+        og_model = self.model
+        super().construct_model()
+        self.update_dim_param_dict()
+        self.make_dim_param_static(self.model, og_model)
+        self.model=og_model
+        self.update_opset_version_and_overwrite()
+    
+    def make_dim_param_static(self, load_model, save_model):
+        from onnxruntime.tools.onnx_model_utils import make_dim_param_fixed, fix_output_shapes
+        import onnx
+        model = onnx.load(load_model)
+        for (p,v) in self.dim_param_dict.items():
+            make_dim_param_fixed(model.graph, p, v)
+        fix_output_shapes(model)
+        onnx.save(model, save_model)
+
+sib_const = lambda dims : get_sibling_constructor(MakeDimParamStatic, dim_param_constructor(dims), "migraphx_ORT__bert_large_uncased_1")
+
+dim_options : lambda batch, seq : {"batch_size": batch, "seq_len": seq}
+
+for i in range(0,6):
+    for j in range(1,4):
+        batch = 2**i
+        seq = 128*j
+        register_test(sib_const(dim_options(batch, seq)), f"migx_bench_bert-large-uncased_{batch}_{seq}")
+        print(f"migx_bench_bert-large-uncased_{batch}_{seq}")
+ 
