@@ -156,12 +156,11 @@ class MakeDimParamStatic(SiblingModel):
 
 sib_const = lambda dims : get_sibling_constructor(MakeDimParamStatic, dim_param_constructor(dims), "migraphx_ORT__bert_large_uncased_1")
 
-dim_options : lambda batch, seq : {"batch_size": batch, "seq_len": seq}
+dim_options = lambda batch, seq : {"batch_size": batch, "seq_len": seq}
 
 for i in range(0,6):
     for j in range(1,4):
         batch = 2**i
         seq = 128*j
         register_test(sib_const(dim_options(batch, seq)), f"migx_bench_bert-large-uncased_{batch}_{seq}")
-        print(f"migx_bench_bert-large-uncased_{batch}_{seq}")
  
