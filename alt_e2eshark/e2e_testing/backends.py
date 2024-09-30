@@ -34,36 +34,17 @@ class SimpleIREEBackend(BackendBase):
     '''This backend uses iree to compile and run MLIR modules for a specified hal_target_backend'''
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
+        if hal_target_backend == "hip":
+            print("IREE compiler python bindings do not currently support the change to using iree-hal-target-device=hip. Defaulting to depreciated iree-hal-target-backends=rocm")
+            hal_target_backend = "rocm"
         self.hal_target_backend = hal_target_backend
+        self.extra_args = []
         if extra_args:
-            self.extra_args = []
             for a in extra_args:
                 if a[0:2] == "--":
                     self.extra_args.append(a)
                 else:
                     self.extra_args.append("--" + a)
-        elif hal_target_backend == "rocm":
-            # some extra args for Mi300x - some of these may not work for other chips
-            self.extra_args = [
-                "--iree-rocm-target-chip=gfx942",
-                # "--iree-global-opt-propagate-transposes=true",
-                # "--iree-opt-outer-dim-concat=true",
-                # "--iree-opt-const-eval=false",
-                # "--iree-rocm-waves-per-eu=2",
-                # "--iree-llvmgpu-enable-prefetch",
-                # "--iree-flow-enable-aggressive-fusion",
-                # "--iree-flow-enable-fuse-horizontal-contractions=true",
-                # "--iree-opt-aggressively-propagate-transposes=true",
-                # "--iree-codegen-llvmgpu-use-vector-distribution=true",
-                # "--iree-preprocessing-pass-pipeline=builtin.module(util.func(iree-preprocessing-pad-to-intrinsics{pad-target-type=conv}))",
-                # maybe add iree-preprocessing-transpose-convolution-pipeline to preprocessing pipeline.
-            ]
-        elif hal_target_backend == "llvm-cpu":
-            self.extra_args = [
-                "--iree-input-demote-i64-to-i32",
-                # "--iree-llvmcpu-fail-on-large-vector=0",
-                # "--iree-llvmcpu-stack-allocation-limit=300000",
-            ]
 
     def compile(self, module, *, save_to: str = None):
         # compile to a vmfb for llvm-cpu
@@ -100,7 +81,10 @@ class CLIREEBackend(BackendBase):
     '''This backend calls iree through the command line to compile and run MLIR modules'''
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
-        self.hal_target_backend = hal_target_backend
+        if hal_target_backend == "rocm":
+            print("Using 'iree-hal-target-device=hip', since 'iree-hal-target-backends' is depreciated")
+            hal_target_backend = "hip"
+        self.hal_target_device = hal_target_backend
         self.extra_args = []
         if extra_args:
             for a in extra_args:
@@ -111,7 +95,7 @@ class CLIREEBackend(BackendBase):
     
     def compile(self, module_path: str, *, save_to : str = None) -> str:
         vmfb_path = os.path.join(save_to, "compiled_model.vmfb")
-        arg_string = f"--iree-hal-target-backends={self.hal_target_backend} "
+        arg_string = f"--iree-hal-target-device={self.hal_target_device} "
         for arg in self.extra_args:
             arg_string += arg
             arg_string += " "
@@ -159,12 +143,6 @@ class OnnxrtIreeEpBackend(BackendBase):
             # some extra args for Mi250 - some of these may not work for other chips
             self.extra_args = [
                 "--iree-hip-target=gfx90a",
-            ]
-        elif hal_target_device == "llvm-cpu":
-            self.extra_args = [
-                "--iree-input-demote-i64-to-i32",
-                # "--iree-llvmcpu-fail-on-large-vector=0",
-                # "--iree-llvmcpu-stack-allocation-limit=300000",
             ]
         self.providers = ["IreeExecutionProvider"]
         # set provider options.
