@@ -37,7 +37,7 @@ TEST_PARAMS = {
         "min_gram_length": 1,
         "max_gram_length": 2,
         "max_skip_count": 5,
-        "ngram_counts":[0,1],
+        "ngram_counts":[0,4],
         "pool_int64s": [2, 3, 5, 4, 5, 6, 7, 8, 6, 7],
         "ngram_indexes": [0, 2, 4, 5, 6, 7, 8, 9],
         "weights": [0.0, 0.15, 0.1, 1.0, 1.0, 7.0, 2.0, 0.0],
