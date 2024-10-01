@@ -35,7 +35,7 @@ class SimpleIREEBackend(BackendBase):
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
         if hal_target_backend == "hip":
-            print("IREE compiler python bindings do not currently support the change to using iree-hal-target-device=hip. Defaulting to depreciated iree-hal-target-backends=rocm")
+            print("IREE compiler python bindings do not currently support the change to using iree-hal-target-device=hip. Defaulting to deprecated iree-hal-target-backends=rocm")
             hal_target_backend = "rocm"
         self.hal_target_backend = hal_target_backend
         self.extra_args = []
@@ -82,7 +82,7 @@ class CLIREEBackend(BackendBase):
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
         if hal_target_backend == "rocm":
-            print("Using 'iree-hal-target-device=hip', since 'iree-hal-target-backends' is depreciated")
+            print("Using 'iree-hal-target-device=hip', since 'iree-hal-target-backends' is deprecated")
             hal_target_backend = "hip"
         self.hal_target_device = hal_target_backend
         self.extra_args = []
