@@ -3,7 +3,7 @@ import onnx
 import onnxruntime
 import torch
 from e2e_testing.storage import TestTensors
-from typing import Optional
+from typing import Optional, Tuple, Iterable
 from pathlib import Path
 
 
@@ -33,10 +33,11 @@ def get_node_shape_from_dim_param_dict(node: onnxruntime.capi.onnxruntime_pybind
     for dim in node.shape:
         if isinstance(dim, str) and dim_param_dict:
             if not dim in dim_param_dict.keys():
-                raise ValueError(f"input node {node.name} has a dim param='{dim}' not found in provided dim_param_dict: '{dim_param_dict}'")
+                print(f"WARNING: dim '{dim}' not in dim_param dict. Will default to use '{dim}'=1. Please re-write dim param dict for this test!")
+                int_dims.append(1)
             else:
                 int_dims.append(dim_param_dict[dim])
-                continue
+            continue
         if not isinstance(dim, int):
             raise TypeError(
                 f"input node '{node.name}' has dims={node.shape}. Node dim '{dim}' has invalid type: {type(dim)}\nexpected type: int.\nIf your model has dim_params, consider setting a self.dim_param_dict for this test. See: https://github.com/nod-ai/SHARK-TestSuite/blob/63f848a42a3e5e01d6c73de142ff182fb6f6e2d2/alt_e2eshark/onnx_tests/models/migraphx.py#L136"
@@ -75,7 +76,7 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
     raise NotImplementedError(f"Found an unhandled dtype: {node.type}.")
 
 
-def get_sample_inputs_for_onnx_model(model_path, dim_param_dict = None) -> TestTensors:
+def get_sample_inputs_for_onnx_model(model_path, dim_param_dict = None) -> Tuple[TestTensors, Iterable]:
     """A convenience function for generating sample inputs for an onnx model"""
     opt = onnxruntime.SessionOptions()
     opt.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
@@ -84,7 +85,7 @@ def get_sample_inputs_for_onnx_model(model_path, dim_param_dict = None) -> TestT
     sample_inputs = TestTensors(
         tuple([generate_input_from_node(node, dim_param_dict) for node in inputs])
     )
-    return sample_inputs
+    return sample_inputs, inputs
 
 
 def get_signature_for_onnx_model(model_path, *, from_inputs: bool = True, dim_param_dict: Optional[dict[str, int]] = None, leave_dynamic: bool = False):
