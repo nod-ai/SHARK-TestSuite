@@ -29,10 +29,10 @@ custom_registry = [
 
 no_opset_update = [
     "dm_nfnet_f2.dm_in1k",
-    "dm_nfnet_f3.dm_in1k",
-    "dm_nfnet_f4.dm_in1k",
-    "dm_nfnet_f5.dm_in1k",
-    "dm_nfnet_f6.dm_in1k",
+    # getting test runner crash for the following.
+    # TODO: unblock these when we externalize weights on import
+    # "dm_nfnet_f3.dm_in1k",
+    # "dm_nfnet_f4.dm_in1k",
     "vit_base_r50_s16_384.orig_in21k_ft_in1k",
     "vit_small_r26_s32_224.augreg_in21k_ft_in1k",
     "vit_small_r26_s32_384.augreg_in21k_ft_in1k",
