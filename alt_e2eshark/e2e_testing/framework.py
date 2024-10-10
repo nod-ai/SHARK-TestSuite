@@ -31,6 +31,7 @@ class OnnxModelInfo:
         self.opset_version = opset_version
         self.sess_options = ort.SessionOptions()
         self.dim_param_dict = None
+        self.input_info = None
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
@@ -75,7 +76,9 @@ class OnnxModelInfo:
         self.update_dim_param_dict()
         # print(self.get_signature())
         # print(get_op_frequency(self.model))
-        return get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict)
+        inputs, self.input_info = get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict)
+        return inputs
+
 
     def apply_postprocessing(self, output: TestTensors):
         """can be overridden to define post-processing methods for individual models"""
