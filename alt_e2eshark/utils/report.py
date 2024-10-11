@@ -23,7 +23,6 @@ STAGE_SIMPLIFICATION = {
     "construct_inputs": "Gold Inference",
     "native_inference": "Gold Inference",
     "compiled_inference": "IREE Inference Invocation",
-    "benchmark": "IREE Inference Invocation",
     "postprocessing": "Inference Comparison",
     "results-summary": "Inference Comparison",
     "Numerics": "Inference Comparison",
