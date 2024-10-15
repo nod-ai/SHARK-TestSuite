@@ -497,11 +497,6 @@ jobs:
             --report-file ./e2eshark-reports/baseline_comparison.md \
             --perf_tol_regression=0.1 \
             --perf_tol_progression=0.1
-          
-          # az storage blob upload --account-name sharkpublic --container-name sharkpublic \
-          #   --name latest-test-suite/combined_reports_${{ matrix.backend }}.json \
-          #   --file ./e2eshark-reports/combined_reports.json \
-          #   --account-key ${AZ_PUBLIC_KEY} --overwrite
 
       - name: Push regression artifacts
         run: |
