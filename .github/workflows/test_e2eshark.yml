@@ -454,7 +454,7 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git pull
-          date=$(date '+%Y-%m-%d')
+          date=$(date '+%Y-%m-%d')-iree-test
           mkdir -p ${date}/ci_reports_onnx/${{ matrix.backend }}/vai-hf-cnn-fp32
           mkdir -p ${date}/ci_reports_onnx/${{ matrix.backend }}/vai-int8-p0p1
           mkdir -p ${date}/ci_reports_onnx/${{ matrix.backend }}/shark-test-suite
@@ -498,17 +498,17 @@ jobs:
             --perf_tol_regression=0.1 \
             --perf_tol_progression=0.1
           
-          az storage blob upload --account-name sharkpublic --container-name sharkpublic \
-            --name latest-test-suite/combined_reports_${{ matrix.backend }}.json \
-            --file ./e2eshark-reports/combined_reports.json \
-            --account-key ${AZ_PUBLIC_KEY} --overwrite
+          # az storage blob upload --account-name sharkpublic --container-name sharkpublic \
+          #   --name latest-test-suite/combined_reports_${{ matrix.backend }}.json \
+          #   --file ./e2eshark-reports/combined_reports.json \
+          #   --account-key ${AZ_PUBLIC_KEY} --overwrite
 
       - name: Push regression artifacts
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git pull
-          date=$(date '+%Y-%m-%d')
+          date=$(date '+%Y-%m-%d')-iree-test
           cp yesterday_comparison.md ${date}/ci_reports_onnx/${{ matrix.backend }}/combined-reports/yesterday_comparison.md
           cp baseline_comparison.md ${date}/ci_reports_onnx/${{ matrix.backend }}/combined-reports/baseline_comparison.md
           git add $date
