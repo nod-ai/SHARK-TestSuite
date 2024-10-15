@@ -7,6 +7,10 @@
 name: E2ESHARK Test Suite
 on:
   workflow_dispatch:
+    inputs:
+      iree-run-id:
+        description: 'IREE Run ID'
+        required: true
   # schedule:
   # # Runs at 12:00 PM UTC, which is 5:00 AM PST
   #  - cron: '0 12 * * *'
@@ -201,6 +205,14 @@ jobs:
           repository: nod-ai/SHARK-TestSuite
           ref: alt-merge-reports
           path: test-suite
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux_x86_64_release_packages
+          github-token: ${{ secrets.IREE_ARTIFACTS }} # token with actions:read permissions on target repo
+          repository: iree-org/iree
+          path: test-suite
+          run-id: ${{ github.event.inputs.iree-run-id }}
       
       - name: "Setup alt e2eshark python venv"
         run: |
@@ -209,9 +221,9 @@ jobs:
           source ${ALT_E2E_VENV_DIR}/bin/activate
           pip install --upgrade pip
           pip install -r ./alt_e2eshark/base_requirements.txt
-          pip install -r ./alt_e2eshark/iree_requirements.txt
+          pip install --force-reinstall iree_compiler-0.dev1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+          pip install --force-reinstall iree_runtime-0.dev1-cp311-cp311-manylinux_2_28_x86_64.whl
           pip install --no-deps -r ./alt_e2eshark/torch_mlir_requirements.txt
-          pip install --find-links https://iree.dev/pip-release-links.html iree-compiler iree-runtime --upgrade
         working-directory: ./test-suite
 
       - name: Run Onnx Bench Mode
