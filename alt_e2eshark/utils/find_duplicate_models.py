@@ -62,7 +62,9 @@ def main(args):
     found_redundancies = []
     for key, value in groupings.items():
         if len(value) > 1:
-            found_redundancies.append({"models": value, "shared_metadata": key})
+            found_redundancies.append(
+                value if args.simplified else {"models": value, "shared_metadata": key}
+            )
     save_to_json(found_redundancies, args.output)
 
 
@@ -82,6 +84,13 @@ def _get_argparse():
         "-o",
         "--output",
         help="specify an output json file",
+    )
+    parser.add_argument(
+        "-s",
+        "--simplified",
+        action="store_true",
+        default=False,
+        help="pass this arg to only print redundant model lists, without the corresponding metadata.",
     )
     return parser
 
