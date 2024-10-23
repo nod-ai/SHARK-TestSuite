@@ -31,7 +31,7 @@ base_dir = Path(onnx.__file__).parent
 # base_dir = str(Path(__file__).parents[3]) + "/third_party/onnx"
 onnx_node_tests_dir = base_dir / "backend" / "test" / "data" / "node"
 
-names = [x.name for x in onnx_node_tests_dir.glob("*") if x.isdir()]
+names = [x.name for x in onnx_node_tests_dir.glob("*") if x.is_dir()]
 
 
 class NodeTest(OnnxModelInfo):
