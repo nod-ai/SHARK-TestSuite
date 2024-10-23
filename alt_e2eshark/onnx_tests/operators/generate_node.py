@@ -38,7 +38,7 @@ class NodeTest(OnnxModelInfo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = str(onnx_node_tests_dir / self.name / "model.onnx")
-        self.opset_version = 17
+        self.opset_version = 21
 
     def construct_inputs(self):
         model = onnx.load(self.model)
