@@ -75,6 +75,7 @@ class SiblingModel(OnnxModelInfo):
         run_dir = Path(self.model).parents[1]
         og_model_path = os.path.join(run_dir, og_name)
         self.sibling_inst = og_model_info_class(og_name, og_model_path)
+        self.opset_version = self.sibling_inst.opset_version
 
     def construct_model(self):
         if not os.path.exists(self.sibling_inst.model):
@@ -140,7 +141,7 @@ class TruncatedModel(SiblingModel):
         print(get_op_frequency(self.model))
 
 
-def get_trucated_constructor(truncated_class, og_constructor, og_name):
+def get_truncated_constructor(truncated_class, og_constructor, og_name):
     """returns a function that takes in (n, op_type) and returns a constructor for the truncated class.
 
     Usage:
