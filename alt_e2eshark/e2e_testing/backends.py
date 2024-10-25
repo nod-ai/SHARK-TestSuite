@@ -34,9 +34,6 @@ class SimpleIREEBackend(BackendBase):
     '''This backend uses iree to compile and run MLIR modules for a specified hal_target_backend'''
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
-        if hal_target_backend == "hip":
-            print("IREE compiler python bindings do not currently support the change to using iree-hal-target-device=hip. Defaulting to deprecated iree-hal-target-backends=rocm")
-            hal_target_backend = "rocm"
         self.hal_target_backend = hal_target_backend
         self.extra_args = []
         if extra_args:
@@ -81,10 +78,7 @@ class CLIREEBackend(BackendBase):
     '''This backend calls iree through the command line to compile and run MLIR modules'''
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
         self.device = device
-        if hal_target_backend == "rocm":
-            print("Using 'iree-hal-target-device=hip', since 'iree-hal-target-backends' is deprecated")
-            hal_target_backend = "hip"
-        self.hal_target_device = hal_target_backend
+        self.hal_target_backend = hal_target_backend
         self.extra_args = []
         if extra_args:
             for a in extra_args:
@@ -95,7 +89,7 @@ class CLIREEBackend(BackendBase):
     
     def compile(self, module_path: str, *, save_to : str = None) -> str:
         vmfb_path = os.path.join(save_to, "compiled_model.vmfb")
-        arg_string = f"--iree-hal-target-device={self.hal_target_device} "
+        arg_string = f"--iree-hal-target-backends={self.hal_target_backend} "
         for arg in self.extra_args:
             arg_string += arg
             arg_string += " "
