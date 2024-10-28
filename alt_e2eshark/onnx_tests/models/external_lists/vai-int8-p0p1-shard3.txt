@@ -12,7 +12,6 @@ resnet33ts.ra2_in1k_vaiq
 resnet33ts.ra2_in1k_train_vaiq
 resnet34d_vaiq
 resnet34d_test_vaiq
-resnet34_vaiq
 resnet34_test_vaiq
 resnet50d_vaiq
 resnet50d_test_vaiq
@@ -40,7 +39,6 @@ resnetv2_101.a1h_in1k_vaiq
 resnetv2_101.a1h_in1k_train_vaiq
 resnetv2_101x1_bit.goog_in21k_ft_in1k_vaiq
 resnetv2_152x2_bit.goog_in21k_ft_in1k_vaiq
-resnetv2_152x2_bit.goog_teacher_in21k_ft_in1k_384_vaiq
 resnetv2_152x2_bit.goog_teacher_in21k_ft_in1k_vaiq
 resnetv2_50.a1h_in1k_vaiq
 resnetv2_50.a1h_in1k_train_vaiq
@@ -56,7 +54,6 @@ resnext101_64x4d_vaiq
 resnext101_64x4d_train_vaiq
 resnext26ts.ra2_in1k_vaiq
 resnext26ts.ra2_in1k_train_vaiq
-resnext50_32x4d_vaiq
 resnext50_32x4d_test_vaiq
 resnext50d_32x4d_vaiq
 resnext50d_32x4d_test_vaiq
@@ -100,18 +97,9 @@ skresnet18_vaiq
 skresnet34_vaiq
 skresnext50_32x4d_vaiq
 spnasnet_100.rmsp_in1k_vaiq
-ssl_resnet18_vaiq
-ssl_resnet50_vaiq
-ssl_resnext101_32x16d_vaiq
-ssl_resnext101_32x4d_vaiq
-ssl_resnext101_32x8d_vaiq
-ssl_resnext50_32x4d_vaiq
 swsl_resnet18_vaiq
-swsl_resnet50_vaiq
 swsl_resnext101_32x16d_vaiq
 swsl_resnext101_32x4d_vaiq
-swsl_resnext101_32x8d_vaiq
-swsl_resnext50_32x4d_vaiq
 tf_efficientnet_el.in1k_vaiq
 tf_efficientnet_em.in1k_vaiq
 tf_efficientnet_es.in1k_vaiq
@@ -128,8 +116,6 @@ tf_efficientnetv2_b2.in1k_vaiq
 tf_efficientnetv2_b2.in1k_train_vaiq
 tf_efficientnetv2_b3.in1k_vaiq
 tf_efficientnetv2_b3.in1k_train_vaiq
-tf_efficientnetv2_b3.in21k_ft_in1k_vaiq
-tf_efficientnetv2_b3.in21k_ft_in1k_train_vaiq
 tf_inception_v3_vaiq
 tf_mobilenetv3_large_minimal_100.in1k_vaiq
 tf_mobilenetv3_small_075.in1k_vaiq
@@ -141,7 +127,6 @@ tv_densenet121_vaiq
 tv_resnet101_vaiq
 tv_resnet152_vaiq
 tv_resnet34_vaiq
-tv_resnet50_vaiq
 tv_resnext50_32x4d_vaiq
 vgg11_bn_vaiq
 vgg11_vaiq

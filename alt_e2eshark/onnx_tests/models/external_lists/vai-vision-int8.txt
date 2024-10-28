@@ -14,11 +14,9 @@ efficientnet_b5.sw_in12k_vaiq
 EfficientNet_b5_vaiq
 EfficientNet_b6_vaiq
 EfficientNet_b7_vaiq
-efficientnet_el_pruned.in1k_vaiq
 efficientnet_el.ra_in1k_vaiq
 efficientnet_em.ra2_in1k_vaiq
 efficientnet_es_pruned.in1k_vaiq
-efficientnet_es.ra_in1k_vaiq
 efficientnet_lite0.ra_in1k_vaiq
 EfficientNet_v2_l_vaiq
 EfficientNet_v2_m_vaiq
@@ -62,7 +60,6 @@ ResNet50_vaiq
 RRDB_ESRGAN_pro_vaiq
 RRDB_ESRGAN_vaiq
 SqueezeNet_1_0_vaiq
-SqueezeNet_1_1_vaiq
 VGG11_bn_vaiq
 VGG11_vaiq
 VGG13_bn_vaiq
