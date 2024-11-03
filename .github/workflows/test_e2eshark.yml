@@ -119,26 +119,26 @@ jobs:
             test-file: nlp-shard1
             cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard2_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: nlp-shard2
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard3_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: nlp-shard3
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard4_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: shark-test-suite
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard5_test
             runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
@@ -161,40 +161,40 @@ jobs:
             test-file: vai-hf-cnn-fp32-shard3
             cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard8_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: vai-int8-p0p1-shard1
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard9_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: vai-int8-p0p1-shard2
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard10_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: vai-int8-p0p1-shard3
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard11_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: vai-vision-int8
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           - name: cpu_shard12_test
-            runs-on: large-cpu
+            runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
             device: local-task
             target-chip: x86_64-linux-gnu
             test-file: migraphx
-            cache-dir: /home/sai/test-suite-ci-cache
+            cache-dir: /groups/aig_sharks/test-suite-ci-cache
           # - name: cpu_shard13_test
           #   runs-on: nodai-amdgpu-mi250-x86-64
           #   backend: llvm-cpu
