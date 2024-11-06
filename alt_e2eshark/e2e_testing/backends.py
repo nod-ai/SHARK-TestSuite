@@ -87,11 +87,11 @@ class CLIREEBackend(BackendBase):
                     self.extra_args.append(a)
                 else:
                     self.extra_args.append("--" + a)
-        elif hal_target_backend == "rocm":
+        if hal_target_backend == "rocm":
             self.extra_args = [
                 f"--iree-hip-target={self.target_chip}",
             ]
-        elif hal_target_backend == "llvm-cpu":
+        if hal_target_backend == "llvm-cpu":
             self.extra_args = [
                 "--iree-llvmcpu-target-cpu=host",
             ]

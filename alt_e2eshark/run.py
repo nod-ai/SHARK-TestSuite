@@ -101,7 +101,7 @@ def main(args):
     elif args.mode == "cl-onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = CLOnnxTestConfig(
-            str(TEST_DIR), CLIREEBackend(device=args.device, hal_target_backend=args.backend, target_chip=args.target, extra_args=args.iree_compile_args), pipeline
+            str(TEST_DIR), CLIREEBackend(device=args.device, hal_target_backend=args.backend, target_chip=args.target_chip, extra_args=args.iree_compile_args), pipeline
         )
     elif args.mode == "ort-ep":
         # TODO: allow specifying provider explicitly from cl args.
@@ -332,7 +332,7 @@ def _get_argparse():
         help="specifies the iree-hal-target-device / iree-hal-target-backends for compile phase",
     )
     parser.add_argument(
-        "-t",
+        "-c",
         "--target-chip",
         default="gfx942",
         help="specifies the target chip (gfx942 for hip)",
