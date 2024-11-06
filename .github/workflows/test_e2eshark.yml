@@ -255,6 +255,7 @@ jobs:
             --testsfile onnx_tests/models/external_lists/${{ matrix.test-file }}.txt \
             -b ${{ matrix.backend }} \
             -d ${{ matrix.device }} \
+            -t ${{ matrix.target-chip }} \
             --report-file reports/${{ matrix.test-file }}.md \
             --mode=cl-onnx-iree \
             --cleanup=3 \
@@ -277,6 +278,7 @@ jobs:
             --testsfile onnx_tests/models/external_lists/${{ matrix.test-file }}.txt \
             -b ${{ matrix.backend }} \
             -d ${{ matrix.device }} \
+            -t ${{ matrix.target-chip }} \
             --report-file reports/${{ matrix.test-file }}.md \
             --mode=cl-onnx-iree \
             --cleanup=3 \
@@ -302,6 +304,7 @@ jobs:
             --testsfile onnx_tests/models/external_lists/${{ matrix.test-file }}.txt \
             -b ${{ matrix.backend }} \
             -d ${{ matrix.device }} \
+            -t ${{ matrix.target-chip }} \
             --report-file reports/${{ matrix.test-file }}.md \
             --cleanup=3 \
             --get-metadata \
