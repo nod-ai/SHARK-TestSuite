@@ -18,6 +18,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
+      max-parallel: 6
       matrix:
         include:
           - name: mi300_gpu1_test
