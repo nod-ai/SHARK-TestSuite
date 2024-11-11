@@ -115,6 +115,24 @@ basic_opt = [
     "xcit_tiny_24_p8_224",
     "xcit_tiny_24_p8_224_dist",
     "xcit_tiny_24_p8_384_dist",
+    "maxvit_base_tf_224.in1k",
+    "maxvit_base_tf_384.in1k",
+    "maxvit_base_tf_384.in21k_ft_in1k",
+    "maxvit_base_tf_512.in1k",
+    "maxvit_base_tf_512.in21k_ft_in1k",
+    "maxvit_large_tf_224.in1k",
+    "maxvit_large_tf_384.in1k",
+    "maxvit_large_tf_384.in21k_ft_in1k",
+    "maxvit_large_tf_512.in1k",
+    "maxvit_large_tf_512.in21k_ft_in1k",
+    "maxvit_small_tf_224.in1k",
+    "maxvit_small_tf_384.in1k",
+    "maxvit_small_tf_512.in1k",
+    "maxvit_tiny_tf_224.in1k",
+    "maxvit_tiny_tf_384.in1k",
+    "maxvit_tiny_tf_512.in1k",
+    "maxvit_xlarge_tf_384.in21k_ft_in1k",
+    "maxvit_xlarge_tf_512.in21k_ft_in1k"
 ]
 
 remove_metadata_props = [
