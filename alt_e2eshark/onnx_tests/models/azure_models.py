@@ -135,7 +135,12 @@ basic_opt = [
     "davit_base.msft_in1k",
     "davit_small.msft_in1k",
     "davit_tiny.msft_in1k",
-    "maxvit_xlarge_tf_512.in21k_ft_in1k"
+    "maxvit_xlarge_tf_512.in21k_ft_in1k",
+    "levit_128.fb_dist_in1k",
+    "levit_128s.fb_dist_in1k",
+    "levit_192.fb_dist_in1k",
+    "levit_256.fb_dist_in1k",
+    "levit_384.fb_dist_in1k"
 ]
 
 remove_metadata_props = [
