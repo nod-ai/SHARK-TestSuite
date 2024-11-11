@@ -132,6 +132,9 @@ basic_opt = [
     "maxvit_tiny_tf_384.in1k",
     "maxvit_tiny_tf_512.in1k",
     "maxvit_xlarge_tf_384.in21k_ft_in1k",
+    "davit_base.msft_in1k",
+    "davit_small.msft_in1k",
+    "davit_tiny.msft_in1k",
     "maxvit_xlarge_tf_512.in21k_ft_in1k"
 ]
 
