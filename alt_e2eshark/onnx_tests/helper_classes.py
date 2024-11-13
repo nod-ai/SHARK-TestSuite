@@ -4,6 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import os
+import requests
 import onnx
 import onnxruntime
 from onnx.helper import make_node, make_graph, make_model
@@ -14,20 +15,107 @@ from e2e_testing.onnx_utils import (
     modify_model_output,
     find_node,
 )
+from e2e_testing.storage import load_test_txt_file
+
+this_file = Path(__file__)
+lists_dir = (this_file.parent).joinpath("models/external_lists")
+onnx_zoo_model_names = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo.txt"))
 
 """This file contains several helpful child classes of OnnxModelInfo."""
 
+
+class OnnxModelZooDownloadableModel(OnnxModelInfo):
+    """This class should be used to download models from ONNX Model Zoo (onnx/models)."""
+
+    def __init__(self, name: str, onnx_model_path: str):
+        opset_version = 21
+        parent_cache_dir = os.getenv("CACHE_DIR")
+        if not parent_cache_dir:
+            raise RuntimeError(
+                "Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files."
+            )
+
+        self.cache_dir = os.path.join(parent_cache_dir, name)
+        self.model_path_map = {}
+        self.build_model_to_path_map()
+
+        super().__init__(name, onnx_model_path, opset_version)
+
+    def build_model_to_path_map(self):
+        for name in onnx_zoo_model_names:
+            test_name = name.split("/")[-2]
+            self.model_path_map[test_name] = name
+
+    def construct_url(self):
+        if "validated" in self.model:
+            raise RuntimeError(
+                "Downloading models from validated models directory is not supported."
+            )
+        absolute_model_url = (
+            "https://github.com/onnx/models/raw/refs/heads/main/"
+            + self.model_path_map[self.name]
+        )
+        return absolute_model_url
+
+    def construct_model(self):
+        # Look in the test-run dir for the model file.
+        # If it does not exists, pull it in from the model's Github URL, and try again.
+        model_url = self.construct_url()
+        # final_model_path should look like this: <directory>/<test/model_name>/<test/model_name>.onnx
+        model_dir = str(Path(self.model).parent)
+
+        def find_models(model_dir):
+            # search for a .onnx file in the ./test-run/testname/ dir
+            found_models = []
+            for root, dirs, files in os.walk(model_dir):
+                for name in files:
+                    if name[-5:] == ".onnx":
+                        found_models.append(os.path.abspath(os.path.join(root, name)))
+            return found_models
+
+        found_models = find_models(model_dir)
+        if len(found_models) == 0:
+            # if cache directory doesn't exist, then make it
+            if not os.path.exists(self.cache_dir):
+                os.mkdir(self.cache_dir)
+
+            dest_file = os.path.join(self.cache_dir, "model.onnx")
+            print(f"Begin download for {self.name}")
+            content = requests.get(model_url, stream=True).content
+
+            with open(dest_file, "wb") as model_out_file:
+                assert (
+                    content is not None and len(content) > 0
+                ), f"Failed to download model {self.name}"
+                model_out_file.write(content)
+            with open(self.model, "wb") as out_file:
+                out_file.write(content)
+            found_models = find_models(model_dir)
+        if len(found_models) == 1:
+            self.model = found_models[0]
+            return
+        if len(found_models) > 1:
+            print(f"Found multiple model.onnx files: {found_models}")
+            print(f"Picking the first model found to use: {found_models[0]}")
+            self.model = found_models[0]
+            return
+        raise OSError(
+            f"No onnx model could be found, downloaded, or extracted to {model_dir}"
+        )
+
+
 class AzureDownloadableModel(OnnxModelInfo):
     """This class can be used for models in our azure storage (both private and public)."""
+
     def __init__(self, name: str, onnx_model_path: str):
-        # TODO: Extract opset version from onnx.version.opset 
+        # TODO: Extract opset version from onnx.version.opset
         opset_version = 21
         parent_cache_dir = os.getenv('CACHE_DIR')
         if not parent_cache_dir:
             raise RuntimeError("Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files.")
         self.cache_dir = os.path.join(parent_cache_dir, name)
         super().__init__(name, onnx_model_path, opset_version)
-    
+
     def update_sess_options(self):
         self.sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
 
@@ -44,11 +132,11 @@ class AzureDownloadableModel(OnnxModelInfo):
             found_models = []
             for root, dirs, files in os.walk(model_dir):
                 for name in files:
-                    if name[-5:] == ".onnx":  
+                    if name[-5:] == ".onnx":
                         found_models.append(os.path.abspath(os.path.join(root, name)))
             return found_models
 
-        found_models = find_models(model_dir) 
+        found_models = find_models(model_dir)
 
         if len(found_models) == 0:
             azutils.pre_test_onnx_model_azure_download(
@@ -65,7 +153,6 @@ class AzureDownloadableModel(OnnxModelInfo):
             return
         raise OSError(f"No onnx model could be found, downloaded, or extracted to {model_dir}")
 
-
 class SiblingModel(OnnxModelInfo):
     """convenience class for re-using an onnx model from another 'sibling' test"""
 
@@ -81,7 +168,7 @@ class SiblingModel(OnnxModelInfo):
         if not os.path.exists(self.sibling_inst.model):
             self.sibling_inst.construct_model()
         self.model = self.sibling_inst.model
-    
+
     def update_dim_param_dict(self):
         self.sibling_inst.update_dim_param_dict()
         self.dim_param_dict = self.sibling_inst.dim_param_dict
