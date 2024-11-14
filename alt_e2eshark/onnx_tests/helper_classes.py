@@ -19,7 +19,30 @@ from e2e_testing.storage import load_test_txt_file
 
 this_file = Path(__file__)
 lists_dir = (this_file.parent).joinpath("models/external_lists")
-onnx_zoo_model_names = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo.txt"))
+onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_nlp.txt"))
+onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_graph_ml.txt"))
+onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_computer_vision.txt"))
+onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_gen_ai.txt"))
+
+onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_text.txt"))
+onnx_zoo_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_vision.txt"))
+
+
+# Putting this inside the class contructor will
+# call this repeatedly, which is wasteful.
+model_path_map = {}
+def build_model_to_path_map():
+    for name in onnx_zoo_non_validated:
+        test_name = name.split("/")[-2]
+        model_path_map[test_name] = name
+
+    for name in onnx_zoo_validated:
+        test_name = '.'.join((name.split("/")[-1]).split('.')[:-1])
+        model_path_map[test_name] = name
+
+
+build_model_to_path_map()
+
 
 """This file contains several helpful child classes of OnnxModelInfo."""
 
@@ -36,24 +59,13 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
             )
 
         self.cache_dir = os.path.join(parent_cache_dir, name)
-        self.model_path_map = {}
-        self.build_model_to_path_map()
 
         super().__init__(name, onnx_model_path, opset_version)
 
-    def build_model_to_path_map(self):
-        for name in onnx_zoo_model_names:
-            test_name = name.split("/")[-2]
-            self.model_path_map[test_name] = name
-
     def construct_url(self):
-        if "validated" in self.model:
-            raise RuntimeError(
-                "Downloading models from validated models directory is not supported."
-            )
         absolute_model_url = (
             "https://github.com/onnx/models/raw/refs/heads/main/"
-            + self.model_path_map[self.name]
+            + model_path_map[self.name]
         )
         return absolute_model_url
 

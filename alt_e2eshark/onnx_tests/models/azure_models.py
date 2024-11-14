@@ -4,7 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 from pathlib import Path
-from ..helper_classes import AzureDownloadableModel, OnnxModelZooDownloadableModel
+from ..helper_classes import AzureDownloadableModel
 from e2e_testing.registry import register_test
 from e2e_testing.storage import load_test_txt_file
 import onnx
@@ -20,8 +20,6 @@ for i in range(1, 4):
     )
     model_names += load_test_txt_file(lists_dir.joinpath(f"vai-int8-p0p1-shard{i}.txt"))
 model_names += load_test_txt_file(lists_dir.joinpath("vai-vision-int8.txt"))
-
-onnx_zoo_model_names = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo.txt"))
 
 custom_registry = [
     "opt-125M-awq",
@@ -157,10 +155,6 @@ custom_registry += remove_metadata_props
 # TODO: many of the models in the text files loaded from above will likely need to be registered with an alternative test info class.
 for t in set(model_names).difference(custom_registry):
     register_test(AzureDownloadableModel, t)
-
-for t in set(onnx_zoo_model_names).difference(custom_registry):
-    t_split = t.split("/")[-2]
-    register_test(OnnxModelZooDownloadableModel, t_split)
 
 
 class AzureWithOpt(AzureDownloadableModel):
