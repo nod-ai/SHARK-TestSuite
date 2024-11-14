@@ -21,8 +21,11 @@ this_file = Path(__file__)
 lists_dir = (this_file.parent).joinpath("models/external_lists")
 onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_nlp.txt"))
 onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_graph_ml.txt"))
-onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_computer_vision.txt"))
 onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_gen_ai.txt"))
+for i in range(5):
+    onnx_zoo_non_validated += load_test_txt_file(
+        lists_dir.joinpath(f"onnx_model_zoo_computer_vision_{i+1}.txt")
+    )
 
 onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_text.txt"))
 onnx_zoo_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_vision.txt"))
