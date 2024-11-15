@@ -79,7 +79,7 @@ def dim_param_constructor(dim_param_dict):
                 self.opset_version = None
             # TODO: check opset versions
             # print(f"Opset: {self.opset_version}")
-            self.update_opset_version_and_overwrite()
+            # self.update_opset_version_and_overwrite()
 
         def update_no_ext(self):
             """Models larger than 2GB do not allow updating opset version, so we update opset version without loading external data. Unfortunately, all external data references get wiped, and we need to manually trace through the graph and copy them back in."""
