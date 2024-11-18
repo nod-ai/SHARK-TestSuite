@@ -29,6 +29,12 @@ def dtype_from_ort_node(node):
 
 def get_node_shape_from_dim_param_dict(node: onnxruntime.capi.onnxruntime_pybind11_state.NodeArg, dim_param_dict: Optional[dict[str, int]] = None):
     """Get the shape of a node, replacing any string dims with values from a dim_param_dict"""
+    if dim_param_dict and node.name in dim_param_dict.keys():
+        # Particularly used for models from ONNX Model Zoo,
+        # the dim_param_dict here should contain the shapes
+        # of the input nodes.
+        return dim_param_dict[node.name]
+
     int_dims = []
     for dim in node.shape:
         if isinstance(dim, str) and dim_param_dict:

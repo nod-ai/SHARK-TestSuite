@@ -90,13 +90,20 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         # The cache dir should already have model.onnx
         if not os.path.exists(self.cache_dir + "/turnkey_stats.yaml"):
             turnkey_yaml_url = '/'.join(model_url.split('/')[:-1]) + '/turnkey_stats.yaml'
-            print(turnkey_yaml_url)
             content = requests.get(turnkey_yaml_url).content
             with open(self.cache_dir + "/turnkey_stats.yaml", "wb") as out_file:
                 out_file.write(content)
 
         shutil.copy(self.cache_dir + "/model.onnx", str(Path(self.model).parent))
-        shutil.copy(self.cache_dir + "/turnkey_stats.yaml", str(Path(self.model).parent))
+
+    def update_dim_param_dict(self):
+        turnkey_dict = {}
+        self.dim_param_dict = {}
+        with open(os.path.join(self.cache_dir, 'turnkey_stats.yaml'), 'rb') as stream:
+            turnkey_dict = yaml.safe_load(stream)
+        if 'onnx_input_dimensions' in turnkey_dict.keys():
+            for dim_param in turnkey_dict['onnx_input_dimensions']:
+                self.dim_param_dict[dim_param] = turnkey_dict['onnx_input_dimensions'][dim_param]
 
     def construct_model(self):
         # Look in the test-run dir for the model file.
