@@ -17,5 +17,5 @@ for t in set(onnx_zoo_non_validated).difference(custom_registry):
     register_test(OnnxModelZooDownloadableModel, t_split)
 
 for t in set(onnx_zoo_validated).difference(custom_registry):
-    t_split = ".".join((t.split("/")[-1]).split(".")[:-1])
+    t_split = ".".join((t.split("/")[-1]).split(".")[:-2])
     register_test(OnnxModelZooDownloadableModel, t_split)

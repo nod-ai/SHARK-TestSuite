@@ -5,6 +5,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import os
 import requests
+import tarfile
+import shutil
+import yaml
 import onnx
 import onnxruntime
 from onnx.helper import make_node, make_graph, make_model
@@ -40,7 +43,7 @@ def build_model_to_path_map():
         model_path_map[test_name] = name
 
     for name in onnx_zoo_validated:
-        test_name = '.'.join((name.split("/")[-1]).split('.')[:-1])
+        test_name = '.'.join((name.split("/")[-1]).split('.')[:-2])
         model_path_map[test_name] = name
 
 
@@ -72,29 +75,59 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         )
         return absolute_model_url
 
+    def unzip_model_archive(self, tar_path):
+        with tarfile.open(tar_path) as tar:
+            for subdir_and_file in tar.getmembers():
+                if "test_data_set_0/input" in subdir_and_file.name:
+                    subdir_and_file.name = subdir_and_file.name.split('/')[-1]
+                if ".onnx" in subdir_and_file.name:
+                    subdir_and_file.name = "model.onnx"
+                tar.extract(subdir_and_file, path=self.model)
+
+    def download_model_yaml(self, model_url: str):
+        # The cache dir should already have model.onnx
+        if not os.path.exists(self.cache_dir + "/turnkey_stats.yaml"):
+            turnkey_yaml_url = '/'.join(model_url.split('/')[:-1]) + '/turnkey_stats.yaml'
+            print(turnkey_yaml_url)
+            content = requests.get(turnkey_yaml_url).content
+            with open(self.cache_dir + "/turnkey_stats.yaml", "wb") as out_file:
+                out_file.write(content)
+
+        shutil.copy(self.cache_dir + "/model.onnx", str(Path(self.model).parent))
+        shutil.copy(self.cache_dir + "/turnkey_stats.yaml", str(Path(self.model).parent))
+
     def construct_model(self):
         # Look in the test-run dir for the model file.
-        # If it does not exists, pull it in from the model's Github URL, and try again.
+        # If it does not exist, pull it in from the model's Github URL, and try again.
         model_url = self.construct_url()
         # final_model_path should look like this: <directory>/<test/model_name>/<test/model_name>.onnx
         model_dir = str(Path(self.model).parent)
 
+        # if cache directory doesn't exist, then make it
+        if not os.path.exists(self.cache_dir):
+            os.mkdir(self.cache_dir)
+
         def find_models(model_dir):
             # search for a .onnx file in the ./test-run/testname/ dir
             found_models = []
+            found_model_in_cache = False
             for root, dirs, files in os.walk(model_dir):
                 for name in files:
                     if name[-5:] == ".onnx":
                         found_models.append(os.path.abspath(os.path.join(root, name)))
-            return found_models
+            if len(found_models) == 0:
+                for _, _, files in os.walk(self.cache_dir):
+                    for name in files:
+                        if name[-6:] == "tar.gz" or name[-5:] == "model.onnx":
+                            found_model_in_cache = True
+                            break
+            return found_models, found_model_in_cache
 
-        found_models = find_models(model_dir)
-        if len(found_models) == 0:
-            # if cache directory doesn't exist, then make it
-            if not os.path.exists(self.cache_dir):
-                os.mkdir(self.cache_dir)
+        is_validated = "validated" in model_url
+        dest_file = os.path.join(self.cache_dir, model_url.split('/')[-1] + "/model.onnx" if is_validated else "model.onnx")
+        find_models_in_test_dir, found_model_in_cache = find_models(model_dir)
 
-            dest_file = os.path.join(self.cache_dir, "model.onnx")
+        if len(find_models_in_test_dir) == 0 and not found_model_in_cache:
             print(f"Begin download for {self.name}")
             content = requests.get(model_url, stream=True).content
 
@@ -103,17 +136,22 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
                     content is not None and len(content) > 0
                 ), f"Failed to download model {self.name}"
                 model_out_file.write(content)
-            with open(self.model, "wb") as out_file:
-                out_file.write(content)
-            found_models = find_models(model_dir)
-        if len(found_models) == 1:
-            self.model = found_models[0]
+            if "validated" in model_url:
+                self.unzip_model_archive(dest_file)
+            else:
+                self.download_model_yaml(model_url)
+            find_models_in_test_dir, _ = find_models(model_dir)
+        if len(find_models_in_test_dir) == 1:
+            self.model = find_models_in_test_dir[0]
             return
-        if len(found_models) > 1:
-            print(f"Found multiple model.onnx files: {found_models}")
-            print(f"Picking the first model found to use: {found_models[0]}")
-            self.model = found_models[0]
+        if len(find_models_in_test_dir) > 1:
+            print(f"Found multiple model.onnx files: {find_models_in_test_dir}")
+            print(f"Picking the first model found to use: {find_models_in_test_dir[0]}")
+            self.model = find_models_in_test_dir[0]
             return
+        if found_model_in_cache:
+            self.unzip_model_archive(dest_file) if is_validated else self.download_model_yaml(model_url)
+            find_models_in_test_dir, _ = find_models(model_dir)
         raise OSError(
             f"No onnx model could be found, downloaded, or extracted to {model_dir}"
         )
