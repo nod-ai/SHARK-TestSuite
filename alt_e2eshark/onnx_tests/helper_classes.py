@@ -76,13 +76,15 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         return absolute_model_url
 
     def unzip_model_archive(self, tar_path):
+        model_dir = str(Path(self.model).parent)
         with tarfile.open(tar_path) as tar:
             for subdir_and_file in tar.getmembers():
                 if "test_data_set_0/input" in subdir_and_file.name:
                     subdir_and_file.name = subdir_and_file.name.split('/')[-1]
+                    tar.extract(subdir_and_file, path=model_dir)
                 if ".onnx" in subdir_and_file.name:
                     subdir_and_file.name = "model.onnx"
-                tar.extract(subdir_and_file, path=self.model)
+                    tar.extract(subdir_and_file, path=model_dir)
 
     def download_model_yaml(self, model_url: str):
         # The cache dir should already have model.onnx
@@ -124,7 +126,7 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
             return found_models, found_model_in_cache
 
         is_validated = "validated" in model_url
-        dest_file = os.path.join(self.cache_dir, model_url.split('/')[-1] + "/model.onnx" if is_validated else "model.onnx")
+        dest_file = os.path.join(self.cache_dir, model_url.split('/')[-1] if is_validated else "model.onnx")
         find_models_in_test_dir, found_model_in_cache = find_models(model_dir)
 
         if len(find_models_in_test_dir) == 0 and not found_model_in_cache:
@@ -141,6 +143,9 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
             else:
                 self.download_model_yaml(model_url)
             find_models_in_test_dir, _ = find_models(model_dir)
+        if found_model_in_cache:
+            self.unzip_model_archive(dest_file) if is_validated else self.download_model_yaml(model_url)
+            find_models_in_test_dir, _ = find_models(model_dir)
         if len(find_models_in_test_dir) == 1:
             self.model = find_models_in_test_dir[0]
             return
@@ -149,9 +154,6 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
             print(f"Picking the first model found to use: {find_models_in_test_dir[0]}")
             self.model = find_models_in_test_dir[0]
             return
-        if found_model_in_cache:
-            self.unzip_model_archive(dest_file) if is_validated else self.download_model_yaml(model_url)
-            find_models_in_test_dir, _ = find_models(model_dir)
         raise OSError(
             f"No onnx model could be found, downloaded, or extracted to {model_dir}"
         )

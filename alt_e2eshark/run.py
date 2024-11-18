@@ -223,7 +223,10 @@ def run_tests(
             curr_stage = "construct_inputs"
             if curr_stage in stages:
                 notify_stage()
-                if load_inputs:
+                model_zoo_inputs = False
+                if os.path.exists(log_dir + "/input_0.pb"):
+                    model_zoo_inputs = True
+                if load_inputs or model_zoo_inputs:
                     inputs = inst.load_inputs(log_dir)
                 else:
                     inputs = inst.construct_inputs()
