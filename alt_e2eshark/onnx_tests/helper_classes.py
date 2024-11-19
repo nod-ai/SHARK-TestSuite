@@ -13,42 +13,12 @@ import onnxruntime
 from onnx.helper import make_node, make_graph, make_model
 from pathlib import Path
 from e2e_testing import azutils
-from e2e_testing.framework import OnnxModelInfo
+from e2e_testing.framework import OnnxModelInfo, TestTensors
 from e2e_testing.onnx_utils import (
     modify_model_output,
     find_node,
+    get_sample_inputs_for_onnx_model
 )
-from e2e_testing.storage import load_test_txt_file
-
-this_file = Path(__file__)
-lists_dir = (this_file.parent).joinpath("models/external_lists")
-onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_nlp.txt"))
-onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_graph_ml.txt"))
-onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_gen_ai.txt"))
-for i in range(5):
-    onnx_zoo_non_validated += load_test_txt_file(
-        lists_dir.joinpath(f"onnx_model_zoo_computer_vision_{i+1}.txt")
-    )
-
-onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_text.txt"))
-onnx_zoo_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_vision.txt"))
-
-
-# Putting this inside the class contructor will
-# call this repeatedly, which is wasteful.
-model_path_map = {}
-def build_model_to_path_map():
-    for name in onnx_zoo_non_validated:
-        test_name = name.split("/")[-2]
-        model_path_map[test_name] = name
-
-    for name in onnx_zoo_validated:
-        test_name = '.'.join((name.split("/")[-1]).split('.')[:-2])
-        model_path_map[test_name] = name
-
-
-build_model_to_path_map()
-
 
 """This file contains several helpful child classes of OnnxModelInfo."""
 
@@ -69,6 +39,7 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         super().__init__(name, onnx_model_path, opset_version)
 
     def construct_url(self):
+        from .models.onnx_zoo_models import model_path_map
         absolute_model_url = (
             "https://github.com/onnx/models/raw/refs/heads/main/"
             + model_path_map[self.name]
@@ -96,14 +67,26 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
 
         shutil.copy(self.cache_dir + "/model.onnx", str(Path(self.model).parent))
 
-    def update_dim_param_dict(self):
+    def contruct_input_name_to_shape_map(self):
         turnkey_dict = {}
-        self.dim_param_dict = {}
+        self.input_name_to_shape_map = {}
         with open(os.path.join(self.cache_dir, 'turnkey_stats.yaml'), 'rb') as stream:
             turnkey_dict = yaml.safe_load(stream)
         if 'onnx_input_dimensions' in turnkey_dict.keys():
             for dim_param in turnkey_dict['onnx_input_dimensions']:
-                self.dim_param_dict[dim_param] = turnkey_dict['onnx_input_dimensions'][dim_param]
+                self.input_name_to_shape_map[dim_param] = turnkey_dict['onnx_input_dimensions'][dim_param]
+
+    def construct_inputs(self) -> TestTensors:
+        if not os.path.exists(self.model):
+            self.construct_model()
+        self.update_dim_param_dict()
+        self.contruct_input_name_to_shape_map()
+
+        input_path = os.path.join(str(Path(self.model).parent), 'input_0.pb')
+        if os.path.exists(input_path):
+            return self.load_inputs(str(Path(self.model).parent))
+
+        return get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict, self.input_name_to_shape_map)
 
     def construct_model(self):
         # Look in the test-run dir for the model file.
