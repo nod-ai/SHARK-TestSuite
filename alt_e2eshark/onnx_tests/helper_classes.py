@@ -80,12 +80,12 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         if not os.path.exists(self.model):
             self.construct_model()
         self.update_dim_param_dict()
-        self.contruct_input_name_to_shape_map()
 
         input_path = os.path.join(str(Path(self.model).parent), 'input_0.pb')
         if os.path.exists(input_path):
             return self.load_inputs(str(Path(self.model).parent))
 
+        self.contruct_input_name_to_shape_map()
         return get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict, self.input_name_to_shape_map)
 
     def construct_model(self):

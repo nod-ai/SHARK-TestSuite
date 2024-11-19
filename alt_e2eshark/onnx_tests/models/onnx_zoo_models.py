@@ -14,16 +14,8 @@ from .azure_models import custom_registry
 
 this_file = Path(__file__)
 lists_dir = (this_file.parent).joinpath("external_lists")
-onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_nlp.txt"))
-onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_graph_ml.txt"))
-onnx_zoo_non_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_gen_ai.txt"))
-for i in range(5):
-    onnx_zoo_non_validated += load_test_txt_file(
-        lists_dir.joinpath(f"onnx_model_zoo_computer_vision_{i+1}.txt")
-    )
-
-onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_text.txt"))
-onnx_zoo_validated += load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_vision.txt"))
+onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_non_validated_paths.txt"))
+onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_paths.txt"))
 
 
 # Putting this inside the class contructor will
@@ -40,7 +32,6 @@ def build_model_to_path_map():
 
 
 build_model_to_path_map()
-
 
 
 for t in set(onnx_zoo_non_validated).difference(custom_registry):
