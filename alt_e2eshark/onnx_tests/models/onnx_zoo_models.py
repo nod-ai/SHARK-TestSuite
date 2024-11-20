@@ -17,7 +17,6 @@ lists_dir = (this_file.parent).joinpath("external_lists")
 onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_non_validated_paths.txt"))
 onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_paths.txt"))
 
-
 # Putting this inside the class contructor will
 # call this repeatedly, which is wasteful.
 model_path_map = {}
@@ -33,11 +32,14 @@ def build_model_to_path_map():
 
 build_model_to_path_map()
 
+url_map = lambda name : f'https://github.com/onnx/models/raw/refs/heads/main/{model_path_map[name]}'
+
+meta_constructor = lambda is_validated, name : (lambda *args, **kwargs : OnnxModelZooDownloadableModel(is_validated, url_map(name),*args, **kwargs))
 
 for t in set(onnx_zoo_non_validated).difference(custom_registry):
     t_split = t.split("/")[-2]
-    register_test(OnnxModelZooDownloadableModel, t_split)
+    register_test(meta_constructor(False, t_split), t_split)
 
 for t in set(onnx_zoo_validated).difference(custom_registry):
     t_split = ".".join((t.split("/")[-1]).split(".")[:-2])
-    register_test(OnnxModelZooDownloadableModel, t_split)
+    register_test(meta_constructor(True, t_split), t_split)

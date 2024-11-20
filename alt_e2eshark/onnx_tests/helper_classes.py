@@ -26,25 +26,19 @@ from e2e_testing.onnx_utils import (
 class OnnxModelZooDownloadableModel(OnnxModelInfo):
     """This class should be used to download models from ONNX Model Zoo (onnx/models)."""
 
-    def __init__(self, name: str, onnx_model_path: str):
+    def __init__(self, is_validated: bool, model_url: str, name: str, onnx_model_path: str):
         opset_version = 21
         parent_cache_dir = os.getenv("CACHE_DIR")
         if not parent_cache_dir:
             raise RuntimeError(
                 "Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files."
             )
-
+        self.is_validated = is_validated
+        self.model_url = model_url
         self.cache_dir = os.path.join(parent_cache_dir, name)
 
         super().__init__(name, onnx_model_path, opset_version)
 
-    def construct_url(self):
-        from .models.onnx_zoo_models import model_path_map
-        absolute_model_url = (
-            "https://github.com/onnx/models/raw/refs/heads/main/"
-            + model_path_map[self.name]
-        )
-        return absolute_model_url
 
     def unzip_model_archive(self, tar_path):
         model_dir = str(Path(self.model).parent)
@@ -91,7 +85,6 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
     def construct_model(self):
         # Look in the test-run dir for the model file.
         # If it does not exist, pull it in from the model's Github URL, and try again.
-        model_url = self.construct_url()
         # final_model_path should look like this: <directory>/<test/model_name>/<test/model_name>.onnx
         model_dir = str(Path(self.model).parent)
 
@@ -115,26 +108,25 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
                             break
             return found_models, found_model_in_cache
 
-        is_validated = "validated" in model_url
-        dest_file = os.path.join(self.cache_dir, model_url.split('/')[-1] if is_validated else "model.onnx")
+        dest_file = os.path.join(self.cache_dir, self.model_url.split('/')[-1] if self.is_validated else "model.onnx")
         find_models_in_test_dir, found_model_in_cache = find_models(model_dir)
 
         if len(find_models_in_test_dir) == 0 and not found_model_in_cache:
             print(f"Begin download for {self.name}")
-            content = requests.get(model_url, stream=True).content
+            content = requests.get(self.model_url, stream=True).content
 
             with open(dest_file, "wb") as model_out_file:
                 assert (
                     content is not None and len(content) > 0
                 ), f"Failed to download model {self.name}"
                 model_out_file.write(content)
-            if "validated" in model_url:
+            if self.is_validated:
                 self.unzip_model_archive(dest_file)
             else:
-                self.download_model_yaml(model_url)
+                self.download_model_yaml(self.model_url)
             find_models_in_test_dir, _ = find_models(model_dir)
         if found_model_in_cache:
-            self.unzip_model_archive(dest_file) if is_validated else self.download_model_yaml(model_url)
+            self.unzip_model_archive(dest_file) if self.is_validated else self.download_model_yaml(self.model_url)
             find_models_in_test_dir, _ = find_models(model_dir)
         if len(find_models_in_test_dir) == 1:
             self.model = find_models_in_test_dir[0]
