@@ -92,7 +92,7 @@ def generate_input_from_node(node: onnxruntime.capi.onnxruntime_pybind11_state.N
 def get_sample_inputs_for_onnx_model(model_path, dim_param_dict = None, input_name_to_shape_map = None) -> TestTensors:
     """A convenience function for generating sample inputs for an onnx model"""
     opt = onnxruntime.SessionOptions()
-    # opt.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+    opt.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
     s = onnxruntime.InferenceSession(model_path, opt)
     inputs = s.get_inputs()
     sample_inputs = TestTensors(
