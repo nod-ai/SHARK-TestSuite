@@ -24,6 +24,26 @@ class ConvRepro(BuildAModel):
 
 register_test(ConvRepro, "conv_depthwise_stride_2")
 
+# %22 = torch.operator "onnx.Conv"(%21, %4, %5) 
+#       {torch.onnx.dilations = [1 : si64, 1 : si64], torch.onnx.group = 80 : si64, torch.onnx.kernel_shape = [7 : si64, 7 : si64], 
+#        torch.onnx.pads = [3 : si64, 3 : si64, 3 : si64, 3 : si64], torch.onnx.strides = [1 : si64, 1 : si64]} : 
+#   (!torch.vtensor<[1,80,72,72],f32>, !torch.vtensor<[80,1,7,7],f32>, !torch.vtensor<[80],f32>) 
+#   -> !torch.vtensor<[1,80,72,72],f32> 
+class ConvNext(BuildAModel):
+    def construct_i_o_value_info(self):
+        self.input_vi = [
+            make_tensor_value_info("X", TensorProto.FLOAT, [1,80,72,72]),
+            make_tensor_value_info("W", TensorProto.FLOAT, [80,1,7,7]),
+            make_tensor_value_info("B", TensorProto.FLOAT, [80]),
+            ]
+        self.output_vi = [make_tensor_value_info("Y", TensorProto.FLOAT, [1,80,72,72])]
+    
+    def construct_nodes(self):
+        app_node = self.get_app_node()
+        app_node("Conv",["X","W","B"],["Y"],dilations=[1,1],group=80,kernel_shape=[7,7],pads=[3,3,3,3],strides=[1,1])
+
+register_test(ConvNext, "ConvNext_test")
+
 class QConvModelBase(BuildAModel):
     def __init__(self, specs, *args, **kwargs):
         (self.N, self.Cin, self.Hin, self.Win, self.Cout, self.groups, self.Hker, self.Wker, self.pads, self.dilations, self.strides) = specs
