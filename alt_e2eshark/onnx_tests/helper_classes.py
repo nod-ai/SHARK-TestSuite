@@ -38,9 +38,10 @@ class HfDownloadableModel(OnnxModelInfo):
         model_dir = str(Path(self.model).parent)
         # TODO: Use Python API instead of CLI?
         opt_cli_command = f"optimum-cli export onnx --model {self.model_repo_path} --task {self.task} --monolith --framework pt {model_dir}"
+
         cli_output = subprocess.run(opt_cli_command.split(' '), capture_output=True)
-        # TODO: Find a cleaner way to exit than an assert.
-        assert cli_output.returncode == 0, f"Failed to run optimum-cli:\n{cli_output.stderr.decode()}"
+        if cli_output.returncode != 0:
+            raise RuntimeError(f"Failed to run `optimum-cli`:\n{cli_output.stderr.decode()}")
 
     def construct_model(self):
         model_dir = str(Path(self.model).parent)
