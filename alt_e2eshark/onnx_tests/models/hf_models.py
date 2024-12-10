@@ -41,7 +41,7 @@ def build_repo_to_model_map():
     # and its task-type.
     hf_models_list = [
         (
-            load_test_txt_file(lists_dir.joinpath(f"hf-{task}-model-list.txt")),
+            load_test_txt_file(lists_dir.joinpath(f"hf-model-paths/hf-{task}-model-list.txt")),
             task,
         )
         for task in task_list
