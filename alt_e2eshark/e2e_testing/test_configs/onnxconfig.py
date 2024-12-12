@@ -157,10 +157,17 @@ class CLOnnxTestConfig(TestConfig):
         detail_log = os.path.join(save_to, "detail", "import_model.detail.log")
         commands_log = os.path.join(save_to, "commands", "import_model.commands.log")
         # get a command line script
-        script = "python -m torch_mlir.tools.import_onnx "
+        script = "python -m iree.compiler.tools.import_onnx "
         script += str(program.model)
-        if program.opset_version:
-            script += f" --opset-version={program.opset_version}"
+        program.update_importer_options()
+        options = program.importer_options
+        for key, value in options._asdict().items():
+            if key == "large_model":
+                script+= f' --large-model' if value else ""
+            elif key == "externalize_params":
+                script+= f' --externalize-params' if value else ""
+            elif value is not None:
+                script += f' --{key.replace("_","-")}={value}'
         script += " -o "
         script = script + mlir_file
         script += f" 1> {detail_log} 2>&1"
@@ -225,13 +232,15 @@ class CLOnnxTestConfig(TestConfig):
     def compile(self, mlir_module: str, *, save_to: str = None) -> str:
         return self.backend.compile(mlir_module, save_to=save_to)
 
-    def run(self, artifact: str, inputs: TestTensors, *, func_name=None) -> TestTensors:
+    def run(self, artifact: str, inputs: TestTensors, *, func_name=None, extra_options=None) -> TestTensors:
         run_dir = Path(artifact).parent
         test_name = run_dir.name
         detail_log = run_dir.joinpath("detail", "compiled_inference.detail.log")
         commands_log = run_dir.joinpath("commands", "compiled_inference.commands.log")
         func = self.backend.load(artifact, func_name=func_name)
         script = func(inputs)
+        if extra_options:
+            script += f" {extra_options}"
         num_outputs = len(self.tensor_info_dict[test_name][0])
         output_files = []
         for i in range(num_outputs):
@@ -252,13 +261,15 @@ class CLOnnxTestConfig(TestConfig):
                 raise FileNotFoundError(error_msg)
         return TestTensors.load_from(self.tensor_info_dict[test_name][0], self.tensor_info_dict[test_name][1], run_dir, "output")
 
-    def benchmark(self, artifact: str, inputs: TestTensors, repetitions: int = 5, *, func_name=None) -> float:
+    def benchmark(self, artifact: str, inputs: TestTensors, repetitions: int = 5, *, func_name=None, extra_options=None) -> float:
         run_dir = Path(artifact).parent
         detail_log = run_dir.joinpath("detail", "benchmark.detail.log")
         commands_log = run_dir.joinpath("commands", "benchmark.commands.log")
         report_json = run_dir.joinpath("detail", "benchmark.json")
         func = self.backend.load(artifact,func_name=func_name)
         script = func(inputs)
+        if extra_options:
+            script+= f" {extra_options}"
         benchmark_script = "iree-benchmark-module " + script[15:]
         benchmark_script += f" --benchmark_repetitions={repetitions} --device_allocator=caching --benchmark_out='{report_json}' --benchmark_out_format=json 1> {detail_log} 2>&1"
         with open(commands_log, "w") as file:

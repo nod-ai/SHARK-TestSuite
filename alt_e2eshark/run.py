@@ -244,7 +244,12 @@ def run_tests(
             curr_stage = "compiled_inference"
             if curr_stage in stages:
                 notify_stage()
-                outputs_raw = config.run(compiled_artifact, inputs, func_name=func_name)
+                options = None
+                try:
+                    options = inst.runtime_options
+                except AttributeError:
+                    pass 
+                outputs_raw = config.run(compiled_artifact, inputs, func_name=func_name, extra_options=options)
                 outputs_raw.save_to(log_dir + "output")
 
             # apply model-specific post-processing:

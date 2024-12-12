@@ -16,6 +16,14 @@ from e2e_testing.onnx_utils import *
 
 Module = TypeVar("Module")
 
+class ImporterOptions(NamedTuple):
+    opset_version : Optional[int] = None
+    large_model : bool = False
+    externalize_params : bool = False
+    externalize_inputs_threshold : Optional[int] = None
+    num_elements_threshold: int = 100
+    params_scope : str = "model"
+    param_gb_threshold : Optional[float] = None
 
 class OnnxModelInfo:
     """Stores information about an onnx test: the filepath to model.onnx, how to construct/download it, and how to construct sample inputs for a test run."""
@@ -32,6 +40,7 @@ class OnnxModelInfo:
         self.sess_options = ort.SessionOptions()
         self.dim_param_dict = None
         self.input_name_to_shape_map = None
+        self.importer_options = ImporterOptions(opset_version=opset_version)
 
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
@@ -60,6 +69,12 @@ class OnnxModelInfo:
     def update_dim_param_dict(self):
         """Can be overridden to modify a dictionary of dim parameters (self.dim_param_dict) used to 
         construct inputs for a model with dynamic dims.
+        """
+        pass
+
+    def update_importer_options(self):
+        """Override to specify:
+        self.importer_options = ImporterOptions(**kwargs)
         """
         pass
 
