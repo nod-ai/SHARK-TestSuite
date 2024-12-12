@@ -107,7 +107,7 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
 
         shutil.copy(os.path.join(self.cache_dir, "model.onnx"), str(Path(self.model).parent))
 
-    def contruct_input_name_to_shape_map(self):
+    def update_input_name_to_shape_map(self):
         turnkey_dict = {}
         self.input_name_to_shape_map = {}
         with open(os.path.join(self.cache_dir, 'turnkey_stats.yaml'), 'rb') as stream:
@@ -125,7 +125,7 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         if os.path.exists(input_path):
             return self.load_inputs(str(Path(self.model).parent))
 
-        self.contruct_input_name_to_shape_map()
+        self.update_input_name_to_shape_map()
         return get_sample_inputs_for_onnx_model(self.model, self.dim_param_dict, self.input_name_to_shape_map)
 
     def construct_model(self):
