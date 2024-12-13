@@ -35,6 +35,14 @@ task_list = [
     "semantic-segmentation",
 ]
 
+# These are NLP model names that have a mismatch between tokenizer
+# outputs and the model inputs, but do not fall under a particular
+# model task. If a huge number of models that can be grouped
+# in a common category fall under this list, a new meta_constructor
+# should be created for them.
+update_tokenizer_input_names = [
+    "hf_paraphrase-multilingual-MiniLM-L12-v2",
+]
 
 def build_repo_to_model_map():
     # The elements of the list are 2-tuples,
@@ -113,8 +121,10 @@ class HfModelWithTokenizers(HfDownloadableModel):
         # At this point, tokenized should be false, so a check is redundant.
         tokenizer = AutoTokenizer.from_pretrained(self.model_repo_path, cache_dir=self.cache_dir)
 
+        if self.name in update_tokenizer_input_names:
+            tokenizer.model_input_names = ['input_ids', 'attention_mask']
 
-        tokens = tokenizer(prompt, return_tensors="pt")
+        tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
         inputs = (*list(tokens.values()),)
 
         self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
@@ -134,7 +144,7 @@ class HfModelMultipleChoice(HfDownloadableModel):
 
         # For Deberta/Roberta Models, the ONNX export will have a mismatch in the number of inputs.
         # See https://stackoverflow.com/questions/75948679/deberta-onnx-export-does-not-work-for-token-type-ids.
-        if "deberta" in self.name or "roberta" in self.name:
+        if "deberta" in self.name or "roberta" in self.name or self.name in update_tokenizer_input_names:
             tokenizer.model_input_names = ['input_ids', 'attention_mask']
 
         tokens = tokenizer([[prompt, candidate1], [prompt, candidate2]], return_tensors="pt", padding=True)
