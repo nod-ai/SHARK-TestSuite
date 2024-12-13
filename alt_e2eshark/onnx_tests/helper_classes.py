@@ -238,14 +238,13 @@ class AzureDownloadableModel(OnnxModelInfo):
 
 class SiblingModel(OnnxModelInfo):
     """convenience class for re-using an onnx model from another 'sibling' test"""
-
-    def __init__(self, og_model_info_class: type, og_name: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, og_model_info_class: type, og_name: str, name, onnx_model_path, opset_version = None):
         # additionally store an instance of the sibling test
-        run_dir = Path(self.model).parents[1]
+        run_dir = Path(onnx_model_path).parent
         og_model_path = os.path.join(run_dir, og_name)
         self.sibling_inst = og_model_info_class(og_name, og_model_path)
         self.opset_version = self.sibling_inst.opset_version
+        super().__init__(name, onnx_model_path, opset_version)
 
     def construct_model(self):
         if not os.path.exists(self.sibling_inst.model):

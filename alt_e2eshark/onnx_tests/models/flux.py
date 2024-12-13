@@ -33,12 +33,15 @@ class FluxTransformerModelInfo(OnnxModelInfo):
         # part of the saftensors files.
         self.param_path = str(Path(onnx_model_path) / "model_params.irpa")
         # these are customizable:
+        self.dynamic = False
+        self.dynamo = False
         self.bs = 1
         self.max_len = 512
         self.img_height = 1024
         self.img_width = 1024
         self.compression_factor = 8
         self.torch_dtype = torch.float32
+        self.update_customizable_vals()
         # these are determined from above
         self.latent_h = self.img_height // self.compression_factor
         self.latent_w = self.img_width // self.compression_factor
@@ -51,6 +54,10 @@ class FluxTransformerModelInfo(OnnxModelInfo):
             "latent_dim": self.latent_dim,
             "L": self.max_len,
         }
+    
+    def update_customizable_vals(self):
+        """override to modify dynamic, dyanmo, bs, max_len, img_height, img_width, compression_factor, or torch_dtype"""
+        pass
 
     def update_extra_options(self):
         # we decided to set `export_params=False` and `do_constant_folding=False`
@@ -63,30 +70,34 @@ class FluxTransformerModelInfo(OnnxModelInfo):
         # The compile flags for rocm match what we are using for similar models.
         # Lastly, we add some runtime options specifically to point to the irpa files
         # generated for this test.
-        rocm_compile_flags = (
-            "iree-execution-model=async-external",
-            "iree-global-opt-propagate-transposes=1",
-            "iree-opt-const-eval=0",
-            "iree-opt-outer-dim-concat=1",
-            "iree-opt-aggressively-propagate-transposes=1",
-            "iree-dispatch-creation-enable-aggressive-fusion",
-            "iree-codegen-llvmgpu-use-vector-distribution=1",
-            "iree-llvmgpu-enable-prefetch=1",
-            "iree-codegen-gpu-native-math-precision=1",
-            "iree-hip-legacy-sync=0",
-            "iree-opt-data-tiling=0",
-            "iree-vm-target-truncate-unsupported-floats",
-            "iree-hal-force-indirect-command-buffers",
-            "iree-preprocessing-pass-pipeline="
-            "'builtin.module(util.func(iree-global-opt-raise-special-ops, iree-flow-canonicalize), "
-            "iree-preprocessing-transpose-convolution-pipeline, "
-            "iree-preprocessing-pad-to-intrinsics, "
-            "util.func(iree-preprocessing-generalize-linalg-matmul-experimental))'",
-            "iree-dispatch-creation-enable-fuse-horizontal-contractions=1",
-        )
+        if self.dynamic:
+            rocm_compile_flags = tuple()
+        else:
+            rocm_compile_flags = (
+                "iree-execution-model=async-external",
+                "iree-global-opt-propagate-transposes=1",
+                "iree-opt-const-eval=0",
+                "iree-opt-outer-dim-concat=1",
+                "iree-opt-aggressively-propagate-transposes=1",
+                "iree-dispatch-creation-enable-aggressive-fusion",
+                "iree-codegen-llvmgpu-use-vector-distribution=1",
+                "iree-llvmgpu-enable-prefetch=1",
+                "iree-codegen-gpu-native-math-precision=1",
+                "iree-hip-legacy-sync=0",
+                "iree-opt-data-tiling=0",
+                "iree-vm-target-truncate-unsupported-floats",
+                "iree-hal-force-indirect-command-buffers",
+                "iree-preprocessing-pass-pipeline="
+                "'builtin.module(util.func(iree-global-opt-raise-special-ops, iree-flow-canonicalize), "
+                "iree-preprocessing-transpose-convolution-pipeline, "
+                "iree-preprocessing-pad-to-intrinsics, "
+                "util.func(iree-preprocessing-generalize-linalg-matmul-experimental))'",
+                "iree-dispatch-creation-enable-fuse-horizontal-contractions=1",
+            )
         self.extra_options = ExtraOptions(
             import_model_options=ImporterOptions(
                 externalize_inputs_threshold=7,
+                num_elements_threshold=32,
                 externalize_params=True,
                 large_model=True,
             ),
@@ -154,30 +165,40 @@ class FluxTransformerModelInfo(OnnxModelInfo):
             "txt_ids",
             "guidance",
         ]
-        dynamic_axes = {
-            "hidden_states": {0: "B", 1: "latent_dim"},
-            "encoder_hidden_states": {0: "B", 1: "L"},
-            "pooled_projections": {0: "B"},
-            "timestep": {0: "B"},
-            "img_ids": {0: "latent_dim"},
-            "txt_ids": {0: "L"},
-            "guidance": {0: "B"},
-        }
+
+        if self.dynamic:
+            dynamic_axes = {
+                "hidden_states": {0: "B", 1: "latent_dim"},
+                "encoder_hidden_states": {0: "B", 1: "L"},
+                "pooled_projections": {0: "B"},
+                "timestep": {0: "B"},
+                "img_ids": {0: "latent_dim"},
+                "txt_ids": {0: "L"},
+                "guidance": {0: "B"},
+            }
+        else:
+            dynamic_axes = {name : {} for name in input_names}
+
         output_names = ["latent"]
+
         sample_inputs = self.construct_inputs().data
+
+        print("exporting hf model to onnx (this might take a while)...")
         with torch.inference_mode():
-            print("exporting hf model to onnx (this might take a while)...")
             torch.onnx.export(
                 model,
                 sample_inputs,
                 self.model,
                 export_params=False,
                 do_constant_folding=False,
+                keep_initializers_as_inputs=True,
+                opset_version=19,
+                dynamo=self.dynamo,
                 input_names=input_names,
                 output_names=output_names,
                 dynamic_axes=dynamic_axes,
             )
-            print("onnx model generated.")
+        print("onnx model generated.")
 
         if not os.path.isfile(self.model):
             raise RuntimeError(
@@ -212,7 +233,7 @@ class FluxTransformerModelInfo(OnnxModelInfo):
         )
 
         def d(dim: Union[str, int]) -> Union[str, int]:
-            if leave_dynamic or isinstance(dim, int):
+            if (leave_dynamic and self.dynamic) or isinstance(dim, int):
                 return dim
             return self.dim_param_dict[dim]
 
