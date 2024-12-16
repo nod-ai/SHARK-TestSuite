@@ -33,8 +33,7 @@ from iree import runtime as ireert
 def flag(arg : str) -> str:
     if arg.startswith("--"):
         return arg
-    else:
-        return f'--{arg}'
+    return f'--{arg}'
 class SimpleIREEBackend(BackendBase):
     '''This backend uses iree to compile and run MLIR modules for a specified hal_target_backend'''
     def __init__(self, *, device="local-task", hal_target_backend="llvm-cpu", extra_args : List[str] = None):
