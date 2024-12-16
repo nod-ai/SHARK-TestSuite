@@ -6,6 +6,7 @@
 
 name: ONNX Zoom model Test Suite
 on:
+  pull_request:
   workflow_dispatch:
   schedule:
   # Runs at 2:30 AM PST
