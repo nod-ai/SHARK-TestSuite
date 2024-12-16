@@ -1,5 +1,6 @@
 import os
 import torch
+from transformers import CLIPTokenizer, T5TokenizerFast, CLIPTextModel, T5EncoderModel
 from diffusers import FluxTransformer2DModel
 from e2e_testing.framework import (
     OnnxModelInfo,
@@ -54,7 +55,7 @@ class FluxTransformerModelInfo(OnnxModelInfo):
             "latent_dim": self.latent_dim,
             "L": self.max_len,
         }
-    
+
     def update_customizable_vals(self):
         """override to modify dynamic, dyanmo, bs, max_len, img_height, img_width, compression_factor, or torch_dtype"""
         pass
@@ -166,8 +167,8 @@ class FluxTransformerModelInfo(OnnxModelInfo):
             "guidance",
         ]
 
-        if self.dynamic:
-            dynamic_axes = {
+        dynamic_axes = (
+            {
                 "hidden_states": {0: "B", 1: "latent_dim"},
                 "encoder_hidden_states": {0: "B", 1: "L"},
                 "pooled_projections": {0: "B"},
@@ -176,8 +177,9 @@ class FluxTransformerModelInfo(OnnxModelInfo):
                 "txt_ids": {0: "L"},
                 "guidance": {0: "B"},
             }
-        else:
-            dynamic_axes = {name : {} for name in input_names}
+            if self.dynamic
+            else {}
+        )
 
         output_names = ["latent"]
 
@@ -259,3 +261,147 @@ class FluxTransformerModelInfo(OnnxModelInfo):
 
 
 register_test(FluxTransformerModelInfo, "flux_1_dev_transformer")
+
+
+class FluxTextEncoderModelInfo(FluxTransformerModelInfo):
+    def update_customizable_vals(self):
+        self.model_dir = "text_encoder"
+        self.dynamo = False
+        self.dynamic = True
+        self.cls = CLIPTextModel
+        self.bs = 1
+        self.max_len = 77
+        self.externalize_params = False
+
+    def update_extra_options(self):
+        if not self.externalize_params:
+            self.extra_options = ExtraOptions()
+            return
+        importer_options = ImporterOptions(
+            externalize_params=True,
+            externalize_inputs_threshold=1,
+        )
+        runtime_options = RuntimeOptions(
+            common_extra_args=(
+                f"parameters=model={self.param_path} ",
+                f'parameters=model={Path(self.model).parent / "model.torch_onnx_params.irpa"}',
+            )
+        )
+        self.extra_options = ExtraOptions(
+            import_model_options=importer_options,
+            compiled_inference_options=runtime_options,
+        )
+
+    def update_dim_param_dict(self):
+        self.dim_param_dict = {"B": 1}
+
+    def construct_inputs(self):
+        return TestTensors(
+            (torch.zeros(self.dim_param_dict["B"], self.max_len, dtype=torch.int32),)
+        )
+
+    def get_signature(self, *, from_inputs=True, leave_dynamic=False):
+        def d(dim: Union[str, int]) -> Union[str, int]:
+            if (leave_dynamic and self.dynamic) or isinstance(dim, int):
+                return dim
+            return self.dim_param_dict[dim]
+
+        B = d("B")
+        if from_inputs:
+            return [[B, self.max_len]], [[torch.int32]]
+
+        return [[B, self.max_len, 768], [B, 768]], [
+            [self.torch_dtype, self.torch_dtype]
+        ]
+
+    def construct_model(self):
+        if os.path.isfile(self.model):
+            return
+
+        model = self.cls.from_pretrained(
+            self.hf_model_path,
+            subfolder=self.model_dir,
+            cache_dir=self.cache_dir,
+            torch_dtype=self.torch_dtype,
+        )
+
+        if self.externalize_params:
+            try:
+                from iree.turbine.aot import save_module_parameters
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    "The package iree-turbine (try pip install iree-turbine) "
+                    "is used to save hf model parameters to irpa format for flux."
+                ) from e
+            save_module_parameters(self.param_path, model)
+        input_names = ["input_ids"]
+        dynamic_axes = {"input_ids": {0: "B"}} if self.dynamic else {}
+        output_names = ["last_hidden_state"]
+        sample_inputs = self.construct_inputs().data
+
+        # CLIP export requires nightly pytorch due to bug in onnx parser
+        with torch.inference_mode():
+            # y = model.forward(sample_inputs[0])
+            # for key, value in y.items():
+            #     print(f'{key} : {value.shape}, {value.dtype}')
+            torch.onnx.export(
+                model,
+                sample_inputs,
+                self.model,
+                export_params=(not self.externalize_params),
+                do_constant_folding=(not self.externalize_params),
+                opset_version=19,
+                dynamo=self.dynamo,
+                input_names=input_names,
+                output_names=output_names,
+                dynamic_axes=dynamic_axes,
+            )
+
+        if not os.path.isfile(self.model):
+            raise RuntimeError(
+                f"Torch onnx export failed to produce an onnx model at {self.model}"
+            )
+
+    def forward(self, inputs):
+        model = self.cls.from_pretrained(
+            self.hf_model_path,
+            subfolder=self.model_dir,
+            cache_dir=self.cache_dir,
+            torch_dtype=self.torch_dtype,
+        )
+        data = inputs.to_torch().data
+        return TestTensors(
+            model.forward(
+                data[0],
+                return_dict=False,
+            )
+        )
+
+
+register_test(FluxTextEncoderModelInfo, "flux_1_dev_clip")
+
+
+class FluxTextEncoder2ModelInfo(FluxTextEncoderModelInfo):
+    def update_customizable_vals(self):
+        self.model_dir = "text_encoder_2"
+        self.dynamo = False
+        self.dynamic = True
+        self.cls = T5EncoderModel
+        self.bs = 1
+        self.max_len = 512
+        self.externalize_params = True
+
+    def get_signature(self, *, from_inputs=True, leave_dynamic=False):
+        def d(dim: Union[str, int]) -> Union[str, int]:
+            if (leave_dynamic and self.dynamic) or isinstance(dim, int):
+                return dim
+            return self.dim_param_dict[dim]
+
+        B = d("B")
+        if from_inputs:
+            return [[B, self.max_len]], [[torch.int32]]
+
+        return [[B, self.max_len, 4096]], [[self.torch_dtype]]
+
+
+register_test(FluxTextEncoder2ModelInfo, "flux_1_dev_t5")
