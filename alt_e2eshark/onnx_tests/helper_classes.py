@@ -83,7 +83,8 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         self.is_validated = is_validated
         self.model_url = model_url
         self.cache_dir = os.path.join(parent_cache_dir, name)
-
+        if not os.path.exists(self.cache_dir):
+            os.mkdir(self.cache_dir)
         super().__init__(name, onnx_model_path, opset_version)
 
     def unzip_model_archive(self, tar_path):
@@ -110,7 +111,10 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
     def update_input_name_to_shape_map(self):
         turnkey_dict = {}
         self.input_name_to_shape_map = {}
-        with open(os.path.join(self.cache_dir, 'turnkey_stats.yaml'), 'rb') as stream:
+        yaml_path = os.path.join(self.cache_dir, 'turnkey_stats.yaml')
+        if not os.path.isfile(yaml_path):
+            self.download_model_yaml(self.model_url)
+        with open(yaml_path, 'rb') as stream:
             turnkey_dict = yaml.safe_load(stream)
         if 'onnx_input_dimensions' in turnkey_dict.keys():
             for dim_param in turnkey_dict['onnx_input_dimensions']:
