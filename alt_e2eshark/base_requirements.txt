@@ -11,10 +11,4 @@ huggingface-hub
 sentencepiece
 accelerate
 auto-gptq
-optimum
-sentence_transformers
 azure-storage-blob
-compressed_tensors
-fugashi
-tf-keras
-timm
