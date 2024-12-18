@@ -26,17 +26,13 @@ from e2e_testing.onnx_utils import (
 # be set at shell level.
 import os
 parent_cache_dir = os.getenv("CACHE_DIR")
-if not parent_cache_dir:
-    raise RuntimeError(
-        "Please specify a cache directory path in the CACHE_DIR environment variable for storing large model files."
-    )
 
-os.environ['HF_HOME'] = parent_cache_dir
-os.environ['HUGGINGFACE_HUB_CACHE'] = parent_cache_dir
+os.environ['HF_HOME'] = "" if parent_cache_dir is None else parent_cache_dir
+os.environ['HUGGINGFACE_HUB_CACHE'] = "" if parent_cache_dir is None else parent_cache_dir
 
 
 try:
-    import optimum.exporters.onnx as opt_onnx
+    import optimum.exporters.onnx as exporter
 except ImportError:
     print("Failed to import ONNX Exporter module from optimum. Please install through `pip install optimum[exporters]`.")
 
@@ -63,7 +59,7 @@ class HfDownloadableModel(OnnxModelInfo):
 
     def export_model(self):
         model_dir = str(Path(self.model).parent)
-        opt_onnx.main_export(
+        exporter.main_export(
             self.model_repo_path,
             output=model_dir,
             task=self.task,
