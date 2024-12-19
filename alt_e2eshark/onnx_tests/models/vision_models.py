@@ -44,3 +44,13 @@ register_test(constructor3, "ResNet50_vaiq_no_opt")
 # truncated_constructor = get_truncated_constructor(TruncatedModel, AzureDownloadableModel, "ResNet50_vaiq")
 # for n in range(4, 10):
 #     register_test(truncated_constructor(n,""), f"ResNet50_vaiq_trunc_{n}")
+
+# python run.py --mode=cl-onnx-iree  --torchtolinalg -t convnext_nano.d1h_in1k -v 
+# {'Conv': 46, 'Transpose': 38, 'ReduceMean': 38, 'Sub': 19, 'Constant': 80, 'Pow': 19, 'Add': 66, 
+# 'Sqrt': 19, 'Div': 33, 'Mul': 61, 'Erf': 14, 'GlobalAveragePool': 1, 'Flatten': 1, 'Gemm': 1}
+
+# from ..helper_classes import TruncatedModel, get_truncated_constructor
+# truncated_constructor = get_truncated_constructor(TruncatedModel, AzureDownloadableModel, "convnext_nano.d1h_in1k")
+# register_test(truncated_constructor(1,"Transpose"), f"convnext_nano.d1h_in1k_trunc_Transpose{1}")
+# for n in range(1, 4):
+#     register_test(truncated_constructor(n,"Conv"), f"convnext_nano.d1h_in1k_trunc_conv{n}")
