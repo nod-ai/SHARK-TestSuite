@@ -12,7 +12,7 @@ from ..helper_classes import HfDownloadableModel
 from e2e_testing.registry import register_test
 from e2e_testing.storage import TestTensors, load_test_txt_file
 
-from transformers import AutoTokenizer, BartTokenizer, BertTokenizer, RobertaTokenizer, XLMRobertaTokenizer
+from transformers import AutoTokenizer, BartTokenizer, BertTokenizer, PhobertTokenizer, RobertaTokenizer, XLMRobertaTokenizer
 from torchvision import transforms
 from PIL import Image
 
@@ -42,7 +42,39 @@ task_list = [
 # should be created for them.
 update_tokenizer_input_names = [
     "hf_paraphrase-multilingual-MiniLM-L12-v2",
-    "hf_all-MiniLM-L6-v2"
+    "hf_all-MiniLM-L6-v2",
+    "hf_jina-embeddings-v2-small-en",
+    "hf_all-MiniLM-L12-v2",
+    "hf_msmarco-MiniLM-L6-cos-v5",
+    "hf_paraphrase-MiniLM-L6-v2",
+    "hf_multi-qa-MiniLM-L6-cos-v",
+    "hf_bge-small-en-v1.5",
+    "hf_llm-embedder",
+    "hf_bert-base-nli-mean-tokens",
+    "hf_LaBSE-en-ru",
+    "hf_bge-large-en-v1.5",
+    "hf_bert-base-turkish-cased-mean-nli-stsb-tr",
+    "hf_mxbai-embed-large-v1",
+    "hf_bge-base-en-v1.5",
+    "hf_phobert-large-finetuned",
+    "hf_bertweet-base-sentiment-analysis",
+    "hf_bertweet-base-emotion-analysis",
+    "hf_phobert-base-finetuned",
+    "hf_bge-large-zh-v1.5",
+    "hf_UAE-Large-V1",
+    "hf_GIST-small-Embedding-v0",
+    "hf_rubert-tiny2",
+    "hf_bge-small-en",
+    "hf_bge-large-en",
+    "hf_GIST-Embedding-v0",
+    "hf_GIST-large-Embedding-v0",
+    "hf_paraphrase-MiniLM-L3-v2",
+    "hf_LaBSE",
+    "hf_opensearch-neural-sparse-encoding-doc-v2-distill",
+    "hf_snowflake-arctic-embed-m",
+    "hf_phobert-base-v2",
+    "hf_phobert-base",
+    "hf_bertweet-base",
 ]
 
 def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
@@ -58,6 +90,9 @@ def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
 
     if "roberta" in name.lower():
         return RobertaTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
+
+    if "phobert" in name.lower():
+        return PhobertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
 
     if "bert" in name.lower():
         return BertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
