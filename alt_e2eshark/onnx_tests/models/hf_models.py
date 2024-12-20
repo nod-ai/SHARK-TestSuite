@@ -218,6 +218,12 @@ class HfModelWithImageSetup(HfDownloadableModel):
 
         model_dir = str(Path(self.model).parent)
         inputs = setup_test_image()
+
+        # TODO: Figure out a way to remove the hardcoded
+        # input name ('pixel_values') and load from model
+        # config/input list.
+        self.input_name_to_shape_map = {'pixel_values': inputs.shape}
+
         test_tensors = TestTensors((inputs,))
         test_tensors.save_to(model_dir)
         return test_tensors
@@ -234,7 +240,7 @@ for t in model_repo_map.keys():
             | "token-classification"
         ):
             register_test(meta_constructor_tokenizer(t), t)
-        case "image-classification" | "object-detection" | "image-segmentation":
+        case "image-classification" | "object-detection" | "image-segmentation" | "semantic-segmentation":
             register_test(meta_constructor_cv(t), t)
         case "multiple-choice":
             register_test(meta_constructor_multiple_choice(t), t)
