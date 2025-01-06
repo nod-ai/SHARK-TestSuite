@@ -339,7 +339,7 @@ def _get_argparse():
         help="specifies the target chip (gfx942 for hip)",
     )
     parser.add_argument(
-        "-ica",
+        "-a",
         "--iree-compile-args",
         nargs="*",
         default = None,
@@ -356,8 +356,10 @@ def _get_argparse():
         "-m",
         "--mode",
         choices=["onnx-iree", "cl-onnx-iree", "ort-ep"],
-        default="onnx-iree",
-        help="onnx-iree=onnx->torch-mlir->IREE, ort=onnx->run with custom ORT EP inference session",
+        default="cl-onnx-iree",
+        help="(cl-)onnx-iree : onnx->torch-mlir->IREE, "
+             "cl-onnx-iree runs this through command line tools "
+             "ort : onnx->run with custom ORT EP inference session",
     )
     parser.add_argument(
         "--torchtolinalg",
