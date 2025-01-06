@@ -213,7 +213,7 @@ class CLOnnxTestConfig(TestConfig):
 
     def benchmark(self, artifact: str, inputs: TestTensors, repetitions: int = 5, *, func_name=None, extra_options=None) -> float:
         run_dir = Path(artifact).parent
-        report_json = run_dir.joinpath("detail", "benchmark.json")
+        report_json = run_dir.joinpath("benchmark.json")
         func = self.backend.load(artifact,func_name=func_name, extra_options=extra_options)
         command = func(inputs)
         # replace "iree-run-module" with "iree-benchmark-module"
