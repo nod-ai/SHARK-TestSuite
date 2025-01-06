@@ -157,6 +157,7 @@ def run_tests(
     warnings.filterwarnings("ignore")
 
     if verbose:
+        warnings.simplefilter("once", UserWarning)
         print(f"Stages to be run: {stages}")
         print(f'Test list: {[test.unique_name for test in test_list]}')
 

@@ -20,6 +20,7 @@ import json
 import shutil
 import warnings
 
+
 BACKEND_LEGAL_OPS = [
     "aten.flatten.using_ints",
     "aten.unflatten.int",
@@ -190,7 +191,7 @@ class CLOnnxTestConfig(TestConfig):
         opt_tool = "torch-mlir-opt"
         use_tmopt = shutil.which("torch-mlir-opt")
         if use_tmopt is None:
-            warnings.warn("Could not find command line tool 'torch-mlir-opt'! Defaulting to 'iree-opt'.")
+            warnings.warn("\nCould not find command line tool 'torch-mlir-opt'. Defaulting to 'iree-opt'.")
             opt_tool = "iree-opt"
         command0 = [opt_tool, f"-pass-pipeline='{onnx_to_torch_pipeline}'", mlir_module, "-o", torch_ir]
         command1 = [opt_tool, f"-pass-pipeline='{self.pass_pipeline}'", torch_ir, "-o", linalg_ir]
