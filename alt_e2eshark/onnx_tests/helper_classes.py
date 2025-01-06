@@ -37,19 +37,15 @@ class HfDownloadableModel(OnnxModelInfo):
     """This class should be used to download models from Huggingface model hub."""
 
     def __init__(self, full_model_path, task_name, name, onnx_model_path):
-        # Checking if CACHE_DIR is set here will allow us to redefine
-        # HF_HOME and HUGGINGFACE_HUB_CACHE without requiring them to
-        # be set at shell level.
         parent_cache_dir = os.getenv("CACHE_DIR")
         if not parent_cache_dir:
             raise RuntimeError(
                 "Please specify a cache directory path in the CACHE_DIR environment variable "
                 "for storing large model files."
             )
-        os.environ["HF_HOME"] = "" if parent_cache_dir is None else parent_cache_dir
-        os.environ["HUGGINGFACE_HUB_CACHE"] = (
-            "" if parent_cache_dir is None else parent_cache_dir
-        )
+        # set HF cache explicitly to match provided CACHE_DIR
+        os.environ["HF_HOME"] = parent_cache_dir
+        os.environ["HUGGINGFACE_HUB_CACHE"] = parent_cache_dir
         # These tests require optimum. Importing here to avoid raising an exception on importing this file.
         try:
             from optimum.exporters.onnx import main_export
