@@ -41,6 +41,11 @@ class HfDownloadableModel(OnnxModelInfo):
         # HF_HOME and HUGGINGFACE_HUB_CACHE without requiring them to
         # be set at shell level.
         parent_cache_dir = os.getenv("CACHE_DIR")
+        if not parent_cache_dir:
+            raise RuntimeError(
+                "Please specify a cache directory path in the CACHE_DIR environment variable "
+                "for storing large model files."
+            )
         os.environ["HF_HOME"] = "" if parent_cache_dir is None else parent_cache_dir
         os.environ["HUGGINGFACE_HUB_CACHE"] = (
             "" if parent_cache_dir is None else parent_cache_dir
@@ -57,12 +62,6 @@ class HfDownloadableModel(OnnxModelInfo):
         opset_version = 21
         self.model_repo_path = full_model_path.replace("hf_", "")
         self.task = task_name
-        parent_cache_dir = os.getenv("CACHE_DIR")
-        if not parent_cache_dir:
-            raise RuntimeError(
-                "Please specify a cache directory path in the CACHE_DIR environment variable "
-                "for storing large model files."
-            )
         # Appending the test name just adds one redundant level of nesting to the cache dir.
         # Use the value of the CACHE_DIR directly, the segregation of distinct models should
         # be handled by Huggingface itself.
