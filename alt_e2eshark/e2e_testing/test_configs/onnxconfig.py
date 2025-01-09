@@ -208,7 +208,7 @@ class CLOnnxTestConfig(TestConfig):
         func = self.backend.load(artifact, func_name=func_name, extra_options=extra_options)
         command = func(inputs)
         num_outputs = len(self.tensor_info_dict[test_name][0])
-        command.extend([f"--output=@'{os.path.join(run_dir, f'output.{i}.bin')}'" for i in range(num_outputs)])
+        command.extend([f"--output=@{os.path.join(run_dir, f'output.{i}.bin')}" for i in range(num_outputs)])
         run_command_and_log(command, save_to=run_dir, stage_name="compiled_inference")
         return TestTensors.load_from(self.tensor_info_dict[test_name][0], self.tensor_info_dict[test_name][1], run_dir, "output")
 
@@ -219,7 +219,7 @@ class CLOnnxTestConfig(TestConfig):
         command = func(inputs)
         # replace "iree-run-module" with "iree-benchmark-module"
         command[0] = "iree-benchmark-module"
-        command.extend([f"--benchmark_repetitions={repetitions}", "--device_allocator=caching", f"--benchmark_out='{report_json}'", "--benchmark_out_format=json"])
+        command.extend([f"--benchmark_repetitions={repetitions}", "--device_allocator=caching", f"--benchmark_out={report_json}", "--benchmark_out_format=json"])
         run_command_and_log(command, save_to=run_dir, stage_name="benchmark")
         # load benchmark time from report_json
         with open(report_json) as contents:

@@ -11,20 +11,20 @@ import shutil
 import subprocess
 from e2e_testing.framework import result_comparison
 
-from typing import List, Union
+from typing import List
 
-def run_command_and_log(command: Union[str, List[str]], save_to: str, stage_name: str) -> None:
-    """ Runs command through subprocess.run and logs the command and error details if present"""
-    script = command if isinstance(command, str) else subprocess.list2cmdline(command)
+def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> None:
+    """ Runs command through subprocess.run and logs the command and error details (if present)"""
     # setup a commands subdirectory (if it doesn't exist)
     commands_dir = os.path.join(save_to, "commands")
     os.makedirs(commands_dir, exist_ok=True)
     commands_log = os.path.join(commands_dir, f"{stage_name}.commands.log")
     # log the command
+    script = subprocess.list2cmdline(command)
     with open(commands_log, "w") as file:
         file.write(script)
     # run the command
-    ret = subprocess.run(script, shell=True, capture_output=True)
+    ret = subprocess.run(command, env=os.environ, capture_output=True)
     # if an error occured, log error details and raise an exception
     if ret.returncode != 0:
         # setup a detail subdirectory (if it doesn't exist)

@@ -123,13 +123,13 @@ class CLIREEBackend(BackendBase):
             test_specific_args += list(extra_options.backend_specific_flags[self.hal_target_backend])
         run_dir = Path(vmfb_path).parent
         def func(x: TestTensors) -> List[str]:
-            command = ["iree-run-module", f"--module='{vmfb_path}'", f"--device={self.device}"]
+            command = ["iree-run-module", f"--module={vmfb_path}", f"--device={self.device}"]
             command.extend([flag(arg) for arg in test_specific_args])
             if func_name:
-                command.append(f"--function='{func_name}'")
+                command.append(f"--function={func_name}")
             torch_inputs = x.to_torch().data
             for index, input in enumerate(torch_inputs):
-                command.append(f"--input='{get_shape_string(input)}=@{run_dir}/input.{index}.bin'")
+                command.append(f"--input={get_shape_string(input)}=@{run_dir}/input.{index}.bin")
             return command
         return func
             
