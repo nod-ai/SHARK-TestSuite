@@ -79,7 +79,7 @@ class LlamaModelInfo(OnnxModelInfo):
             (
                 torch.ones(*(shapes[0]), dtype=dtypes[0]),
                 torch.ones(*(shapes[1]), dtype=dtypes[1]),
-                torch.tensor(0).to(dtype=dtypes[2])
+                torch.tensor(0, dtype=dtypes[2]),
             )
         )
 
