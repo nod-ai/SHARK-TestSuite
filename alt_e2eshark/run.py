@@ -65,11 +65,11 @@ def get_tests(groups: Literal["all", "combinations", "operators"], test_filter: 
 
     # importing the test generating files will register them to GLOBAL_TEST_LIST
     if combinations:
-        from onnx_tests.combinations import model
+        import onnx_tests.combinations
     if models:
-        from onnx_tests.models import model
+        import onnx_tests.models
     if operators:
-        from onnx_tests.operators import model
+        import onnx_tests.operators
 
     pre_test_list = GLOBAL_TEST_LIST
 
