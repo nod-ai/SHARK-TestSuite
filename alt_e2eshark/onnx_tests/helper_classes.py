@@ -43,18 +43,6 @@ class HfDownloadableModel(OnnxModelInfo):
                 "Please specify a cache directory path in the CACHE_DIR environment variable "
                 "for storing large model files."
             )
-        # set HF cache explicitly to match provided CACHE_DIR
-        os.environ["HF_HOME"] = parent_cache_dir
-        os.environ["HUGGINGFACE_HUB_CACHE"] = parent_cache_dir
-        # These tests require optimum. Importing here to avoid raising an exception on importing this file.
-        try:
-            from optimum.exporters.onnx import main_export
-        except ImportError:
-            print(
-                "Failed to import ONNX Exporter module from optimum. "
-                "Please install through `pip install optimum[exporters]`."
-            )
-        self.export = main_export
         opset_version = 21
         self.model_repo_path = full_model_path.replace("hf_", "")
         self.task = task_name
@@ -71,9 +59,23 @@ class HfDownloadableModel(OnnxModelInfo):
             import_model_options=ImporterOptions(opset_version=21)
         )
 
-    def export_model(self):
+    def export_model(self, optim_level: str | None = None):
         model_dir = str(Path(self.model).parent)
-        self.export(
+
+        # set HF cache explicitly to match provided CACHE_DIR
+        os.environ["HF_HOME"] = self.cache_dir
+        os.environ["HUGGINGFACE_HUB_CACHE"] = self.cache_dir
+
+        # These tests require optimum. Importing here to avoid raising an exception on importing this file.
+        try:
+            from optimum.exporters.onnx import main_export
+        except ImportError:
+            print(
+                "Failed to import ONNX Exporter module from optimum. "
+                "Please install through `pip install optimum[exporters]`."
+            )
+
+        main_export(
             self.model_repo_path,
             output=model_dir,
             task=self.task,
@@ -81,6 +83,7 @@ class HfDownloadableModel(OnnxModelInfo):
             local_files_only=False,
             monolith=True,
             framework="pt",
+            optimize=optim_level,
         )
 
     def construct_model(self):
@@ -128,7 +131,8 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
         self.model_url = model_url
         self.cache_dir = os.path.join(parent_cache_dir, name)
         os.makedirs(self.cache_dir, exist_ok=True)
-        self.yaml_path = self.get_model_yaml()
+        # Validated models do not need a YAML file, we get the inputs directly.
+        self.yaml_path = self.get_model_yaml() if not is_validated else None
         # super().__init__ will also call all update methods
         super().__init__(name, onnx_model_path, opset_version)
 
@@ -163,9 +167,8 @@ class OnnxModelZooDownloadableModel(OnnxModelInfo):
             return
         turnkey_dict = dict()
         self.input_name_to_shape_map = dict()
-        if self.yaml_path:
-            with open(self.yaml_path, "rb") as stream:
-                turnkey_dict = yaml.safe_load(stream)
+        with open(self.yaml_path, "rb") as stream:
+            turnkey_dict = yaml.safe_load(stream)
         if "onnx_input_dimensions" in turnkey_dict.keys():
             for dim_param in turnkey_dict["onnx_input_dimensions"]:
                 self.input_name_to_shape_map[dim_param] = turnkey_dict[
