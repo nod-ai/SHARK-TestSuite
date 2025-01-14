@@ -13,8 +13,9 @@ from e2e_testing.framework import result_comparison
 
 from typing import List
 
+
 def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> None:
-    """ Runs command through subprocess.run and logs the command and error details (if present)"""
+    """Runs command through subprocess.run and logs the command and error details (if present)"""
     # setup a commands subdirectory (if it doesn't exist)
     commands_dir = os.path.join(save_to, "commands")
     os.makedirs(commands_dir, exist_ok=True)
@@ -23,11 +24,19 @@ def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> No
     script = subprocess.list2cmdline(command)
     with open(commands_log, "w") as file:
         file.write(script)
+    # Although we don't currently host the test suite on any machines which take external requests,
+    # we should still check for potentially dangrous scripts.
+    # A user can append to the compile command with the flag `--extra-compile-args`
+    # E.g. we should avoid examples like:
+    # `python run.py -t add_test -i "&& <malicious command>"`
+    assert (
+        script.count("&&") == 0
+    ), f"Script may be dangrous to run as it contains '&&'.\nSee {commands_log}"
     # run the command
-    ret = subprocess.run(command, env=os.environ, capture_output=True)
-    # if an error occured, log error details and raise an exception
+    ret = subprocess.run(script, shell=True, capture_output=True)
+
+    # if an error occured, raise an exception
     if ret.returncode != 0:
-        # setup a detail subdirectory (if it doesn't exist)
         detail_dir = os.path.join(save_to, "detail")
         os.makedirs(detail_dir, exist_ok=True)
         detail_log = os.path.join(detail_dir, f"{stage_name}.detail.log")

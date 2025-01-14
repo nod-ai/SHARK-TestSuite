@@ -4,14 +4,16 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 import abc
-import onnxruntime as ort
-from typing import TypeVar, List
-from e2e_testing.storage import TestTensors, get_shape_string
-from e2e_testing.framework import CompiledOutput, ModelArtifact, CompilerOptions, RuntimeOptions
-from e2e_testing.logging_utils import run_command_and_log
-from onnx import ModelProto
 import os
 from pathlib import Path
+from typing import TypeVar, List
+
+from onnx import ModelProto
+import onnxruntime as ort
+
+from e2e_testing.framework import CompiledOutput, ModelArtifact, CompilerOptions, RuntimeOptions
+from e2e_testing.logging_utils import run_command_and_log
+from e2e_testing.storage import TestTensors, get_shape_string
 
 Invoker = TypeVar("Invoker")
 
@@ -25,10 +27,6 @@ class BackendBase(abc.ABC):
     @abc.abstractmethod
     def load(self, artifact: CompiledOutput, func_name: str, extra_options : RuntimeOptions) -> Invoker:
         """loads the function with name func_name from compiled artifact. This method should return a function callable from python."""
-
-
-from iree import compiler as ireec
-from iree import runtime as ireert
 
 
 def flag(arg : str) -> str:
@@ -52,6 +50,7 @@ class SimpleIREEBackend(BackendBase):
             ]
 
     def compile(self, module, *, save_to: str = None, extra_options : CompilerOptions):
+        from iree import compiler as ireec
         test_specific_args = list(extra_options.common_extra_args)
         if self.hal_target_backend in extra_options.backend_specific_flags.keys():
             test_specific_args += list(extra_options.backend_specific_flags[self.hal_target_backend])
@@ -69,6 +68,7 @@ class SimpleIREEBackend(BackendBase):
         return b
 
     def load(self, artifact, *, func_name="main", extra_options : RuntimeOptions):
+        from iree import runtime as ireert
         config = ireert.Config(self.device)
         ctx = ireert.SystemContext(config=config)
         vm_module = ireert.VmModule.copy_buffer(ctx.instance, artifact)
@@ -123,13 +123,13 @@ class CLIREEBackend(BackendBase):
             test_specific_args += list(extra_options.backend_specific_flags[self.hal_target_backend])
         run_dir = Path(vmfb_path).parent
         def func(x: TestTensors) -> List[str]:
-            command = ["iree-run-module", f"--module={vmfb_path}", f"--device={self.device}"]
+            command = ["iree-run-module", f"--module='{vmfb_path}'", f"--device={self.device}"]
             command.extend([flag(arg) for arg in test_specific_args])
             if func_name:
-                command.append(f"--function={func_name}")
+                command.append(f"--function='{func_name}'")
             torch_inputs = x.to_torch().data
             for index, input in enumerate(torch_inputs):
-                command.append(f"--input={get_shape_string(input)}=@{run_dir}/input.{index}.bin")
+                command.append(f"--input='{get_shape_string(input)}=@{run_dir}/input.{index}.bin'")
             return command
         return func
             

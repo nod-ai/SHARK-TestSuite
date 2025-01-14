@@ -3,23 +3,20 @@
 # Licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-import onnx
-from torch_mlir.extras import onnx_importer
-from torch_mlir.dialects import torch as torch_d
-from torch_mlir.ir import Context
-from e2e_testing.backends import BackendBase
-from e2e_testing.framework import TestConfig, OnnxModelInfo, Module, CompiledArtifact, ImporterOptions, CompilerOptions, RuntimeOptions
-from e2e_testing.storage import TestTensors
-from e2e_testing.logging_utils import run_command_and_log
-from torch_mlir.passmanager import PassManager
-from typing import Tuple, Any
-from onnxruntime import InferenceSession
-import os
-from pathlib import Path
 import json
+import os
 import shutil
 import warnings
+from pathlib import Path
+from typing import Tuple, Any
 
+import onnx
+from onnxruntime import InferenceSession
+
+from e2e_testing.backends import BackendBase
+from e2e_testing.framework import TestConfig, OnnxModelInfo, Module, CompiledArtifact, ImporterOptions, CompilerOptions, RuntimeOptions
+from e2e_testing.logging_utils import run_command_and_log
+from e2e_testing.storage import TestTensors
 
 BACKEND_LEGAL_OPS = [
     "aten.flatten.using_ints",
@@ -87,6 +84,9 @@ class OnnxTestConfig(TestConfig):
             self.pass_pipeline = None
 
     def import_model(self, model_info: OnnxModelInfo, *, save_to: str = None, extra_options : ImporterOptions) -> Tuple[Module, str]:
+        from torch_mlir.extras import onnx_importer
+        from torch_mlir.dialects import torch as torch_d
+        from torch_mlir.ir import Context
         model = onnx.load(model_info.model)
         if model_info.opset_version:
             model = onnx.version_converter.convert_version(
@@ -109,6 +109,7 @@ class OnnxTestConfig(TestConfig):
         return m, func_name
 
     def preprocess_model(self, mlir_module: Module, *, save_to: str = None) -> Module:
+        from torch_mlir.passmanager import PassManager
         # if the pass pipeline is empty, return the original module
         if not self.pass_pipeline:
             return mlir_module
@@ -208,7 +209,7 @@ class CLOnnxTestConfig(TestConfig):
         func = self.backend.load(artifact, func_name=func_name, extra_options=extra_options)
         command = func(inputs)
         num_outputs = len(self.tensor_info_dict[test_name][0])
-        command.extend([f"--output=@{os.path.join(run_dir, f'output.{i}.bin')}" for i in range(num_outputs)])
+        command.extend([f"--output=@'{os.path.join(run_dir, f'output.{i}.bin')}'" for i in range(num_outputs)])
         run_command_and_log(command, save_to=run_dir, stage_name="compiled_inference")
         return TestTensors.load_from(self.tensor_info_dict[test_name][0], self.tensor_info_dict[test_name][1], run_dir, "output")
 
@@ -219,7 +220,7 @@ class CLOnnxTestConfig(TestConfig):
         command = func(inputs)
         # replace "iree-run-module" with "iree-benchmark-module"
         command[0] = "iree-benchmark-module"
-        command.extend([f"--benchmark_repetitions={repetitions}", "--device_allocator=caching", f"--benchmark_out={report_json}", "--benchmark_out_format=json"])
+        command.extend([f"--benchmark_repetitions={repetitions}", "--device_allocator=caching", f"--benchmark_out='{report_json}'", "--benchmark_out_format=json"])
         run_command_and_log(command, save_to=run_dir, stage_name="benchmark")
         # load benchmark time from report_json
         with open(report_json) as contents:
