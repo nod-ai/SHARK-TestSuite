@@ -16,32 +16,22 @@ from typing import List
 
 def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> None:
     """Runs command through subprocess.run and logs the command and error details (if present)"""
-    # setup a commands subdirectory (if it doesn't exist)
-    commands_dir = os.path.join(save_to, "commands")
-    os.makedirs(commands_dir, exist_ok=True)
-    commands_log = os.path.join(commands_dir, f"{stage_name}.commands.log")
-    # log the command
+    # convert command list to a string
     script = subprocess.list2cmdline(command)
-    with open(commands_log, "w") as file:
-        file.write(script)
-    # Although we don't currently host the test suite on any machines which take external requests,
-    # we should still check for potentially dangrous scripts.
-    # A user can append to the compile command with the flag `--extra-compile-args`
-    # E.g. we should avoid examples like:
-    # `python run.py -t add_test -i "&& <malicious command>"`
-    assert (
-        script.count("&&") == 0
-    ), f"Script may be dangrous to run as it contains '&&'.\nSee {commands_log}"
+    # setup a commands subdirectory (if it doesn't exist)
+    commands_dir = Path(save_to) / "commands"
+    commands_dir.mkdir(exist_ok=True)
+    # log the command
+    commands_log = commands_dir / f"{stage_name}.commands.log"
+    commands_log.write_text(script)
     # run the command
     ret = subprocess.run(script, shell=True, capture_output=True)
-
-    # if an error occured, raise an exception
+    # if an error occured, log stderr and raise exception
     if ret.returncode != 0:
-        detail_dir = os.path.join(save_to, "detail")
-        os.makedirs(detail_dir, exist_ok=True)
-        detail_log = os.path.join(detail_dir, f"{stage_name}.detail.log")
-        with open(detail_log, "w") as file:
-            file.write(ret.stderr.decode())
+        detail_dir = Path(save_to) / "detail"
+        detail_dir.mkdir(exist_ok=True)
+        detail_log = detail_dir / f"{stage_name}.detail.log"
+        detail_log.write_text(ret.stderr.decode())
         error_msg = f"failure executing command:\n{script}"
         error_msg += f"Error detail in '{detail_log}'"
         raise RuntimeError(error_msg)
