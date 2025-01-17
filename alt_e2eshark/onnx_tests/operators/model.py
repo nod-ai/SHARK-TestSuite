@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from .add import *
+from .cast import *
 from .concat import *
 from .dynamic_quantize_linear import *
 from .pad import *
