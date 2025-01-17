@@ -98,8 +98,6 @@ jobs:
             target-chip: gfx942
             test-file: hf-token-classification-shard
             cache-dir: /data/e2eshark/shark-test-suite-models-cache
-
-	## CPU
           - name: cpu_shard1_test
             runs-on: nodai-amdgpu-mi250-x86-64
             backend: llvm-cpu
