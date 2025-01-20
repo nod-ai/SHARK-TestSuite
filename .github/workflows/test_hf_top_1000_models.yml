@@ -91,7 +91,7 @@ jobs:
          #   target-chip: gfx942
          #   test-file: hf-text-generation-shard
          #   cache-dir: /data/e2eshark/shark-test-suite-models-cache
-          - name: mi300_gpu11_test
+         - name: mi300_gpu11_test
             runs-on: nodai-amdgpu-mi300-x86-64
             backend: rocm
             device: hip
