@@ -149,23 +149,6 @@ basic_opt = []
 
 def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
     name = model_repo_path.split("/")[-1]
-    if "deberta" in name.lower():
-        return AutoTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "bart" in name.lower():
-        return BartTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "xlm" in name.lower() and "roberta" in name.lower():
-        return XLMRobertaTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "roberta" in name.lower():
-        return RobertaTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "phobert" in name.lower():
-        return PhobertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "bert" in name.lower():
-        return BertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
 
     return AutoTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
 
