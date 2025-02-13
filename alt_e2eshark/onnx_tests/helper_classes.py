@@ -88,7 +88,9 @@ class HfDownloadableModel(OnnxModelInfo):
 
     def __repr__(self):
         cls = self.__class__.__name__
-        return f"{cls} (full_model_path=hf_{self.model_repo_path}, task_name={self.task}, name={super().name}, onnx_model_path={os.path.dirname(super().model)})"
+        model_details = self.model_repo_path.split('/')
+        model_path = '/hf_'.join(model_details)
+        return f"{cls} (full_model_path={model_path}, task_name={self.task}, name={self.name}, onnx_model_path={os.path.dirname(self.model)})"
 
     def construct_model(self):
         model_dir = str(Path(self.model).parent)
@@ -107,8 +109,8 @@ class HfDownloadableModel(OnnxModelInfo):
             try:
                 self.export_model()
             except:
-                print(self)
-                raise RuntimeError("Failed to Export")
+                #print(self.__repr__())
+                raise RuntimeError("Failed to Export class: ", self)
 
             found_models = find_models(model_dir)
         if len(found_models) == 1:
