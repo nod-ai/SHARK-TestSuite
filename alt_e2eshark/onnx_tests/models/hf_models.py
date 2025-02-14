@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import requests
+import torch
 
 from pathlib import Path
 
@@ -14,11 +15,6 @@ from e2e_testing.storage import TestTensors, load_test_txt_file
 
 from transformers import (
     AutoTokenizer,
-    BartTokenizer,
-    BertTokenizer,
-    PhobertTokenizer,
-    RobertaTokenizer,
-    XLMRobertaTokenizer,
 )
 
 from torchvision import transforms
@@ -41,6 +37,7 @@ task_list = [
     "object-detection",
     "image-segmentation",
     "semantic-segmentation",
+    "audio-classification",
 ]
 
 # These are NLP model names that have a mismatch between tokenizer
@@ -148,26 +145,13 @@ basic_opt = []
 
 
 def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
+    trust_remote_code = False
+
     name = model_repo_path.split("/")[-1]
-    if "deberta" in name.lower():
-        return AutoTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
+    if 'kobert' in name.lower():
+        trust_remote_code = True
 
-    if "bart" in name.lower():
-        return BartTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "xlm" in name.lower() and "roberta" in name.lower():
-        return XLMRobertaTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "roberta" in name.lower():
-        return RobertaTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "phobert" in name.lower():
-        return PhobertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    if "bert" in name.lower():
-        return BertTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
-
-    return AutoTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir)
+    return AutoTokenizer.from_pretrained(model_repo_path, cache_dir=cache_dir, trust_remote_code=True)
 
 
 def build_repo_to_model_map():
@@ -216,6 +200,13 @@ meta_constructor_cv = lambda m_name: (
 )
 
 # Meta constructor for all multiple choice models.
+meta_constructor_random_input = lambda m_name: (
+    lambda *args, **kwargs: HfModelWithRandomInput(
+        model_repo_map[m_name][0], model_repo_map[m_name][1], *args, **kwargs
+    )
+)
+
+# Meta constructor for all multiple choice models.
 meta_constructor_multiple_choice = lambda m_name: (
     lambda *args, **kwargs: HfModelMultipleChoice(
         model_repo_map[m_name][0], model_repo_map[m_name][1], *args, **kwargs
@@ -238,6 +229,22 @@ class HfModelWithTokenizers(HfDownloadableModel):
 
         tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
         inputs = (*list(tokens.values()),)
+
+        self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
+
+        test_tensors = TestTensors(inputs)
+        return test_tensors
+
+
+class HfModelWithRandomInput(HfDownloadableModel):
+    def export_model(self, optim_level: str | None = None):
+        # We won't need optim_level.
+        del optim_level
+        super().export_model("O1" if self.name in basic_opt else None)
+
+    def construct_inputs(self):
+        inputs = tuple(torch.randn(16000) for _ in range(4))
+        print(f"{inputs=}")
 
         self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
 
@@ -334,6 +341,8 @@ for t in model_repo_map.keys():
             | "semantic-segmentation"
         ):
             register_test(meta_constructor_cv(t), t)
+        case "audio-classification":
+            register_test(meta_constructor_random_input(t), t)
         case "multiple-choice":
             register_test(meta_constructor_multiple_choice(t), t)
         case _:
