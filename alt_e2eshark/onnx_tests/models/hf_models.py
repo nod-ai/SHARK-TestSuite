@@ -342,6 +342,19 @@ class HfModelWithTokenizers(HfDownloadableModel):
 
         tokenizer = get_tokenizer_from_model_path(self.model_repo_path, self.cache_dir)
 
+<<<<<<< HEAD
+=======
+        padding = False
+        truncation = False
+        if self.name not in large_models:
+            padding = True
+            truncation = True
+
+        tokens = tokenizer(prompt, return_tensors="pt", padding=padding, truncation=truncation)
+
+        self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
+
+>>>>>>> 7ea392d (Externalizes large HF models)
         if self.name in models_with_input_names_2:
             # Handles 2 inputs
             tokenizer.model_input_names = ["input_ids", "attention_mask"]
