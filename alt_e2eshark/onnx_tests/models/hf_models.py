@@ -6,6 +6,7 @@
 
 import requests
 import torch
+import sys
 
 from pathlib import Path
 
@@ -16,6 +17,10 @@ from e2e_testing.storage import TestTensors, load_test_txt_file
 from transformers import (
     AutoTokenizer,
 )
+from e2e_testing.framework import (
+    ImporterOptions,
+    ExtraOptions,
+    )
 
 from torchvision import transforms
 from PIL import Image
@@ -38,6 +43,11 @@ task_list = [
     "image-segmentation",
     "semantic-segmentation",
     "audio-classification",
+]
+
+large_models = [
+    "hf_StableBeluga2",
+    "hf_deberta-v3-xsmall",
 ]
 
 # These are NLP model names that have a mismatch between tokenizer
@@ -161,7 +171,11 @@ models_with_input_names_4 = {
 }
 
 # Add a basic_opt list to apply O1 to the models.
-basic_opt = []
+basic_opt = [
+    "hf_content",
+    "hf_deberta-v3-xsmall",
+    "hf_StableBeluga2",
+]
 
 
 def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
@@ -235,17 +249,107 @@ meta_constructor_multiple_choice = lambda m_name: (
 
 
 class HfModelWithTokenizers(HfDownloadableModel):
+    def update_extra_options(self):
+        if self.name not in large_models:
+            super().update_extra_options()
+            return
+
+        # for large models, externalizing params
+        import_model_options=ImporterOptions(
+            # externalize_inputs_threshold=2,
+            num_elements_threshold=32,
+            externalize_params=True,
+            large_model=True,
+            param_gb_threshold=100,
+        )
+
+        self.extra_options = ExtraOptions(
+            import_model_options=import_model_options
+        )
+
+
     def export_model(self, optim_level: str | None = None):
         # We won't need optim_level.
         del optim_level
         super().export_model("O1" if self.name in basic_opt else None)
+        #if self.name in large_models:
+        #    super().export_model("O1" if self.name in basic_opt else None)
+        #else:
+        #    export_large_models()
+
+
+    def export_large_models(self):
+        from transformers import AutoModelForCausalLM
+        print("\nLoading Hugging Face model...")
+        model = AutoModelForCausalLM.from_pretrained(
+            self.model_repo_path,
+            cache_dir=self.cache_dir,
+            #torch_dtype=self.torch_dtype,
+        )
+        print("Model loaded.")
+
+        # we will use iree turbine to save params
+        try:
+            from iree.turbine.aot import save_module_parameters
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "The package iree-turbine (try pip install iree-turbine) "
+                "is used to save hf model parameters to irpa format."
+            ) from e
+
+        print("Saving params (this might take a while)...")
+        self.param_path = os.path.join(self.cache_dir, self.name)
+        save_module_parameters(self.param_path, model)
+        print("Params saved.")
+
+        dynamic_axes = (
+            {
+                "input_ids": {0: "B", 1: "L"},
+                "attention_mask": {0: "B", 1: "L"},
+                "output": {0: "B", 1: "L"},
+            }
+        )
+        inputs = self.construct_inputs().data
+        print(f"{inputs=}", file=sys.stderr)
+
+        print("Exporting model to ONNX (this might take a while)...")
+        import torch
+        import torch.onnx
+        with torch.inference_mode():
+            torch.onnx.export(
+                model,
+                (inputs[0], inputs[1]),
+                self.model,
+                export_params=False,
+                do_constant_folding=True,
+                keep_initializers_as_inputs=False,
+                opset_version=19,
+                dynamo=self.dynamo,
+                input_names=["input_ids", "attention_mask"],
+                output_names=["output"],
+                dynamic_axes=dynamic_axes,
+            )
+        print("ONNX model exported.")
+
+        if not os.path.isfile(self.model):
+            raise RuntimeError(
+                f"Torch onnx export failed to produce an onnx model at {self.model}"
+            )
+
 
     def construct_inputs(self):
         prompt = ["Deeds will not be less valiant because they are unpraised."]
 
         tokenizer = get_tokenizer_from_model_path(self.model_repo_path, self.cache_dir)
 
-        tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+        padding = False
+        truncation = False
+        if self.name not in large_models:
+            padding = True
+            truncation = True
+
+        tokens = tokenizer(prompt, return_tensors="pt", padding=padding, truncation=truncation)
+
         self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
 
         if self.name in models_with_input_names_2:
