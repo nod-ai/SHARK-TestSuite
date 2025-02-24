@@ -311,17 +311,17 @@ jobs:
           python utils/find_duplicate_models.py -s -r ./test-onnx -o reports/duplicates.json
         working-directory: ./test-suite
 
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ci_reports_${{ matrix.backend }}_${{ matrix.test-file }}_onnx_md
           path: ./test-suite/alt_e2eshark/reports/${{ matrix.test-file }}.md
       
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ci_reports_${{ matrix.backend }}_${{ matrix.test-file }}_onnx_json
           path: ./test-suite/alt_e2eshark/reports/${{ matrix.test-file }}.json
       
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: ci_reports_${{ matrix.backend }}_${{ matrix.test-file }}_duplicates_json
           path: ./test-suite/alt_e2eshark/duplicates.json
