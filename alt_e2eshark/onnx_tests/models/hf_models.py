@@ -245,21 +245,20 @@ class HfModelWithTokenizers(HfDownloadableModel):
 
         tokenizer = get_tokenizer_from_model_path(self.model_repo_path, self.cache_dir)
 
-        tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
-        self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
-
         if self.name in models_with_input_names_2:
             # Handles 2 inputs
             tokenizer.model_input_names = ["input_ids", "attention_mask"]
+            tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
             inputs = (*list(tokens.values()), )
+            self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
         else:
-            self.input_name_to_shape_map["position_ids"] = self.input_name_to_shape_map["input_ids"]
-            zeros = torch.zeros(*(self.input_name_to_shape_map["input_ids"]), dtype=int)
             if self.name in models_with_input_names_3:
                 # Handles 3 inputs
                 tokenizer.model_input_names = ["input_ids", "attention_mask", "position_ids"]
+                tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
             elif self.name in models_with_input_names_4:
                 tokenizer.model_input_names = ["input_ids", "bbox", "attention_mask", "position_ids"]
+                tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
 
                 # Handles 4 inputs
                 # Tokenizer is returning tokens dict with key token_type_ids" instead of "bbox".
@@ -270,6 +269,10 @@ class HfModelWithTokenizers(HfDownloadableModel):
             else:
                 raise RuntimeError(f"Model: {self.name} not found in any of the registry lists.")
 
+            self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
+            self.input_name_to_shape_map["position_ids"] = self.input_name_to_shape_map["input_ids"]
+
+            zeros = torch.zeros(*(self.input_name_to_shape_map["input_ids"]), dtype=int)
             inputs = (*list(tokens.values()), zeros)
 
         test_tensors = TestTensors(inputs)
