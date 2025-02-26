@@ -20,19 +20,18 @@ onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_n
 onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_paths.txt"))
 onnx_zoo_unsupported = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_unsupported.txt"))
 
+onnx_zoo_non_validated = list(set(onnx_zoo_non_validated).difference(set(onnx_zoo_unsupported)))
+onnx_zoo_validated = list(set(onnx_zoo_validated).difference(set(onnx_zoo_unsupported)))
+
 # Putting this inside the class contructor will
 # call this repeatedly, which is wasteful.
 model_path_map = {}
 def build_model_to_path_map():
     for name in onnx_zoo_non_validated:
-        if name in onnx_zoo_unsupported:
-            continue
         test_name = name.split("/")[-2]
         model_path_map[test_name] = name
 
     for name in onnx_zoo_validated:
-        if name in onnx_zoo_unsupported:
-            continue
         test_name = '.'.join((name.split("/")[-1]).split('.')[:-2])
         model_path_map[test_name] = name
 
