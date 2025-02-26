@@ -342,19 +342,6 @@ class HfModelWithTokenizers(HfDownloadableModel):
 
         tokenizer = get_tokenizer_from_model_path(self.model_repo_path, self.cache_dir)
 
-<<<<<<< HEAD
-=======
-        padding = False
-        truncation = False
-        if self.name not in large_models:
-            padding = True
-            truncation = True
-
-        tokens = tokenizer(prompt, return_tensors="pt", padding=padding, truncation=truncation)
-
-        self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
-
->>>>>>> 7ea392d (Externalizes large HF models)
         if self.name in models_with_input_names_2:
             # Handles 2 inputs
             tokenizer.model_input_names = ["input_ids", "attention_mask"]
@@ -384,36 +371,6 @@ class HfModelWithTokenizers(HfDownloadableModel):
             inputs = (*list(tokens.values()), zeros)
         else:
             inputs = (*list(tokens.values()), )
-
-        test_tensors = TestTensors(inputs)
-        return test_tensors
-
-
-class HfModelWithRandomInput(HfDownloadableModel):
-    def export_model(self, optim_level: str | None = None):
-        # We won't need optim_level.
-        del optim_level
-        super().export_model("O1" if self.name in basic_opt else None)
-
-    def construct_inputs(self):
-        inputs = torch.randn(1, 4, 16000)
-
-        self.input_name_to_shape_map = {'input_ids': torch.Size([16000, 4]), 'attention_mask': torch.Size([16000, 4])}
-
-        test_tensors = TestTensors(inputs)
-        return test_tensors
-
-
-class HfModelWithRandomInput(HfDownloadableModel):
-    def export_model(self, optim_level: str | None = None):
-        # We won't need optim_level.
-        del optim_level
-        super().export_model("O1" if self.name in basic_opt else None)
-
-    def construct_inputs(self):
-        inputs = torch.randn(1, 4, 16000)
-
-        self.input_name_to_shape_map = {'input_ids': torch.Size([16000, 4]), 'attention_mask': torch.Size([16000, 4])}
 
         test_tensors = TestTensors(inputs)
         return test_tensors
