@@ -7,6 +7,7 @@
 import requests
 import torch
 import sys
+import os
 
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from transformers import (
 from e2e_testing.framework import (
     ImporterOptions,
     ExtraOptions,
+    RuntimeOptions,
     )
 
 from torchvision import transforms
@@ -45,10 +47,17 @@ task_list = [
     "audio-classification",
 ]
 
-large_models = [
+large_models = {
     "hf_StableBeluga2",
-    "hf_deberta-v3-xsmall",
-]
+    "hf_llama-7b",
+    "hf_oasst-sft-4-pythia-12b-epoch-3.5",
+    "hf_Qwen2.5-1.5B-Instruct",
+    "hf_Qwen2.5-7B-Instruct",
+    "hf_Qwen2-7B-Instruct",
+    "hf_TinyLlama-1.1B-Chat-v1.0",
+    "hf_vicuna-7b-v1.5",
+    "hf_wasmai-7b-v1",
+}
 
 # These are NLP model names that have a mismatch between tokenizer
 # outputs and the model inputs, but do not fall under a particular
@@ -164,6 +173,15 @@ models_with_input_names_3 = {
     "hf_tiny-random-LlamaForCausalLM",
     "hf_tiny-random-mt5",
     "hf_tiny-random-Phi3ForCausalLM",
+    "hf_StableBeluga2",
+    "hf_llama-7b",
+    "hf_oasst-sft-4-pythia-12b-epoch-3.5",
+    "hf_Qwen2.5-1.5B-Instruct",
+    "hf_Qwen2.5-7B-Instruct",
+    "hf_Qwen2-7B-Instruct",
+    "hf_TinyLlama-1.1B-Chat-v1.0",
+    "hf_vicuna-7b-v1.5",
+    "hf_wasmai-7b-v1",
 }
 
 models_with_input_names_4 = {
@@ -171,12 +189,7 @@ models_with_input_names_4 = {
 }
 
 # Add a basic_opt list to apply O1 to the models.
-basic_opt = [
-    "hf_content",
-    "hf_deberta-v3-xsmall",
-    "hf_StableBeluga2",
-]
-
+basic_opt = []
 
 def get_tokenizer_from_model_path(model_repo_path: str, cache_dir: str | Path):
     trust_remote_code = False
@@ -264,13 +277,19 @@ class HfModelWithTokenizers(HfDownloadableModel):
         )
 
         self.extra_options = ExtraOptions(
-            import_model_options=import_model_options
+            import_model_options=import_model_options,
+            compiled_inference_options=RuntimeOptions(
+                common_extra_args=(
+                    f'parameters=model={Path(self.model).parent / "model.torch_onnx_params.irpa"}',
+                )
+            )
         )
 
 
     def export_model(self, optim_level: str | None = None):
         # We won't need optim_level.
         del optim_level
+
         super().export_model("O1" if self.name in basic_opt else None)
         #if self.name in large_models:
         #    super().export_model("O1" if self.name in basic_opt else None)
