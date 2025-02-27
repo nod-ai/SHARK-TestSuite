@@ -23,6 +23,7 @@ from e2e_testing.framework import (
     ExtraOptions,
     RuntimeOptions,
     )
+from e2e_testing.onnx_utils import update_no_ext
 
 from torchvision import transforms
 from PIL import Image
@@ -291,7 +292,7 @@ class HfModelWithTokenizers(HfDownloadableModel):
         )
 
         self.construct_model()
-        self.update_no_ext()
+        update_no_ext(onnx_model_path=self.model, opset_version=self.opset_version)
 
 
     def export_model(self, optim_level: str | None = None):

@@ -64,38 +64,6 @@ class OnnxModelInfo:
         self.extra_options = ExtraOptions()
         self.update_extra_options()
 
-    def update_no_ext(self):
-        """Models larger than 2GB do not allow updating opset version, so we update opset version without loading external data. Unfortunately, all external data references get wiped, and we need to manually trace through the graph and copy them back in."""
-        model = onnx.load(self.model, load_external_data=False)
-        new_model = onnx.version_converter.convert_version(
-            model, self.opset_version
-        )
-        nv_init_map = {init.name: init for init in model.graph.initializer}
-        for new_init in new_model.graph.initializer:
-            if new_init.name not in nv_init_map.keys():
-                continue
-            old_init = nv_init_map[new_init.name]
-            if old_init.data_location:
-                new_init.Clear()
-                new_init.CopyFrom(old_init)
-        nv_node_map = {node.output[0]: node for node in model.graph.node}
-        for node in new_model.graph.node:
-            name = node.output[0]
-            if name not in nv_node_map.keys():
-                continue
-            og_node = nv_node_map[name]
-            attrs_to_replace = dict()
-            for attr in og_node.attribute:
-                if attr.t.external_data:
-                    attrs_to_replace[attr.name] = attr
-            for new_attr in node.attribute:
-                if new_attr.name in attrs_to_replace.keys():
-                    old_attr = attrs_to_replace[new_attr.name]
-                    new_attr.Clear()
-                    new_attr.CopyFrom(old_attr)
-
-        onnx.save(new_model, self.model)
-
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
         input = input.to_numpy().data
