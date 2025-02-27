@@ -402,10 +402,9 @@ class HfModelWithRandomInput(HfDownloadableModel):
         super().export_model("O1" if self.name in basic_opt else None)
 
     def construct_inputs(self):
-        inputs = tuple(torch.randn(16000) for _ in range(4))
-        print(f"{inputs=}")
+        inputs = torch.randn(1, 4, 16000)
 
-        self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}
+        self.input_name_to_shape_map = {'input_ids': torch.Size([16000, 4]), 'attention_mask': torch.Size([16000, 4])}
 
         test_tensors = TestTensors(inputs)
         return test_tensors
