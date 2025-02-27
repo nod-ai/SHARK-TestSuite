@@ -105,9 +105,6 @@ class OnnxModelInfo:
         session_inputs = session.get_inputs()
         session_outputs = session.get_outputs()
 
-        print(f'DEBUG:: {input=}')
-        print(f'DEBUG:: {len(input)=}')
-        print(f'DEBUG:: {len(session_inputs)=}')
         model_output = session.run(
             [output.name for output in session_outputs],
             {session_inputs[i].name: input[i] for i in range(len(session_inputs))},
