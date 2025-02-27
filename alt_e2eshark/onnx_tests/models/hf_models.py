@@ -49,6 +49,10 @@ task_list = [
 
 large_models = {
     "hf_StableBeluga2",
+}
+
+models_need_externalization = {
+    "hf_StableBeluga2",
     "hf_llama-7b",
     "hf_oasst-sft-4-pythia-12b-epoch-3.5",
     "hf_Qwen2.5-1.5B-Instruct",
@@ -263,7 +267,7 @@ meta_constructor_multiple_choice = lambda m_name: (
 
 class HfModelWithTokenizers(HfDownloadableModel):
     def update_extra_options(self):
-        if self.name not in large_models:
+        if self.name not in models_need_externalization:
             super().update_extra_options()
             return
 
@@ -274,6 +278,7 @@ class HfModelWithTokenizers(HfDownloadableModel):
             externalize_params=True,
             large_model=True,
             param_gb_threshold=100,
+            opset_version=21,
         )
 
         self.extra_options = ExtraOptions(
@@ -285,16 +290,18 @@ class HfModelWithTokenizers(HfDownloadableModel):
             )
         )
 
+        self.construct_model()
+        self.update_no_ext()
+
 
     def export_model(self, optim_level: str | None = None):
         # We won't need optim_level.
         del optim_level
 
-        super().export_model("O1" if self.name in basic_opt else None)
-        #if self.name in large_models:
-        #    super().export_model("O1" if self.name in basic_opt else None)
-        #else:
-        #    export_large_models()
+        if self.name in large_models:
+            super().export_model("O1" if self.name in basic_opt else None)
+        else:
+            export_large_models()
 
 
     def export_large_models(self):
@@ -367,7 +374,7 @@ class HfModelWithTokenizers(HfDownloadableModel):
 
         padding = False
         truncation = False
-        if self.name not in large_models:
+        if self.name not in models_need_externalization:
             padding = True
             truncation = True
 
@@ -379,7 +386,6 @@ class HfModelWithTokenizers(HfDownloadableModel):
             # For now, "token_type_ids" will be reused as bbox in this case
             # bbox is a bounding box with size [?, ?, 4]
             #   where each 4 numbers represent x_min, y_min, x_max, y_max
-            print(f'DEBUG: {tokens=}')
             tokens["token_type_ids"] = tokens["token_type_ids"].unsqueeze(-1).repeat(1, 1, 4)
 
         self.input_name_to_shape_map = {k: v.shape for (k, v) in tokens.items()}

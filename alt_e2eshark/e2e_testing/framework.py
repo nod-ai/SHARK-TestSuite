@@ -26,7 +26,7 @@ class ImporterOptions(NamedTuple):
     param_gb_threshold : Optional[float] = None
 
 class CompilerOptions(NamedTuple):
-    """Specify, for specific iree-hal-target-backends, a tuple of extra compiler flags. 
+    """Specify, for specific iree-hal-target-backends, a tuple of extra compiler flags.
        Also allows backend-agnostic options to be included."""
     backend_specific_flags : Dict[str, Tuple[str]] = dict()
     common_extra_args : Tuple[str] = tuple()
@@ -64,6 +64,38 @@ class OnnxModelInfo:
         self.extra_options = ExtraOptions()
         self.update_extra_options()
 
+    def update_no_ext(self):
+        """Models larger than 2GB do not allow updating opset version, so we update opset version without loading external data. Unfortunately, all external data references get wiped, and we need to manually trace through the graph and copy them back in."""
+        model = onnx.load(self.model, load_external_data=False)
+        new_model = onnx.version_converter.convert_version(
+            model, self.opset_version
+        )
+        nv_init_map = {init.name: init for init in model.graph.initializer}
+        for new_init in new_model.graph.initializer:
+            if new_init.name not in nv_init_map.keys():
+                continue
+            old_init = nv_init_map[new_init.name]
+            if old_init.data_location:
+                new_init.Clear()
+                new_init.CopyFrom(old_init)
+        nv_node_map = {node.output[0]: node for node in model.graph.node}
+        for node in new_model.graph.node:
+            name = node.output[0]
+            if name not in nv_node_map.keys():
+                continue
+            og_node = nv_node_map[name]
+            attrs_to_replace = dict()
+            for attr in og_node.attribute:
+                if attr.t.external_data:
+                    attrs_to_replace[attr.name] = attr
+            for new_attr in node.attribute:
+                if new_attr.name in attrs_to_replace.keys():
+                    old_attr = attrs_to_replace[new_attr.name]
+                    new_attr.Clear()
+                    new_attr.CopyFrom(old_attr)
+
+        onnx.save(new_model, self.model)
+
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
         input = input.to_numpy().data
@@ -73,6 +105,9 @@ class OnnxModelInfo:
         session_inputs = session.get_inputs()
         session_outputs = session.get_outputs()
 
+        print(f'DEBUG:: {input=}')
+        print(f'DEBUG:: {len(input)=}')
+        print(f'DEBUG:: {len(session_inputs)=}')
         model_output = session.run(
             [output.name for output in session_outputs],
             {session_inputs[i].name: input[i] for i in range(len(session_inputs))},
@@ -81,7 +116,7 @@ class OnnxModelInfo:
         return TestTensors(model_output)
 
     def update_dim_param_dict(self):
-        """Can be overridden to modify a dictionary of dim parameters (self.dim_param_dict) used to 
+        """Can be overridden to modify a dictionary of dim parameters (self.dim_param_dict) used to
         construct inputs for a model with dynamic dims.
         """
         pass
@@ -119,7 +154,7 @@ class OnnxModelInfo:
     def apply_postprocessing(self, output: TestTensors):
         """can be overridden to define post-processing methods for individual models"""
         return output
-    
+
     def save_processed_output(self, output: TestTensors, save_to: str, name: str):
         """can be overridden to provide instructions on saving processed outputs (e.g., images, labels, text)"""
         pass
@@ -131,7 +166,7 @@ class OnnxModelInfo:
         if not os.path.exists(self.model):
             self.construct_model()
         if not leave_dynamic:
-            self.update_dim_param_dict() 
+            self.update_dim_param_dict()
         return get_signature_for_onnx_model(self.model, from_inputs=from_inputs, dim_param_dict=self.dim_param_dict, leave_dynamic=leave_dynamic)
 
     def load_inputs(self, dir_path):
@@ -154,7 +189,7 @@ class OnnxModelInfo:
         """computes the input signature of the onnx model and loads golden outputs from bin files"""
         shapes, dtypes = self.get_signature(from_inputs=False)
         return TestTensors.load_from(shapes, dtypes, dir_path, "golden_output")
-    
+
     def update_opset_version_and_overwrite(self):
         if not self.opset_version:
             return
@@ -167,7 +202,7 @@ class OnnxModelInfo:
             og_model, self.opset_version
         )
         onnx.save(model, self.model)
-    
+
     def get_metadata(self):
         model_size = os.path.getsize(self.model)
         freq = get_op_frequency(self.model)
@@ -177,7 +212,7 @@ class OnnxModelInfo:
 
 
 # TODO: extend TestModel to a union, or make TestModel a base class when supporting other frontends
-TestModel = OnnxModelInfo 
+TestModel = OnnxModelInfo
 CompiledArtifact = TypeVar("CompiledArtifact")
 ModelArtifact = Union[Module, onnx.ModelProto]
 CompiledOutput = Union[CompiledArtifact, ort.InferenceSession]
