@@ -279,7 +279,6 @@ class HfModelWithTokenizers(HfDownloadableModel):
             externalize_params=True,
             large_model=True,
             param_gb_threshold=100,
-            opset_version=21,
         )
 
         self.extra_options = ExtraOptions(
@@ -292,7 +291,7 @@ class HfModelWithTokenizers(HfDownloadableModel):
         )
 
         self.construct_model()
-        update_no_ext(onnx_model_path=self.model, opset_version=self.opset_version)
+        self.update_model_without_ext_data()
 
 
     def export_model(self, optim_level: str | None = None):

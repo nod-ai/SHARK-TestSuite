@@ -8,10 +8,7 @@ from pathlib import Path
 from ..helper_classes import AzureDownloadableModel
 from e2e_testing.registry import register_test
 from e2e_testing.storage import load_test_txt_file
-from e2e_testing.onnx_utils import (
-        get_node_shape_from_dim_param_dict,
-        update_no_ext,
-        )
+from e2e_testing.onnx_utils import get_node_shape_from_dim_param_dict
 from e2e_testing.storage import TestTensors
 import onnxruntime as ort
 import numpy
@@ -78,7 +75,7 @@ def dim_param_constructor(dim_param_dict):
             super().__init__(*args, **kwargs)
             if self.name in large_file_size_models:
                 self.construct_model()
-                update_no_ext(onnx_model_path=self.model, opset_version=self.opset_version)
+                self.update_model_without_ext_data()
                 self.opset_version = None
             # TODO: check opset versions
             # print(f"Opset: {self.opset_version}")

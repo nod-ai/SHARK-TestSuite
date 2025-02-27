@@ -64,6 +64,11 @@ class OnnxModelInfo:
         self.extra_options = ExtraOptions()
         self.update_extra_options()
 
+
+    def update_model_without_ext_data(self):
+        update_no_ext(onnx_model_path=self.model, opset_version=self.opset_version)
+
+
     def forward(self, input: Optional[TestTensors] = None) -> TestTensors:
         """Applies self.model to self.input. Only override if necessary for specific models"""
         input = input.to_numpy().data
