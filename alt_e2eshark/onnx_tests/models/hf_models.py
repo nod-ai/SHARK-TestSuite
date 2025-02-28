@@ -321,10 +321,10 @@ class HfModelWithTokenizers(HfDownloadableModel):
         # We won't need optim_level.
         del optim_level
 
-        if self.name in large_models:
+        if self.name not in large_models:
             super().export_model("O1" if self.name in basic_opt else None)
         else:
-            export_large_models()
+            self.export_large_models()
 
 
     def export_large_models(self):
