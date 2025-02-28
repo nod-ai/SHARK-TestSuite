@@ -66,6 +66,9 @@ class OnnxModelInfo:
 
 
     def update_model_without_ext_data(self):
+        """For large models, which fail opset_version updating, use this method to update without loading external data.
+        This will also trace the graph and copy the external data references which gets wiped out otherwise.
+        """
         update_no_ext(onnx_model_path=self.model, opset_version=self.opset_version)
 
 
