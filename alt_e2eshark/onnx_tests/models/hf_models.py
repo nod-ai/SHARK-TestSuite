@@ -62,6 +62,12 @@ models_need_externalization = {
     "hf_TinyLlama-1.1B-Chat-v1.0",
     "hf_vicuna-7b-v1.5",
     "hf_wasmai-7b-v1",
+    "hf_esm2_t36_3B_UR50D",
+    "hf_Phi-3.5-mini-instruct",
+    "hf_Phi-3-mini-128k-instruct",
+    "hf_Phi-3-mini-4k-instruct",
+    "hf_zephyr-7b-beta",
+
 }
 
 # These are NLP model names that have a mismatch between tokenizer
@@ -162,6 +168,7 @@ models_with_input_names_2 = {
     "hf_distilbert-base-nli-mean-tokens",
     "hf_distilbert-base-multilingual-cased",
     "hf_distilbert-base-cased",
+    "hf_esm2_t36_3B_UR50D",
 }
 
 models_with_input_names_3 = {
@@ -187,6 +194,10 @@ models_with_input_names_3 = {
     "hf_TinyLlama-1.1B-Chat-v1.0",
     "hf_vicuna-7b-v1.5",
     "hf_wasmai-7b-v1",
+    "hf_Phi-3.5-mini-instruct",
+    "hf_Phi-3-mini-128k-instruct",
+    "hf_Phi-3-mini-4k-instruct",
+    "hf_zephyr-7b-beta",
 }
 
 models_with_input_names_4 = {
