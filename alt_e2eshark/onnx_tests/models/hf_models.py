@@ -67,6 +67,10 @@ models_need_externalization = {
     "hf_Phi-3-mini-128k-instruct",
     "hf_Phi-3-mini-4k-instruct",
     "hf_zephyr-7b-beta",
+    "hf_distilgpt2",
+    "hf_gpt2",
+    "hf_llama-68m",
+    "hf_tiny-random-mistral",
 }
 
 # These are NLP model names that have a mismatch between tokenizer
@@ -197,6 +201,11 @@ models_with_input_names_3 = {
     "hf_Phi-3-mini-128k-instruct",
     "hf_Phi-3-mini-4k-instruct",
     "hf_zephyr-7b-beta",
+    "hf_distilgpt2",
+    "hf_gpt2",
+    "hf_llama-68m",
+    "hf_tiny-random-mistral",
+
 }
 
 models_with_input_names_4 = {
