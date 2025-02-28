@@ -314,20 +314,6 @@ class HfModelWithTokenizers(HfDownloadableModel):
         )
         print("Model loaded.")
 
-        # we will use iree turbine to save params
-        try:
-            from iree.turbine.aot import save_module_parameters
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError(
-                "The package iree-turbine (try pip install iree-turbine) "
-                "is used to save hf model parameters to irpa format."
-            ) from e
-
-        print("Saving params (this might take a while)...")
-        self.param_path = os.path.join(self.cache_dir, self.name)
-        save_module_parameters(self.param_path, model)
-        print("Params saved.")
-
         dynamic_axes = (
             {
                 "input_ids": {0: "B", 1: "L"},
@@ -336,17 +322,14 @@ class HfModelWithTokenizers(HfDownloadableModel):
             }
         )
         inputs = self.construct_inputs().data
-        print(f"{inputs=}", file=sys.stderr)
 
         print("Exporting model to ONNX (this might take a while)...")
-        import torch
-        import torch.onnx
         with torch.inference_mode():
             torch.onnx.export(
                 model,
                 (inputs[0], inputs[1]),
                 self.model,
-                export_params=False,
+                export_params=True,
                 do_constant_folding=True,
                 keep_initializers_as_inputs=False,
                 opset_version=19,
