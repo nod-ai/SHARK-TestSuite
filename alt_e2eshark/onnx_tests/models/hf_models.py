@@ -172,6 +172,10 @@ models_with_input_names_2 = {
     "hf_distilbert-base-multilingual-cased",
     "hf_distilbert-base-cased",
     "hf_esm2_t36_3B_UR50D",
+    "hf_ko-sroberta-multitask",
+    "hf_robertuito-sentiment-analysis",
+    "hf_sbert_large_nlu_ru",
+    "hf_sentence-bert-base-ja-mean-tokens-v2",
 }
 
 models_with_input_names_3 = {
