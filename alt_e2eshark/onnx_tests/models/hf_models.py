@@ -49,7 +49,6 @@ task_list = [
 ]
 
 large_models = {
-    "hf_StableBeluga2",
 }
 
 models_need_externalization = {
@@ -356,7 +355,7 @@ class HfModelWithTokenizers(HfDownloadableModel):
                 do_constant_folding=True,
                 keep_initializers_as_inputs=False,
                 opset_version=19,
-                dynamo=self.dynamo,
+                dynamo=False,
                 input_names=["input_ids", "attention_mask"],
                 output_names=["output"],
                 dynamic_axes=dynamic_axes,
