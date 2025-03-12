@@ -588,7 +588,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_nlp-shard3_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_nlp-shard3_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_nlp-shard3_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_nlp-shard3_others_onnx_json
 
 
@@ -598,7 +598,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_1_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_1_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_1_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_1_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -606,7 +606,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_2_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_2_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_2_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_2_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -614,7 +614,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_3_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_3_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_3_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_3_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -622,7 +622,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_4_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_4_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_4_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_4_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -630,7 +630,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_5_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_5_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_5_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_computer_vision_5_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -638,7 +638,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_gen_ai_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_gen_ai_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_gen_ai_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_gen_ai_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -646,7 +646,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_graph_ml_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_graph_ml_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_graph_ml_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_graph_ml_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -654,7 +654,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_nlp_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_nlp_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_nlp_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_nlp_others_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -662,7 +662,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_vision_others_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_vision_onnx_others_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_vision_others_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_vision_others_onnx_json
       # - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       #   with:
