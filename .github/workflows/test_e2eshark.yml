@@ -175,7 +175,6 @@ jobs:
             target-chip: gfx942
             test-file: onnx_model_zoo_validated_vision_unique
             cache-dir: /data/e2eshark/shark-test-suite-models-cache
-
           # - name: mi300_gpu13_test
           #   runs-on: nodai-amdgpu-mi300-x86-64
           #   backend: hip
