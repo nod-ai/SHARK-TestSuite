@@ -96,12 +96,14 @@ def main(args):
     if args.mode == "onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = OnnxTestConfig(
-            str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend, extra_args=args.iree_compile_args), pipeline
+            str(TEST_DIR), SimpleIREEBackend(device=args.device, hal_target_backend=args.backend, extra_args=args.iree_compile_args), pipeline,
+            verbose=args.verbose
         )
     elif args.mode == "cl-onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = CLOnnxTestConfig(
-            str(TEST_DIR), CLIREEBackend(device=args.device, hal_target_backend=args.backend, target_chip=args.target_chip, extra_args=args.iree_compile_args), pipeline
+            str(TEST_DIR), CLIREEBackend(verbose=args.verbose, device=args.device, hal_target_backend=args.backend, target_chip=args.target_chip, extra_args=args.iree_compile_args), pipeline,
+            verbose=args.verbose,
         )
     elif args.mode == "ort-ep":
         # TODO: allow specifying provider explicitly from cl args.
