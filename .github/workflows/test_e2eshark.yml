@@ -676,7 +676,7 @@ jobs:
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_text_unique_onnx_md
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_text_onnx_unique_json
+          name: ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_text_unique_onnx_json
           path: ./e2eshark-reports/ci_reports_${{ matrix.backend }}_onnx_model_zoo_validated_text_unique_onnx_json
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
@@ -792,14 +792,14 @@ jobs:
           cd ..
 
           python ./test-suite/alt_e2eshark/utils/check_regressions.py \
-            --new ./e2eshark-reports/combined_reports.json \
+            --new ./e2eshark-reports/combined_reports_unique.json \
             --old ./test-suite/latest/combined_reports_${{ matrix.backend }}.json \
             --report-file ./e2eshark-reports/yesterday_comparison.md \
             --perf_tol_regression=0.05 \
             --perf_tol_progression=0.05
           
           python ./test-suite/alt_e2eshark/utils/check_regressions.py \
-            --new ./e2eshark-reports/combined_reports.json \
+            --new ./e2eshark-reports/combined_reports_unique.json \
             --old ./test-suite/baseline/combined_reports_${{ matrix.backend }}.json \
             --report-file ./e2eshark-reports/baseline_comparison.md \
             --perf_tol_regression=0.1 \
@@ -807,7 +807,7 @@ jobs:
           
           az storage blob upload --account-name sharkpublic --container-name sharkpublic \
             --name latest-test-suite/combined_reports_${{ matrix.backend }}.json \
-            --file ./e2eshark-reports/combined_reports.json \
+            --file ./e2eshark-reports/combined_reports_unique.json \
             --account-key ${AZ_PUBLIC_KEY} --overwrite
 
       - name: Push regression artifacts
