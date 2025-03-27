@@ -6,11 +6,10 @@
 
 name: E2ESHARK Test Suite
 on:
-  pull_request:
   workflow_dispatch:
   schedule:
   # Runs at 2:30 AM PST
-   - cron: '30 9 * * *'
+   - cron: '30 9 * * 1-6'
 
 
 jobs: 
