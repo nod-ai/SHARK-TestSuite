@@ -3,12 +3,13 @@
 # Licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+from collections.abc import Sequence
 import json
 import os
 import shutil
 import warnings
 from pathlib import Path
-from typing import Tuple, Any
+from typing import Tuple
 
 import onnx
 from onnxruntime import InferenceSession
@@ -73,7 +74,7 @@ class OnnxEpTestConfig(TestConfig):
 class OnnxTestConfig(TestConfig):
     '''This is the basic testing configuration for onnx models. This should be initialized with a specific backend, and uses torch-mlir to import the onnx model to torch-onnx MLIR, and apply torch-mlir pre-proccessing passes if desired.'''
     def __init__(
-        self, log_dir: str, backend: BackendBase, torch_mlir_pipeline: Tuple[str, ...]
+        self, log_dir: str, backend: BackendBase, torch_mlir_pipeline: Sequence[str], *, verbose: bool
     ):
         super().__init__()
         self.log_dir = log_dir
@@ -82,6 +83,7 @@ class OnnxTestConfig(TestConfig):
             self.pass_pipeline = "builtin.module(" + ",".join(torch_mlir_pipeline) + ")"
         else:
             self.pass_pipeline = None
+        self.verbose = verbose
 
     def import_model(self, model_info: OnnxModelInfo, *, save_to: str = None, extra_options : ImporterOptions) -> Tuple[Module, str]:
         from torch_mlir.extras import onnx_importer
@@ -143,7 +145,7 @@ class OnnxTestConfig(TestConfig):
 class CLOnnxTestConfig(TestConfig):
     '''This is parallel to OnnxTestConfig, but uses command-line scripts for each stage.'''
     def __init__(
-        self, log_dir: str, backend: BackendBase, torch_mlir_pipeline: Tuple[str, ...]
+        self, log_dir: str, backend: BackendBase, torch_mlir_pipeline: Sequence[str], *, verbose: bool
     ):
         super().__init__()
         self.log_dir = log_dir
@@ -153,6 +155,7 @@ class CLOnnxTestConfig(TestConfig):
             self.pass_pipeline = "builtin.module(" + ",".join(torch_mlir_pipeline) + ")"
         else:
             self.pass_pipeline = None
+        self.verbose = verbose
     
     def import_model(self, program: OnnxModelInfo, *, save_to: str, extra_options : ImporterOptions) -> Tuple[str, str]:
         if not save_to:
@@ -172,7 +175,7 @@ class CLOnnxTestConfig(TestConfig):
             elif value != bool_arg_defaults[key]:
                 import_command.extend([f'--{key}'])
         import_command.extend(["-o", mlir_file])
-        run_command_and_log(import_command, save_to, "import_model")
+        run_command_and_log(import_command, save_to, "import_model", verbose=self.verbose)
         # get the func name
         # TODO put this as an OnnxModelInfo attr?
         model = onnx.load(program.model, load_external_data=False)
@@ -196,8 +199,8 @@ class CLOnnxTestConfig(TestConfig):
             opt_tool = "iree-opt"
         command0 = [opt_tool, f"-pass-pipeline='{onnx_to_torch_pipeline}'", mlir_module, "-o", torch_ir]
         command1 = [opt_tool, f"-pass-pipeline='{self.pass_pipeline}'", torch_ir, "-o", linalg_ir]
-        run_command_and_log(command0, save_to, "preprocessing_torch_onnx_to_torch") 
-        run_command_and_log(command1, save_to, "preprocessing_torch_to_linalg") 
+        run_command_and_log(command0, save_to, "preprocessing_torch_onnx_to_torch", verbose=self.verbose)
+        run_command_and_log(command1, save_to, "preprocessing_torch_to_linalg", verbose=self.verbose)
         return linalg_ir
 
     def compile(self, mlir_module: str, *, save_to: str = None, extra_options : CompilerOptions) -> str:
@@ -210,7 +213,7 @@ class CLOnnxTestConfig(TestConfig):
         command = func(inputs)
         num_outputs = len(self.tensor_info_dict[test_name][0])
         command.extend([f"--output=@'{os.path.join(run_dir, f'output.{i}.bin')}'" for i in range(num_outputs)])
-        run_command_and_log(command, save_to=run_dir, stage_name="compiled_inference")
+        run_command_and_log(command, save_to=run_dir, stage_name="compiled_inference", verbose=self.verbose)
         return TestTensors.load_from(self.tensor_info_dict[test_name][0], self.tensor_info_dict[test_name][1], run_dir, "output")
 
     def benchmark(self, artifact: str, inputs: TestTensors, repetitions: int = 5, *, func_name=None, extra_options=None) -> float:
@@ -221,7 +224,7 @@ class CLOnnxTestConfig(TestConfig):
         # replace "iree-run-module" with "iree-benchmark-module"
         command[0] = "iree-benchmark-module"
         command.extend([f"--benchmark_repetitions={repetitions}", "--device_allocator=caching", f"--benchmark_out='{report_json}'", "--benchmark_out_format=json"])
-        run_command_and_log(command, save_to=run_dir, stage_name="benchmark")
+        run_command_and_log(command, save_to=run_dir, stage_name="benchmark", verbose=self.verbose)
         # load benchmark time from report_json
         with open(report_json) as contents:
             loaded_dict = json.load(contents) 

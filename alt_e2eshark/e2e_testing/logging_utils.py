@@ -6,6 +6,7 @@
 
 import os
 from pathlib import Path
+import textwrap
 import traceback
 import shutil
 import subprocess
@@ -14,7 +15,7 @@ from e2e_testing.framework import result_comparison
 from typing import List
 
 
-def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> None:
+def run_command_and_log(command: List[str], save_to: str, stage_name: str, *, verbose: bool) -> None:
     """Runs command through subprocess.run and logs the command and error details (if present)"""
     # convert command list to a string
     script = subprocess.list2cmdline(command)
@@ -25,15 +26,19 @@ def run_command_and_log(command: List[str], save_to: str, stage_name: str) -> No
     commands_log = commands_dir / f"{stage_name}.commands.log"
     commands_log.write_text(script)
     # run the command
+    if verbose:
+        print(f"  $ {script}")
     ret = subprocess.run(script, shell=True, capture_output=True)
     # if an error occured, log stderr and raise exception
     if ret.returncode != 0:
         detail_dir = Path(save_to) / "detail"
         detail_dir.mkdir(exist_ok=True)
         detail_log = detail_dir / f"{stage_name}.detail.log"
-        detail_log.write_text(ret.stderr.decode())
-        error_msg = f"failure executing command:\n{script}"
-        error_msg += f"Error detail in '{detail_log}'"
+        stderr = ret.stderr.decode()
+        detail_log.write_text(stderr)
+        error_msg = f"failure executing command:\n  {script}"
+        error_msg += f"\nError detail in '{detail_log}'"
+        error_msg += "\nstderr:\n" + textwrap.indent(stderr, '  ')
         raise RuntimeError(error_msg)
 
 
@@ -62,7 +67,7 @@ def log_exception(e: Exception, path: str, stage: str, name: str, verbose: bool)
         f.write(base_str)
         if verbose:
             print(f"\tFAILED ({stage})" + " " * 20)
-            traceback.print_exception(e, file=f)
+            traceback.print_exception(e)
         else:
             print(f"FAILED: {name}")
 
