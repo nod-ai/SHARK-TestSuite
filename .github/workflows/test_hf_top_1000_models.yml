@@ -196,11 +196,11 @@ jobs:
           python3.11 -m venv ${ALT_E2E_VENV_DIR}
           source ${ALT_E2E_VENV_DIR}/bin/activate
           pip install --upgrade pip
-          pip install -r ./alt_e2eshark/base_requirements.txt
-          pip install -r ./alt_e2eshark/hf_requirements.txt
-          pip install -r ./alt_e2eshark/iree_requirements.txt
-          pip install --no-deps -r ./alt_e2eshark/torch_mlir_requirements.txt
-          pip install --pre --upgrade iree-base-compiler iree-base-runtime -f https://iree.dev/pip-release-links.html
+          pip install -r ./alt_e2eshark/base_requirements.txt --no-cache-dir
+          pip install -r ./alt_e2eshark/hf_requirements.txt  --no-cache-dir
+          pip install -r ./alt_e2eshark/iree_requirements.txt --no-cache-dir
+          pip install --no-deps -r ./alt_e2eshark/torch_mlir_requirements.txt --no-cache-dir
+          pip install --pre --upgrade iree-base-compiler iree-base-runtime -f https://iree.dev/pip-release-links.html --no-cache-dir
         working-directory: ./test-suite
       
       - name: Run HF top-1000 model
@@ -275,10 +275,10 @@ jobs:
           python3.11 -m venv report_venv_alt
           source report_venv_alt/bin/activate
           pip install --upgrade pip
-          pip install -r ./test-suite/alt_e2eshark/base_requirements.txt
-          pip install -r ./test-suite/alt_e2eshark/iree_requirements.txt
-          pip install --no-deps -r ./test-suite/alt_e2eshark/torch_mlir_requirements.txt
-          pip install --pre --upgrade iree-base-compiler iree-base-runtime -f https://iree.dev/pip-release-links.html
+          pip install -r ./test-suite/alt_e2eshark/base_requirements.txt --no-cache-dir
+          pip install -r ./test-suite/alt_e2eshark/iree_requirements.txt --no-cache-dir
+          pip install --no-deps -r ./test-suite/alt_e2eshark/torch_mlir_requirements.txt --no-cache-dir
+          pip install --pre --upgrade iree-base-compiler iree-base-runtime -f https://iree.dev/pip-release-links.html --no-cache-dir
       - uses: actions/download-artifact@master
         with:
           name: ci_reports_${{ matrix.backend }}_hf-feature-extraction-shard_onnx_md
