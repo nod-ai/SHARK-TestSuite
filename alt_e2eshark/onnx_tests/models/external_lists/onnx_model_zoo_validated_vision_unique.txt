@@ -133,3 +133,6 @@ MaskRCNN-12
 MaskRCNN-12-int8
 MaskRCNN-10
 MaskRCNN-12-qdq
+ResNet101-DUC-12
+ResNet101-DUC-7
+ResNet101-DUC-12-int8
