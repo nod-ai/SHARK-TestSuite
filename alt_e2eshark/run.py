@@ -93,6 +93,7 @@ def main(args):
     """Sets up config and test list based on CL args, then runs the tests"""
 
     # setup config
+    print("Dhiraj : Before if statement")
     if args.mode == "onnx-iree":
         pipeline = REDUCE_TO_LINALG_PIPELINE if args.torchtolinalg else []
         config = OnnxTestConfig(
@@ -111,7 +112,9 @@ def main(args):
         raise NotImplementedError(f"unsupported mode: {args.mode}")
 
     # get test list
+    print("Dhiraj: Before get tests")
     test_list = get_tests(args.groups, args.test_filter, args.testsfile)
+    print("Dhiraj : Before sort")
     test_list.sort()
 
     #setup test stages
@@ -121,7 +124,7 @@ def main(args):
         stages = args.stages
     if args.skip_stages:
         stages = [s for s in stages if s not in args.skip_stages]
-    
+    print("Dhiraj : Before parent dir")
     parent_log_dir = os.path.join(TEST_DIR, args.rundirectory)
 
     status_dict = run_tests(
