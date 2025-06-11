@@ -128,4 +128,8 @@ ssd-10
 ssd-12
 ssd-12-qdq
 tinyyolov2-7
-
+yolov4 
+MaskRCNN-12
+MaskRCNN-12-int8
+MaskRCNN-10
+MaskRCNN-12-qdq
