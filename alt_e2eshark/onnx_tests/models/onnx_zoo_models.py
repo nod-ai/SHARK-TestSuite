@@ -19,9 +19,12 @@ lists_dir = (this_file.parent).joinpath("external_lists")
 onnx_zoo_non_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_non_validated_paths.txt"))
 onnx_zoo_validated = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_validated_paths.txt"))
 onnx_zoo_unsupported = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_unsupported.txt"))
+onnx_zoo_temporarily_disabled = load_test_txt_file(lists_dir.joinpath("onnx_model_zoo_temporarily_disabled_tests.txt"))
 
 onnx_zoo_non_validated = list(set(onnx_zoo_non_validated).difference(set(onnx_zoo_unsupported)))
+onnx_zoo_non_validated = list(set(onnx_zoo_non_validated).difference(set(onnx_zoo_temporarily_disabled)))
 onnx_zoo_validated = list(set(onnx_zoo_validated).difference(set(onnx_zoo_unsupported)))
+onnx_zoo_validated = list(set(onnx_zoo_validated).difference(set(onnx_zoo_temporarily_disabled)))
 
 # Putting this inside the class contructor will
 # call this repeatedly, which is wasteful.
